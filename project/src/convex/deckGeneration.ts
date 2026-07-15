@@ -68,6 +68,16 @@ function formatSeconds(seconds: number): string {
   return `${minutes}m ${String(remaining).padStart(2, "0")}s`;
 }
 
+function estimateUsageTokens(systemPrompt: string, userContent: string, content: string) {
+  const promptTokens = Math.max(1, Math.ceil((systemPrompt.length + userContent.length) / 4));
+  const completionTokens = Math.max(1, Math.ceil(content.length / 4));
+  return {
+    promptTokens,
+    completionTokens,
+    totalTokens: promptTokens + completionTokens,
+  };
+}
+
 function compactProviderOrder(candidates: AiModelCandidate[]): {
   candidates: Array<AiModelCandidate & { providerIndex: number }>;
   providerCount: number;
@@ -208,6 +218,29 @@ async function updateJob(
   });
 }
 
+async function recordUsage(
+  ctx: ActionCtx,
+  jobId: Id<"generationJobs"> | undefined,
+  kind: "prompt" | "document",
+  candidate: ModelCandidate,
+  systemPrompt: string,
+  userContent: string,
+  content: string,
+  usage?: { promptTokens: number; completionTokens: number; totalTokens: number } | null,
+): Promise<void> {
+  const tokenUsage = usage ?? estimateUsageTokens(systemPrompt, userContent, content);
+  await ctx.runMutation(api.providerUsage.record, {
+    provider: candidate.provider,
+    providerLabel: candidate.providerLabel,
+    model: candidate.modelName,
+    kind,
+    jobId,
+    promptTokens: tokenUsage.promptTokens,
+    completionTokens: tokenUsage.completionTokens,
+    totalTokens: tokenUsage.totalTokens,
+  });
+}
+
 function progressForPromptAttempt(attempt: number, totalAttempts: number): number {
   if (totalAttempts <= 0) return 0;
   return Math.min(0.95, attempt / totalAttempts);
@@ -307,12 +340,14 @@ export const generateDeckFromDocument = action({
           if (attempt > 0) {
             await new Promise((r) => setTimeout(r, 1000 * attempt));
           }
-          const content = await callChatCompletion({
+          const result = await callChatCompletion({
             candidate,
             systemPrompt,
             userContent,
             maxTokens,
           });
+          const content = result.content;
+          await recordUsage(ctx, args.jobId, "document", candidate, systemPrompt, userContent, content, result.usage);
           const parsed = parseAiDeckGeneration(content);
 
           // Use the most consistent deck name: prefer user override, then first successful response
@@ -448,12 +483,14 @@ export const generateDeckFromPrompt = action({
           totalModels: candidates.length,
           message: `Trying ${candidate.providerLabel} / ${candidate.modelName} (${formatSeconds(etaSeconds)} est.)`,
         });
-        const content = await callChatCompletion({
+        const result = await callChatCompletion({
           candidate,
           systemPrompt,
           userContent,
           maxTokens,
         });
+        const content = result.content;
+        await recordUsage(ctx, args.jobId, "prompt", candidate, systemPrompt, userContent, content, result.usage);
         const parsed = parseAiDeckGeneration(content);
         await updateJob(ctx, args.jobId, {
           status: "succeeded",
