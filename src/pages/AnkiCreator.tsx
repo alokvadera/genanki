@@ -30,6 +30,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { generateAnkiPackage, type AnkiCard } from "@/lib/anki";
 import { extractTextFromFile } from "@/lib/docParser";
 import { generateCardsFromText } from "@/lib/cardGenerator";
+import { estimateDocumentTimeoutSeconds, estimatePromptTimeoutSeconds } from "@/lib/generationTiming";
 import { useDeckStore, type Deck } from "@/hooks/use-deck-store";
 
 export default function AnkiCreator() {
@@ -89,11 +90,13 @@ export default function AnkiCreator() {
   const [aiPreviewSummary, setAiPreviewSummary] = useState("");
   const [aiGenerating, setAiGenerating] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+  const [selectedGenerationJobId, setSelectedGenerationJobId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const docFileInputRef = useRef<HTMLInputElement>(null);
   const docFullTextRef = useRef<string>("");
   const createGenerationJob = useMutation(api.generationJobs.create);
-  const recentGenerationJobs = useQuery(api.generationJobs.listRecent, { limit: 8 }) ?? [];
+  const cancelGenerationJob = useMutation(api.generationJobs.cancel);
+  const recentGenerationJobs = useQuery(api.generationJobs.listRecent, { limit: 20 }) ?? [];
   const generateDeckFromPrompt = useAction(api.deckGeneration.generateDeckFromPrompt);
   const generateDeckFromDocument = useAction(api.deckGeneration.generateDeckFromDocument);
 
@@ -115,6 +118,18 @@ export default function AnkiCreator() {
     if (minutes === 0) return `${remainder}s`;
     return `${minutes}m ${String(remainder).padStart(2, "0")}s`;
   }, []);
+
+  const getDeadlineSeconds = useCallback(
+    (deadlineAt?: number) => {
+      if (!deadlineAt) return null;
+      return Math.max(0, Math.ceil((deadlineAt - now) / 1000));
+    },
+    [now]
+  );
+
+  const selectedGenerationJob = selectedGenerationJobId
+    ? recentGenerationJobs.find((job) => job._id === selectedGenerationJobId) ?? null
+    : null;
 
   const startRename = useCallback((deck: Deck) => {
     setEditingDeckName(deck.id);
@@ -217,14 +232,19 @@ export default function AnkiCreator() {
         setDocPreviewText(text.slice(0, 500) + (text.length > 500 ? "..." : ""));
 
         if (docMode === "ai") {
+          const totalSections = Math.min(3, Math.max(1, Math.ceil(text.length / 6000)));
+          const etaSeconds = Math.max(24, Math.round(12 + docCardCount * 1.4 + totalSections * 5));
+          const timeoutSeconds = estimateDocumentTimeoutSeconds(docCardCount, totalSections);
           const jobId = await createGenerationJob({
             kind: "document",
             requestedCount: docCardCount,
             totalProviders: 0,
             totalModels: 0,
-            totalSections: Math.min(3, Math.max(1, Math.ceil(text.length / 6000))),
+            totalSections,
             message: "Queued document generation",
-            etaSeconds: Math.max(20, Math.round(14 + docCardCount * 1.8)),
+            etaSeconds,
+            timeoutSeconds,
+            deadlineAt: Date.now() + timeoutSeconds * 1000,
           });
           const result = await generateDeckFromDocument({
             text,
@@ -375,6 +395,8 @@ export default function AnkiCreator() {
 
     setAiGenerating(true);
     try {
+      const timeoutSeconds = estimatePromptTimeoutSeconds(aiCardCount);
+      const etaSeconds = Math.max(18, Math.round(8 + aiCardCount * 1.2));
       const jobId = await createGenerationJob({
         kind: "prompt",
         requestedCount: aiCardCount,
@@ -382,7 +404,9 @@ export default function AnkiCreator() {
         totalModels: 0,
         totalSections: 1,
         message: "Queued AI deck generation",
-        etaSeconds: Math.max(18, Math.round(10 + aiCardCount * 1.6)),
+        etaSeconds,
+        timeoutSeconds,
+        deadlineAt: Date.now() + timeoutSeconds * 1000,
       });
       const result = await generateDeckFromPrompt({
         prompt,
@@ -490,17 +514,25 @@ export default function AnkiCreator() {
                   job.status === "running" || job.status === "queued"
                     ? Math.max(0, job.etaSeconds - Math.floor((now - job.updatedAt) / 1000))
                     : 0;
+                const liveTimeoutSeconds =
+                  job.status === "running" || job.status === "queued"
+                    ? getDeadlineSeconds(job.deadlineAt)
+                    : null;
                 const statusLabel =
                   job.status === "queued"
                     ? "Queued"
                     : job.status === "running"
                       ? "Running"
+                      : job.status === "canceled"
+                        ? "Canceled"
                       : job.status === "succeeded"
                         ? "Complete"
                         : "Failed";
                 const statusTone =
                   job.status === "succeeded"
                     ? "bg-emerald-100 text-emerald-800"
+                    : job.status === "canceled"
+                      ? "bg-slate-100 text-slate-800"
                     : job.status === "failed"
                       ? "bg-red-100 text-red-800"
                       : job.status === "running"
@@ -516,6 +548,7 @@ export default function AnkiCreator() {
                   job.totalModels > 0
                     ? `Model ${Math.min(job.modelIndex + 1, job.totalModels)} / ${job.totalModels}`
                     : "Model chain pending";
+                const hasResults = (job.resultCards?.length ?? 0) > 0;
 
                 return (
                   <div key={job._id} className="nb-border-2 bg-muted/20 p-4">
@@ -541,6 +574,11 @@ export default function AnkiCreator() {
                         <p className="text-xs text-muted-foreground font-medium mt-2">
                           {providerChain} · {modelChain}
                         </p>
+                        {hasResults && (
+                          <p className="text-xs font-semibold text-emerald-700 mt-2">
+                            Archived {job.resultCards?.length ?? 0} card(s) from this run
+                          </p>
+                        )}
                         {job.error && (
                           <p className="text-xs text-red-700 font-semibold mt-2 break-words">
                             {job.error}
@@ -548,7 +586,7 @@ export default function AnkiCreator() {
                         )}
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3 lg:min-w-[250px]">
+                      <div className="grid grid-cols-2 gap-3 lg:min-w-[300px]">
                         <div className="text-right lg:text-left">
                           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                             ETA
@@ -558,6 +596,11 @@ export default function AnkiCreator() {
                               ? formatDuration(liveEtaSeconds)
                               : "0s"}
                           </p>
+                          <p className="text-[10px] font-medium text-muted-foreground mt-1">
+                            {job.timeoutSeconds > 0 && liveTimeoutSeconds !== null
+                              ? `Time left ${formatDuration(liveTimeoutSeconds)}`
+                              : "Timeout pending"}
+                          </p>
                         </div>
                         <div className="text-right lg:text-left">
                           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
@@ -566,8 +609,44 @@ export default function AnkiCreator() {
                           <p className="text-2xl font-bold tracking-tight">
                             {Math.round(Math.max(0, Math.min(1, job.progress)) * 100)}%
                           </p>
+                          <p className="text-[10px] font-medium text-muted-foreground mt-1">
+                            {job.timeoutSeconds > 0 ? `Budget ${formatDuration(job.timeoutSeconds)}` : "Budget pending"}
+                          </p>
                         </div>
                       </div>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedGenerationJobId(job._id)}
+                        className="nb-border bg-white px-3 py-1.5 text-xs font-bold nb-hover-shadow"
+                      >
+                        Open run
+                      </button>
+                      {(job.status === "running" || job.status === "queued") && (
+                        <button
+                          type="button"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            await cancelGenerationJob({ jobId: job._id });
+                            setSelectedGenerationJobId(job._id);
+                            showToast("Cancel requested");
+                          }}
+                          className="nb-border bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700 nb-hover-shadow"
+                        >
+                          Cancel
+                        </button>
+                      )}
+                      {hasResults && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedGenerationJobId(job._id)}
+                          className="nb-border bg-secondary px-3 py-1.5 text-xs font-bold nb-hover-shadow"
+                        >
+                          View archived cards
+                        </button>
+                      )}
                     </div>
 
                     <div className="mt-4">
@@ -624,6 +703,109 @@ export default function AnkiCreator() {
           </div>
         </div>
       </header>
+
+      {selectedGenerationJob && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6">
+          <section className="nb-border bg-white nb-shadow-sm p-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-1">
+                  Archived run
+                </p>
+                <h2 className="text-lg font-bold tracking-tight">
+                  {selectedGenerationJob.resultDeckName || selectedGenerationJob.message}
+                </h2>
+                <p className="text-sm text-muted-foreground font-medium mt-1">
+                  {selectedGenerationJob.provider || "Provider pending"} /{" "}
+                  {selectedGenerationJob.model || "Model pending"}
+                </p>
+                <p className="text-xs text-muted-foreground font-medium mt-1">
+                  {selectedGenerationJob.resultCards?.length ?? 0} archived card(s)
+                  {selectedGenerationJob.resultPartial ? " · partial result" : ""}
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {selectedGenerationJob.resultCards?.length ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const deckName =
+                          selectedGenerationJob.resultDeckName?.trim() ||
+                          selectedGenerationJob.message ||
+                          "Archived Deck";
+                        createDeckWithCards(deckName, selectedGenerationJob.resultCards ?? []);
+                        showToast(`Created "${deckName}" from archived cards`);
+                      }}
+                      className="nb-border bg-secondary px-3 py-1.5 text-xs font-bold nb-hover-shadow"
+                    >
+                      Create deck from run
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        addCards(activeDeckId, selectedGenerationJob.resultCards ?? []);
+                        showToast("Added archived cards to the current deck");
+                      }}
+                      className="nb-border bg-white px-3 py-1.5 text-xs font-bold nb-hover-shadow"
+                    >
+                      Add to current deck
+                    </button>
+                  </>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => setSelectedGenerationJobId(null)}
+                  className="nb-border bg-white px-3 py-1.5 text-xs font-bold nb-hover-shadow"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+
+            {selectedGenerationJob.resultSummary ? (
+              <p className="text-sm text-muted-foreground font-medium mt-4">
+                {selectedGenerationJob.resultSummary}
+              </p>
+            ) : null}
+
+            {selectedGenerationJob.resultWarnings?.length ? (
+              <div className="mt-4 nb-border-2 bg-amber-50 p-3">
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-800">Warnings</p>
+                <ul className="mt-2 space-y-1 text-sm text-amber-900 font-medium">
+                  {selectedGenerationJob.resultWarnings.map((warning) => (
+                    <li key={warning}>{warning}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            <div className="mt-4 grid gap-3 max-h-[520px] overflow-auto pr-1">
+              {(selectedGenerationJob.resultCards ?? []).map((card, index) => (
+                <div key={`${selectedGenerationJob._id}-${index}`} className="nb-border-2 bg-muted/20 p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-2">
+                    Card {index + 1}
+                  </p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="nb-border bg-white p-3">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-1">
+                        Front
+                      </p>
+                      <p className="text-sm font-medium break-words">{card.front}</p>
+                    </div>
+                    <div className="nb-border bg-white p-3">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-1">
+                        Back
+                      </p>
+                      <p className="text-sm font-medium break-words">{card.back}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+      )}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 flex flex-col lg:flex-row gap-6">
         {/* Sidebar: Deck List */}

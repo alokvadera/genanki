@@ -20,7 +20,7 @@ export default function ProviderUsage() {
   const recent = useQuery(api.providerUsage.recent, { limit: 20 }) ?? [];
 
   const providerOrder = useMemo(
-    () => ["Groq", "Cerebras", "OpenRouter", "Kilo"],
+    () => ["Groq", "Cerebras", "Kilo", "OpenRouter"],
     []
   );
 
@@ -47,13 +47,13 @@ export default function ProviderUsage() {
                 Provider Usage
               </h1>
               <p className="text-xs text-muted-foreground font-medium mt-0.5">
-                Groq is the primary provider. Cerebras, OpenRouter, and Kilo only step in when needed.
+                Groq is the primary provider. Cerebras, Kilo, and OpenRouter only step in when needed.
               </p>
             </div>
           </div>
           <div className="hidden sm:flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
             <span className="nb-border bg-secondary px-2 py-1">Primary: Groq</span>
-            <span className="nb-border bg-white px-2 py-1">Fallbacks: Cerebras, OpenRouter, Kilo</span>
+            <span className="nb-border bg-white px-2 py-1">Fallbacks: Cerebras, Kilo, OpenRouter</span>
           </div>
         </div>
       </header>

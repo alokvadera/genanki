@@ -5,8 +5,8 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const PROVIDER_PRIORITY = new Map([
   ["groq", 0],
   ["cerebras", 1],
-  ["openrouter", 2],
-  ["kilo", 3],
+  ["kilo", 2],
+  ["openrouter", 3],
 ]);
 
 export const record = mutation({
