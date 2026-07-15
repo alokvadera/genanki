@@ -19,9 +19,11 @@ import {
   Zap,
   X,
   BookOpen,
+  BarChart3,
 } from "lucide-react";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { Link } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -603,15 +605,23 @@ export default function AnkiCreator() {
               </p>
             </div>
           </div>
-          <Button
-            onClick={handleExport}
-            disabled={exporting || !activeDeck || activeDeck.cards.length === 0}
-            className="nb-border nb-shadow-sm nb-hover-shadow bg-primary text-primary-foreground font-bold text-sm px-4 h-9 disabled:opacity-40"
-          >
-            <Download className="w-4 h-4" />
-            <span className="hidden sm:inline">{exporting ? "Exporting..." : "Export .apkg"}</span>
-            <span className="sm:hidden">.apkg</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button asChild variant="outline" className="nb-border nb-shadow-sm nb-hover-shadow font-bold text-sm px-4 h-9">
+              <Link to="/usage">
+                <BarChart3 className="w-4 h-4" />
+                Usage
+              </Link>
+            </Button>
+            <Button
+              onClick={handleExport}
+              disabled={exporting || !activeDeck || activeDeck.cards.length === 0}
+              className="nb-border nb-shadow-sm nb-hover-shadow bg-primary text-primary-foreground font-bold text-sm px-4 h-9 disabled:opacity-40"
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">{exporting ? "Exporting..." : "Export .apkg"}</span>
+              <span className="sm:hidden">.apkg</span>
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -970,7 +980,7 @@ export default function AnkiCreator() {
                   className="overflow-hidden"
                 >
                   <p className="text-xs text-muted-foreground mb-4 font-medium">
-                    Describe a topic, chapter, or source idea. The provider chain will generate a deck title and editable cards you can save as a new deck or add to the current one.
+                    Describe a topic, chapter, or source idea. The Groq-first provider chain will generate a deck title and editable cards you can save as a new deck or add to the current one.
                   </p>
 
                   <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr_0.5fr_0.8fr] gap-3 mb-3">

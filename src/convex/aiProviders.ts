@@ -39,6 +39,18 @@ type ModelResponse = {
 
 type ChatCompletionResponse = {
   choices?: Array<{ message?: { content?: string } }>;
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    total_tokens?: number;
+    promptTokens?: number;
+    completionTokens?: number;
+    totalTokens?: number;
+    input_tokens?: number;
+    output_tokens?: number;
+    inputTokens?: number;
+    outputTokens?: number;
+  };
 };
 
 let cachedCatalog: { fetchedAt: number; catalogs: ProviderCatalog[] } | null = null;
@@ -386,12 +398,40 @@ export type ChatCallConfig = {
   maxTokens: number;
 };
 
+export type ChatUsage = {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+};
+
+export type ChatCallResult = {
+  content: string;
+  usage: ChatUsage | null;
+};
+
+function normalizeUsage(usage?: ChatCompletionResponse["usage"]): ChatUsage | null {
+  if (!usage) return null;
+  const promptTokens = Number(
+    usage.prompt_tokens ?? usage.promptTokens ?? usage.input_tokens ?? usage.inputTokens ?? 0,
+  );
+  const completionTokens = Number(
+    usage.completion_tokens ?? usage.completionTokens ?? usage.output_tokens ?? usage.outputTokens ?? 0,
+  );
+  const totalTokens = Number(usage.total_tokens ?? usage.totalTokens ?? promptTokens + completionTokens);
+  if (!Number.isFinite(totalTokens)) return null;
+  return {
+    promptTokens: Number.isFinite(promptTokens) ? Math.max(0, Math.round(promptTokens)) : 0,
+    completionTokens: Number.isFinite(completionTokens) ? Math.max(0, Math.round(completionTokens)) : 0,
+    totalTokens: Math.max(0, Math.round(totalTokens)),
+  };
+}
+
 export async function callChatCompletion({
   candidate,
   systemPrompt,
   userContent,
   maxTokens,
-}: ChatCallConfig): Promise<string> {
+}: ChatCallConfig): Promise<ChatCallResult> {
   const body: Record<string, unknown> = {
     model: candidate.modelId,
     temperature: 0.3,
@@ -424,6 +464,8 @@ export async function callChatCompletion({
     throw new Error(`${candidate.providerLabel} returned an empty response`);
   }
 
-  return content;
+  return {
+    content,
+    usage: normalizeUsage(data.usage),
+  };
 }
-

@@ -64,6 +64,20 @@ const schema = defineSchema(
       error: v.optional(v.string()),
     }).index("by_createdAt", ["createdAt"]),
 
+    providerUsage: defineTable({
+      provider: v.string(),
+      providerLabel: v.string(),
+      model: v.string(),
+      kind: v.union(v.literal("prompt"), v.literal("document")),
+      jobId: v.optional(v.id("generationJobs")),
+      promptTokens: v.number(),
+      completionTokens: v.number(),
+      totalTokens: v.number(),
+      createdAt: v.number(),
+    })
+      .index("by_createdAt", ["createdAt"])
+      .index("by_provider_createdAt", ["provider", "createdAt"]),
+
     // tableName: defineTable({
     //   ...
     //   // table fields

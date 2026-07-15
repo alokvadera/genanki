@@ -14,6 +14,7 @@ import type * as auth_emailOtp from "../auth/emailOtp.js";
 import type * as deckGeneration from "../deckGeneration.js";
 import type * as generationJobs from "../generationJobs.js";
 import type * as http from "../http.js";
+import type * as providerUsage from "../providerUsage.js";
 import type * as rateLimits from "../rateLimits.js";
 import type * as users from "../users.js";
 
@@ -30,6 +31,7 @@ declare const fullApi: ApiFromModules<{
   deckGeneration: typeof deckGeneration;
   generationJobs: typeof generationJobs;
   http: typeof http;
+  providerUsage: typeof providerUsage;
   rateLimits: typeof rateLimits;
   users: typeof users;
 }>;
