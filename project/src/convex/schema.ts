@@ -34,6 +34,36 @@ const schema = defineSchema(
 
     // add other tables here
 
+    rateLimits: defineTable({
+      userId: v.string(),
+      timestamp: v.number(),
+    }).index("by_user", ["userId"]),
+
+    generationJobs: defineTable({
+      kind: v.union(v.literal("prompt"), v.literal("document")),
+      status: v.union(
+        v.literal("queued"),
+        v.literal("running"),
+        v.literal("succeeded"),
+        v.literal("failed"),
+      ),
+      requestedCount: v.number(),
+      progress: v.number(),
+      etaSeconds: v.number(),
+      message: v.string(),
+      provider: v.optional(v.string()),
+      model: v.optional(v.string()),
+      providerIndex: v.number(),
+      modelIndex: v.number(),
+      totalProviders: v.number(),
+      totalModels: v.number(),
+      sectionIndex: v.number(),
+      totalSections: v.number(),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+      error: v.optional(v.string()),
+    }).index("by_createdAt", ["createdAt"]),
+
     // tableName: defineTable({
     //   ...
     //   // table fields
