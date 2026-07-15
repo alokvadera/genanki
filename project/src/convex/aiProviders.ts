@@ -59,6 +59,14 @@ let cachedGroq: { fetchedAt: number; models: AiModelCandidate[] } | null = null;
 let cachedCerebras: { fetchedAt: number; models: AiModelCandidate[] } | null = null;
 
 const MODEL_CACHE_TTL_MS = 5 * 60_000;
+const GROQ_MODEL_PRIORITY = new Map([
+  ["llama-3.1-8b-instant", 0],
+  ["llama-3.3-70b-versatile", 1],
+  ["openai/gpt-oss-20b", 2],
+  ["openai/gpt-oss-120b", 3],
+  ["qwen/qwen3-32b", 4],
+  ["meta-llama/llama-4-scout-17b-16e-instruct", 5],
+]);
 
 function shuffleInPlace<T>(items: T[]): T[] {
   for (let i = items.length - 1; i > 0; i--) {
@@ -158,7 +166,7 @@ async function loadOpenRouterFreeModels(): Promise<AiModelCandidate[]> {
       .map((model) => ({
         provider: "openrouter" as const,
         providerLabel: "OpenRouter",
-        providerIndex: 2,
+        providerIndex: 3,
         modelId: model.id?.trim() || "openrouter/free",
         modelName: model.name?.trim() || model.id?.trim() || "OpenRouter free model",
         supportsJsonMode: supportsJsonModeFromParameters(model.supported_parameters),
@@ -173,7 +181,7 @@ async function loadOpenRouterFreeModels(): Promise<AiModelCandidate[]> {
     const router: AiModelCandidate = {
       provider: "openrouter",
       providerLabel: "OpenRouter",
-      providerIndex: 2,
+      providerIndex: 3,
       modelId: "openrouter/free",
       modelName: "OpenRouter Free Router",
       supportsJsonMode: true,
@@ -193,7 +201,7 @@ async function loadOpenRouterFreeModels(): Promise<AiModelCandidate[]> {
       {
         provider: "openrouter",
         providerLabel: "OpenRouter",
-        providerIndex: 2,
+        providerIndex: 3,
         modelId: "openrouter/free",
         modelName: "OpenRouter Free Router",
         supportsJsonMode: true,
@@ -236,19 +244,21 @@ async function loadGroqModels(): Promise<AiModelCandidate[]> {
     const response = await fetchJson<ModelResponse>(GROQ_MODELS_URL, { headers });
     const mapped = mapModelCatalog("groq", "Groq", 0, baseUrl, headers, response);
     const filtered = mapped.filter((model) => preferredIds.has(model.modelId) || preferredIds.has(model.modelName));
-    const models = shuffleInPlace((filtered.length > 0 ? filtered : mapped).slice());
+    const models = (filtered.length > 0 ? filtered : mapped)
+      .slice()
+      .sort((a, b) => (GROQ_MODEL_PRIORITY.get(a.modelId) ?? 99) - (GROQ_MODEL_PRIORITY.get(b.modelId) ?? 99));
     cachedGroq = { fetchedAt: Date.now(), models };
     return models;
   } catch {
-    const fallback: AiModelCandidate[] = shuffleInPlace(
-      [
-        "llama-3.1-8b-instant",
-        "llama-3.3-70b-versatile",
-        "openai/gpt-oss-20b",
-        "openai/gpt-oss-120b",
-        "qwen/qwen3-32b",
-        "meta-llama/llama-4-scout-17b-16e-instruct",
-      ].map((modelId) => ({
+    const fallback: AiModelCandidate[] = [
+      "llama-3.1-8b-instant",
+      "llama-3.3-70b-versatile",
+      "openai/gpt-oss-20b",
+      "openai/gpt-oss-120b",
+      "qwen/qwen3-32b",
+      "meta-llama/llama-4-scout-17b-16e-instruct",
+    ]
+      .map((modelId) => ({
         provider: "groq" as const,
         providerLabel: "Groq",
         providerIndex: 0,
@@ -257,8 +267,8 @@ async function loadGroqModels(): Promise<AiModelCandidate[]> {
         supportsJsonMode: false,
         baseUrl,
         headers,
-      })),
-    );
+      }))
+      .sort((a, b) => (GROQ_MODEL_PRIORITY.get(a.modelId) ?? 99) - (GROQ_MODEL_PRIORITY.get(b.modelId) ?? 99));
     cachedGroq = { fetchedAt: Date.now(), models: fallback };
     return fallback;
   }
@@ -281,7 +291,7 @@ async function loadCerebrasModels(): Promise<AiModelCandidate[]> {
   try {
     const response = await fetchJson<ModelResponse>(CEREBRAS_MODELS_URL, { headers });
     const mapped = mapModelCatalog("cerebras", "Cerebras", 1, baseUrl, headers, response);
-    const models = shuffleInPlace(mapped.length > 0 ? mapped.slice() : []);
+    const models = (mapped.length > 0 ? mapped.slice() : []).sort((a, b) => a.modelId.localeCompare(b.modelId));
     if (models.length > 0) {
       cachedCerebras = { fetchedAt: Date.now(), models };
       return models;
@@ -322,7 +332,7 @@ async function loadKiloModels(): Promise<AiModelCandidate[]> {
   return modelIds.map((modelId) => ({
     provider: "kilo",
     providerLabel: "Kilo",
-    providerIndex: 3,
+    providerIndex: 2,
     modelId,
     modelName: modelId,
     supportsJsonMode: false,
@@ -363,27 +373,27 @@ export async function buildModelCandidates(): Promise<AiModelCandidate[]> {
     });
   }
 
-  const openRouterModels = await loadOpenRouterFreeModels();
-  if (openRouterModels.length > 0) {
-    catalogs.push({
-      provider: "openrouter",
-      label: "OpenRouter",
-      providerIndex: 2,
-      baseUrl: "https://openrouter.ai/api/v1",
-      headers: openRouterModels[0].headers,
-      models: openRouterModels,
-    });
-  }
-
   const kiloModels = await loadKiloModels();
   if (kiloModels.length > 0) {
     catalogs.push({
       provider: "kilo",
       label: "Kilo",
-      providerIndex: 3,
+      providerIndex: 2,
       baseUrl: normalizeBaseUrl(process.env.KILO_BASE_URL || ""),
       headers: kiloModels[0].headers,
       models: kiloModels,
+    });
+  }
+
+  const openRouterModels = await loadOpenRouterFreeModels();
+  if (openRouterModels.length > 0) {
+    catalogs.push({
+      provider: "openrouter",
+      label: "OpenRouter",
+      providerIndex: 3,
+      baseUrl: "https://openrouter.ai/api/v1",
+      headers: openRouterModels[0].headers,
+      models: openRouterModels,
     });
   }
 
@@ -431,7 +441,8 @@ export async function callChatCompletion({
   systemPrompt,
   userContent,
   maxTokens,
-}: ChatCallConfig): Promise<ChatCallResult> {
+  timeoutMs = CHAT_TIMEOUT_MS,
+}: ChatCallConfig & { timeoutMs?: number }): Promise<ChatCallResult> {
   const body: Record<string, unknown> = {
     model: candidate.modelId,
     temperature: 0.3,
@@ -450,7 +461,7 @@ export async function callChatCompletion({
     method: "POST",
     headers: candidate.headers,
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(CHAT_TIMEOUT_MS),
+    signal: AbortSignal.timeout(timeoutMs),
   });
 
   if (!response.ok) {

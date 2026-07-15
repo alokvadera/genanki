@@ -6,9 +6,22 @@ import type { Id } from "./_generated/dataModel";
 import { api } from "./_generated/api";
 import { buildModelCandidates, callChatCompletion, type AiModelCandidate } from "./aiProviders";
 import { parseAiDeckGeneration } from "../lib/deckGeneration";
+import {
+  estimateDocumentEtaSeconds,
+  estimateDocumentTimeoutSeconds,
+  estimatePromptEtaSeconds,
+  estimatePromptTimeoutSeconds,
+} from "../lib/generationTiming";
 
-const REQUEST_TIMEOUT_MS = 60_000;
-const FALLBACK_PENALTY_SECONDS = 18;
+const FALLBACK_PENALTY_SECONDS = 12;
+const TIMEOUT_BUFFER_MS = 2500;
+const PROVIDER_MODEL_LIMITS: Record<string, number> = {
+  groq: 2,
+  cerebras: 1,
+  kilo: 1,
+  openrouter: 1,
+};
+const PROVIDER_ORDER = ["groq", "cerebras", "kilo", "openrouter"] as const;
 
 function clampCardCount(value: number): number {
   if (!Number.isFinite(value)) {
@@ -29,7 +42,7 @@ type ModelCandidate = {
 };
 
 type JobPatch = {
-  status?: "queued" | "running" | "succeeded" | "failed";
+  status?: "queued" | "running" | "succeeded" | "canceled" | "failed";
   progress?: number;
   etaSeconds?: number;
   message?: string;
@@ -41,24 +54,17 @@ type JobPatch = {
   totalModels?: number;
   sectionIndex?: number;
   totalSections?: number;
+  timeoutSeconds?: number;
+  deadlineAt?: number;
+  resultDeckName?: string;
+  resultSummary?: string;
+  resultCards?: Array<{ front: string; back: string }>;
+  resultPartial?: boolean;
+  resultWarnings?: string[];
+  cancelRequestedAt?: number;
+  canceledAt?: number;
   error?: string;
 };
-
-function estimatePromptSeconds(cardCount: number, modelCount: number, providerCount: number): number {
-  return Math.max(24, Math.round(10 + cardCount * 1.6 + Math.max(0, modelCount - 1) * 1.5 + Math.max(0, providerCount - 1) * 4));
-}
-
-function estimateDocumentSeconds(
-  cardCount: number,
-  sectionCount: number,
-  modelCount: number,
-  providerCount: number,
-): number {
-  return Math.max(
-    28,
-    Math.round(14 + cardCount * 1.8 + sectionCount * 6 + Math.max(0, modelCount - 1) * 1.5 + Math.max(0, providerCount - 1) * 4),
-  );
-}
 
 function formatSeconds(seconds: number): string {
   const safe = Math.max(0, Math.round(seconds));
@@ -78,30 +84,42 @@ function estimateUsageTokens(systemPrompt: string, userContent: string, content:
   };
 }
 
-function compactProviderOrder(candidates: AiModelCandidate[]): {
+function prioritizeCandidates(candidates: AiModelCandidate[]): {
   candidates: Array<AiModelCandidate & { providerIndex: number }>;
   providerCount: number;
 } {
-  const providerOrder = new Map<string, number>();
+  const grouped = new Map<string, AiModelCandidate[]>();
+
+  for (const provider of PROVIDER_ORDER) {
+    grouped.set(provider, []);
+  }
+
   for (const candidate of candidates) {
-    if (!providerOrder.has(candidate.provider)) {
-      providerOrder.set(candidate.provider, providerOrder.size);
+    const list = grouped.get(candidate.provider) ?? [];
+    list.push(candidate);
+    grouped.set(candidate.provider, list);
+  }
+
+  const prioritized: Array<AiModelCandidate & { providerIndex: number }> = [];
+  let providerIndex = 0;
+
+  for (const provider of PROVIDER_ORDER) {
+    const list = grouped.get(provider) ?? [];
+    if (list.length === 0) continue;
+    const limit = PROVIDER_MODEL_LIMITS[provider] ?? 1;
+    for (const candidate of list.slice(0, limit)) {
+      prioritized.push({
+        ...candidate,
+        providerIndex,
+      });
     }
+    providerIndex += 1;
   }
 
   return {
-    candidates: candidates.map((candidate) => ({
-      ...candidate,
-      providerIndex: providerOrder.get(candidate.provider) ?? 0,
-    })),
-    providerCount: providerOrder.size,
+    candidates: prioritized,
+    providerCount: providerIndex,
   };
-}
-
-function rotateCandidates<T>(items: T[], startIndex: number): T[] {
-  if (items.length === 0) return items;
-  const start = ((startIndex % items.length) + items.length) % items.length;
-  return [...items.slice(start), ...items.slice(0, start)];
 }
 
 function buildSystemPrompt(cardCount: number, difficulty: string, deckName: string) {
@@ -125,7 +143,7 @@ async function getCandidateChain(): Promise<{
   providerCount: number;
 }> {
   const built = await buildModelCandidates();
-  const { candidates, providerCount } = compactProviderOrder(built);
+  const { candidates, providerCount } = prioritizeCandidates(built);
 
   return {
     candidates: candidates.map((candidate) => ({
@@ -251,6 +269,53 @@ function progressForDocumentSection(sectionIndex: number, totalSections: number)
   return Math.min(0.95, sectionIndex / totalSections);
 }
 
+function isTimeoutError(error: unknown): boolean {
+  return error instanceof Error && (error.name === "AbortError" || /timeout/i.test(error.message));
+}
+
+function getAttemptTimeoutMs(candidate: ModelCandidate, kind: "prompt" | "document", deadlineAt: number): number {
+  const remainingMs = Math.max(5_000, deadlineAt - Date.now() - TIMEOUT_BUFFER_MS);
+  const providerBudget =
+    candidate.provider === "groq"
+      ? candidate.modelId === "llama-3.1-8b-instant"
+        ? 16_000
+        : 22_000
+      : candidate.provider === "cerebras"
+        ? 24_000
+        : candidate.provider === "kilo"
+          ? 20_000
+          : kind === "prompt"
+            ? 18_000
+            : 22_000;
+
+  return Math.max(10_000, Math.min(remainingMs, providerBudget));
+}
+
+function assertWithinDeadline(deadlineAt: number): void {
+  if (Date.now() > deadlineAt) {
+    throw new Error("Generation timed out before completion");
+  }
+}
+
+class GenerationCanceledError extends Error {
+  constructor() {
+    super("Generation canceled");
+    this.name = "GenerationCanceledError";
+  }
+}
+
+function isGenerationCanceledError(error: unknown): boolean {
+  return error instanceof Error && error.name === "GenerationCanceledError";
+}
+
+async function assertJobActive(ctx: ActionCtx, jobId: Id<"generationJobs"> | undefined): Promise<void> {
+  if (!jobId) return;
+  const job = await ctx.runQuery(api.generationJobs.get, { jobId });
+  if (job?.status === "canceled") {
+    throw new GenerationCanceledError();
+  }
+}
+
 export const generateDeckFromDocument = action({
   args: {
     text: v.string(),
@@ -284,12 +349,16 @@ export const generateDeckFromDocument = action({
 
     const chunks = chunkText(text);
     const totalSections = chunks.length;
-    let estimatedSeconds = estimateDocumentSeconds(requestedCount, totalSections, candidates.length, providerCount);
+    const timeoutSeconds = estimateDocumentTimeoutSeconds(requestedCount, totalSections);
+    const deadlineAt = Date.now() + timeoutSeconds * 1000;
+    let estimatedSeconds = estimateDocumentEtaSeconds(requestedCount, totalSections, candidates.length, providerCount);
 
     await updateJob(ctx, args.jobId, {
       status: "running",
       progress: 0,
       etaSeconds: estimatedSeconds,
+      timeoutSeconds,
+      deadlineAt,
       message: `Preparing document generation across ${providerCount} provider(s) and ${candidates.length} model(s) (${formatSeconds(estimatedSeconds)} est.)`,
       provider: undefined,
       providerIndex: 0,
@@ -307,9 +376,10 @@ export const generateDeckFromDocument = action({
     let resultSummary = "";
     const seen = new Set<string>();
     const warnings: string[] = [];
-    let modelCursor = 0;
 
     for (let i = 0; i < chunks.length; i++) {
+      await assertJobActive(ctx, args.jobId);
+      assertWithinDeadline(deadlineAt);
       const systemPrompt = buildDocumentSystemPrompt(cardsPerChunk, difficulty, deckName);
       const userContent = [
         `Document content (section ${i + 1} of ${chunks.length}):`,
@@ -322,14 +392,15 @@ export const generateDeckFromDocument = action({
       let lastErr: unknown = null;
       let success = false;
       for (let attempt = 0; attempt < candidates.length && !success; attempt++) {
-        const candidate = candidates[modelCursor % candidates.length];
-        modelCursor++;
+        await assertJobActive(ctx, args.jobId);
+        assertWithinDeadline(deadlineAt);
+        const candidate = candidates[attempt % candidates.length];
         try {
           await updateJob(ctx, args.jobId, {
             provider: candidate.providerLabel,
             providerIndex: candidate.providerIndex,
             model: candidate.modelName,
-            modelIndex: (modelCursor - 1) % candidates.length,
+            modelIndex: attempt,
             sectionIndex: i,
             progress: progressForDocumentSection(i, totalSections),
             etaSeconds: estimatedSeconds + attempt * FALLBACK_PENALTY_SECONDS,
@@ -337,15 +408,14 @@ export const generateDeckFromDocument = action({
             totalModels: candidates.length,
             message: `Section ${i + 1}/${chunks.length}: trying ${candidate.providerLabel} / ${candidate.modelName} (${formatSeconds(estimatedSeconds + attempt * FALLBACK_PENALTY_SECONDS)} est.)`,
           });
-          if (attempt > 0) {
-            await new Promise((r) => setTimeout(r, 1000 * attempt));
-          }
           const result = await callChatCompletion({
             candidate,
             systemPrompt,
             userContent,
             maxTokens,
+            timeoutMs: getAttemptTimeoutMs(candidate, "document", deadlineAt),
           });
+          await assertJobActive(ctx, args.jobId);
           const content = result.content;
           await recordUsage(ctx, args.jobId, "document", candidate, systemPrompt, userContent, content, result.usage);
           const parsed = parseAiDeckGeneration(content);
@@ -363,17 +433,26 @@ export const generateDeckFromDocument = action({
           }
           success = true;
         } catch (err) {
+          if (isGenerationCanceledError(err)) {
+            throw err;
+          }
           lastErr = err;
-          estimatedSeconds += FALLBACK_PENALTY_SECONDS;
+          if (isTimeoutError(err)) {
+            estimatedSeconds += 8;
+          } else {
+            estimatedSeconds += FALLBACK_PENALTY_SECONDS;
+          }
           await updateJob(ctx, args.jobId, {
             etaSeconds: estimatedSeconds,
             provider: candidate.providerLabel,
             providerIndex: candidate.providerIndex,
             model: candidate.modelName,
-            modelIndex: (modelCursor - 1) % candidates.length,
+            modelIndex: attempt,
             totalProviders: providerCount,
             totalModels: candidates.length,
-            message: `Section ${i + 1}/${chunks.length}: ${candidate.providerLabel} / ${candidate.modelName} failed, switching models`,
+            message: isTimeoutError(err)
+              ? `Section ${i + 1}/${chunks.length}: ${candidate.providerLabel} / ${candidate.modelName} timed out, switching models`
+              : `Section ${i + 1}/${chunks.length}: ${candidate.providerLabel} / ${candidate.modelName} failed, switching models`,
           });
         }
       }
@@ -400,6 +479,11 @@ export const generateDeckFromDocument = action({
       status: "succeeded",
       progress: 1,
       etaSeconds: 0,
+      resultDeckName: resultDeckName || deckName || "Document Deck",
+      resultSummary: resultSummary,
+      resultCards: allCards.slice(0, requestedCount),
+      resultPartial: warnings.length > 0,
+      resultWarnings: warnings,
       message: `Generated ${allCards.slice(0, requestedCount).length} cards`,
     });
 
@@ -444,12 +528,16 @@ export const generateDeckFromPrompt = action({
       throw new Error("No AI providers are configured. Add GROQ_API_KEY, CEREBRAS_API_KEY, or OPENROUTER_API_KEY.");
     }
 
-    let etaSeconds = estimatePromptSeconds(requestedCount, candidates.length, providerCount);
+    const timeoutSeconds = estimatePromptTimeoutSeconds(requestedCount);
+    const deadlineAt = Date.now() + timeoutSeconds * 1000;
+    let etaSeconds = estimatePromptEtaSeconds(requestedCount, candidates.length, providerCount);
 
     await updateJob(ctx, args.jobId, {
       status: "running",
       progress: 0,
       etaSeconds,
+      timeoutSeconds,
+      deadlineAt,
       message: `Preparing model chain across ${providerCount} provider(s) and ${candidates.length} model(s) (${formatSeconds(etaSeconds)} est.)`,
       provider: undefined,
       providerIndex: 0,
@@ -470,6 +558,8 @@ export const generateDeckFromPrompt = action({
     const maxTokens = Math.min(12000, requestedCount * 90 + 300);
     let lastErr: unknown = null;
     for (let attempt = 0; attempt < candidates.length; attempt++) {
+      await assertJobActive(ctx, args.jobId);
+      assertWithinDeadline(deadlineAt);
       const candidate = candidates[attempt % candidates.length];
       try {
         await updateJob(ctx, args.jobId, {
@@ -488,7 +578,9 @@ export const generateDeckFromPrompt = action({
           systemPrompt,
           userContent,
           maxTokens,
+          timeoutMs: getAttemptTimeoutMs(candidate, "prompt", deadlineAt),
         });
+        await assertJobActive(ctx, args.jobId);
         const content = result.content;
         await recordUsage(ctx, args.jobId, "prompt", candidate, systemPrompt, userContent, content, result.usage);
         const parsed = parseAiDeckGeneration(content);
@@ -502,6 +594,11 @@ export const generateDeckFromPrompt = action({
           modelIndex: attempt,
           totalProviders: providerCount,
           totalModels: candidates.length,
+          resultDeckName: parsed.deckName,
+          resultSummary: parsed.summary,
+          resultCards: parsed.cards.slice(0, requestedCount),
+          resultPartial: false,
+          resultWarnings: [],
           message: `Generated ${parsed.cards.length} cards with ${candidate.providerLabel} / ${candidate.modelName}`,
         });
         return {
@@ -510,8 +607,17 @@ export const generateDeckFromPrompt = action({
           cards: parsed.cards.slice(0, requestedCount),
         };
       } catch (err) {
+        if (isGenerationCanceledError(err)) {
+          await updateJob(ctx, args.jobId, {
+            status: "canceled",
+            progress: 0,
+            etaSeconds: 0,
+            message: "Generation canceled",
+          });
+          throw err;
+        }
         lastErr = err;
-        etaSeconds += FALLBACK_PENALTY_SECONDS;
+        etaSeconds += isTimeoutError(err) ? 8 : FALLBACK_PENALTY_SECONDS;
         await updateJob(ctx, args.jobId, {
           etaSeconds,
           provider: candidate.providerLabel,
@@ -520,7 +626,9 @@ export const generateDeckFromPrompt = action({
           modelIndex: attempt,
           totalProviders: providerCount,
           totalModels: candidates.length,
-          message: `${candidate.providerLabel} / ${candidate.modelName} failed, switching to another provider or model`,
+          message: isTimeoutError(err)
+            ? `${candidate.providerLabel} / ${candidate.modelName} timed out, switching to another provider or model`
+            : `${candidate.providerLabel} / ${candidate.modelName} failed, switching to another provider or model`,
         });
       }
     }
