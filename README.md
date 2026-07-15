@@ -29,53 +29,22 @@ The convex server has a separate set of environment variables that are accessibl
 
 Currently, these variables include auth-specific keys: JWKS, JWT_PRIVATE_KEY, and SITE_URL.
 
+For AI deck generation, configure one or more providers in the Convex backend environment:
 
-# Using Authentication (Important!)
+- `GROQ_API_KEY` primary provider
+- `CEREBRAS_API_KEY` fallback provider
+- `OPENROUTER_API_KEY` fallback provider for free OpenRouter models
+- `OPENROUTER_APP_NAME` optional, used for OpenRouter headers
+- `OPENROUTER_APP_URL` optional, used for OpenRouter headers
+- `KILO_API_KEY` optional fallback provider
+- `KILO_BASE_URL` required if you want Kilo enabled
+- `KILO_MODEL_IDS` or `KILO_MODELS` comma-separated model ids for Kilo
 
-You must follow these conventions when using authentication.
+The app records provider, model, attempt, ETA, and progress for each generation job so the frontend and backend stay in sync.
 
-## Auth is already set up.
+## Authentication
 
-All convex authentication functions are already set up. The auth currently uses email OTP and anonymous users, but can support more.
-
-The email OTP configuration is defined in `src/convex/auth/emailOtp.ts`. DO NOT MODIFY THIS FILE.
-
-Also, DO NOT MODIFY THESE AUTH FILES: `src/convex/auth.config.ts` and `src/convex/auth.ts`.
-
-## Using Convex Auth on the backend
-
-On the `src/convex/users.ts` file, you can use the `getCurrentUser` function to get the current user's data.
-
-## Using Convex Auth on the frontend
-
-The `/auth` page is already set up to use auth. Navigate to `/auth` for all log in / sign up sequences.
-
-You MUST use this hook to get user data. Never do this yourself without the hook:
-```typescript
-import { useAuth } from "@/hooks/use-auth";
-
-const { isLoading, isAuthenticated, user, signIn, signOut } = useAuth();
-```
-
-## Protected Routes
-
-When protecting a page, use the auth hooks to check for authentication and redirect to /auth.
-
-## Auth Page
-
-The auth page is defined in `src/pages/Auth.tsx`. Redirect authenticated pages and sign in / sign up to /auth.
-
-## Authorization
-
-You can perform authorization checks on the frontend and backend.
-
-On the frontend, you can use the `useAuth` hook to get the current user's data and authentication state.
-
-You should also be protecting queries, mutations, and actions at the base level, checking for authorization securely.
-
-## Adding a redirect after auth
-
-In `src/main.tsx`, you must add a redirect after auth URL to redirect to the correct dashboard/profile/page that should be created after authentication.
+Authentication has been removed from the current app flow. The deck creator runs without the auth page or auth-gated routes.
 
 # Frontend Conventions
 

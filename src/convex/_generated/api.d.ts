@@ -8,9 +8,13 @@
  * @module
  */
 
+import type * as aiProviders from "../aiProviders.js";
 import type * as auth from "../auth.js";
 import type * as auth_emailOtp from "../auth/emailOtp.js";
+import type * as deckGeneration from "../deckGeneration.js";
+import type * as generationJobs from "../generationJobs.js";
 import type * as http from "../http.js";
+import type * as rateLimits from "../rateLimits.js";
 import type * as users from "../users.js";
 
 import type {
@@ -20,9 +24,13 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  aiProviders: typeof aiProviders;
   auth: typeof auth;
   "auth/emailOtp": typeof auth_emailOtp;
+  deckGeneration: typeof deckGeneration;
+  generationJobs: typeof generationJobs;
   http: typeof http;
+  rateLimits: typeof rateLimits;
   users: typeof users;
 }>;
 
