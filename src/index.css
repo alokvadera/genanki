@@ -1,0 +1,154 @@
+/* DO NOT CHANGE */
+@import "tailwindcss";
+@import "tw-animate-css";
+@custom-variant dark (&:is(.dark *));
+
+/* DO NOT CHANGE */
+@theme inline {
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+/* Neobrutalism Minimalism Theme */
+:root {
+  --radius: 0px;
+  --background: #f5f0e8;
+  --foreground: #1a1a1a;
+  --card: #ffffff;
+  --card-foreground: #1a1a1a;
+  --popover: #ffffff;
+  --popover-foreground: #1a1a1a;
+  --primary: #1a1a1a;
+  --primary-foreground: #ffffff;
+  --secondary: #ffe066;
+  --secondary-foreground: #1a1a1a;
+  --muted: #e8e3db;
+  --muted-foreground: #555555;
+  --accent: #ff6b6b;
+  --accent-foreground: #ffffff;
+  --destructive: #ff4444;
+  --border: #1a1a1a;
+  --input: #e8e3db;
+  --ring: #1a1a1a;
+  --chart-1: #ff6b6b;
+  --chart-2: #4ecdc4;
+  --chart-3: #ffe066;
+  --chart-4: #a8e6cf;
+  --chart-5: #dda0dd;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #1a1a1a;
+  --sidebar-primary: #1a1a1a;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #ffe066;
+  --sidebar-accent-foreground: #1a1a1a;
+  --sidebar-border: #1a1a1a;
+  --sidebar-ring: #1a1a1a;
+}
+
+.dark {
+  --background: #1a1a1a;
+  --foreground: #f5f0e8;
+  --card: #2a2a2a;
+  --card-foreground: #f5f0e8;
+  --popover: #2a2a2a;
+  --popover-foreground: #f5f0e8;
+  --primary: #f5f0e8;
+  --primary-foreground: #1a1a1a;
+  --secondary: #b8960a;
+  --secondary-foreground: #ffffff;
+  --muted: #333333;
+  --muted-foreground: #aaaaaa;
+  --accent: #ff6b6b;
+  --accent-foreground: #ffffff;
+  --destructive: #ff4444;
+  --border: #f5f0e8;
+  --input: #333333;
+  --ring: #f5f0e8;
+  --chart-1: #ff6b6b;
+  --chart-2: #4ecdc4;
+  --chart-3: #ffe066;
+  --chart-4: #a8e6cf;
+  --chart-5: #dda0dd;
+  --sidebar: #2a2a2a;
+  --sidebar-foreground: #f5f0e8;
+  --sidebar-primary: #f5f0e8;
+  --sidebar-primary-foreground: #1a1a1a;
+  --sidebar-accent: #b8960a;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #f5f0e8;
+  --sidebar-ring: #f5f0e8;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  button:not([disabled]),
+  [role="button"]:not([disabled]) {
+    cursor: pointer;
+  }
+}
+
+/* Neobrutalism utility classes */
+.nb-shadow {
+  box-shadow: 4px 4px 0px #1a1a1a;
+}
+.nb-shadow-sm {
+  box-shadow: 2px 2px 0px #1a1a1a;
+}
+.nb-shadow-lg {
+  box-shadow: 6px 6px 0px #1a1a1a;
+}
+.nb-hover-shadow {
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+.nb-hover-shadow:hover {
+  box-shadow: 6px 6px 0px #1a1a1a;
+  transform: translate(-1px, -1px);
+}
+.nb-active-shadow {
+  box-shadow: 2px 2px 0px #1a1a1a;
+  transform: translate(1px, 1px);
+}
+.nb-border {
+  border: 3px solid #1a1a1a;
+}
+.nb-border-2 {
+  border: 2px solid #1a1a1a;
+}
