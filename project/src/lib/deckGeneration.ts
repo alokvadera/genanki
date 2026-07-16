@@ -1,11 +1,8 @@
 import { z } from "zod";
 
 export const aiFlashcardSchema = z.object({
-  front: z.string().trim().min(1).max(400),
-  back: z.string().trim().min(1).max(1200).refine(
-    (val) => val.split(/\s+/).filter(Boolean).length <= 2,
-    { message: "Back must be at most 2 words" },
-  ),
+  front: z.string().trim().min(1).max(800),
+  back: z.string().trim().max(1200).optional().default(""),
 });
 
 export const aiDeckGenerationSchema = z.object({
