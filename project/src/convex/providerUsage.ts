@@ -7,6 +7,7 @@ const PROVIDER_PRIORITY = new Map([
   ["cerebras", 1],
   ["kilo", 2],
   ["openrouter", 3],
+  ["cloudflare", 4],
 ]);
 
 export const record = mutation({
@@ -137,6 +138,99 @@ export const summary = query({
       requests,
       providers,
       models,
+    };
+  },
+});
+
+export const byJob = query({
+  args: {
+    jobId: v.id("generationJobs"),
+  },
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("providerUsage")
+      .withIndex("by_jobId_createdAt", (q) => q.eq("jobId", args.jobId))
+      .order("desc")
+      .collect();
+
+    const providerMap = new Map<
+      string,
+      {
+        provider: string;
+        providerLabel: string;
+        promptTokens: number;
+        completionTokens: number;
+        totalTokens: number;
+        requests: number;
+      }
+    >();
+
+    const modelMap = new Map<
+      string,
+      {
+        provider: string;
+        providerLabel: string;
+        model: string;
+        promptTokens: number;
+        completionTokens: number;
+        totalTokens: number;
+        requests: number;
+      }
+    >();
+
+    let totalPromptTokens = 0;
+    let totalCompletionTokens = 0;
+    let totalTokens = 0;
+    let requests = 0;
+
+    for (const row of rows) {
+      requests += 1;
+      totalPromptTokens += row.promptTokens;
+      totalCompletionTokens += row.completionTokens;
+      totalTokens += row.totalTokens;
+
+      const providerEntry = providerMap.get(row.provider) ?? {
+        provider: row.provider,
+        providerLabel: row.providerLabel,
+        promptTokens: 0,
+        completionTokens: 0,
+        totalTokens: 0,
+        requests: 0,
+      };
+      providerEntry.promptTokens += row.promptTokens;
+      providerEntry.completionTokens += row.completionTokens;
+      providerEntry.totalTokens += row.totalTokens;
+      providerEntry.requests += 1;
+      providerMap.set(row.provider, providerEntry);
+
+      const modelKey = `${row.provider}:${row.model}`;
+      const modelEntry = modelMap.get(modelKey) ?? {
+        provider: row.provider,
+        providerLabel: row.providerLabel,
+        model: row.model,
+        promptTokens: 0,
+        completionTokens: 0,
+        totalTokens: 0,
+        requests: 0,
+      };
+      modelEntry.promptTokens += row.promptTokens;
+      modelEntry.completionTokens += row.completionTokens;
+      modelEntry.totalTokens += row.totalTokens;
+      modelEntry.requests += 1;
+      modelMap.set(modelKey, modelEntry);
+    }
+
+    const providers = [...providerMap.values()].sort((a, b) => b.totalTokens - a.totalTokens);
+    const models = [...modelMap.values()].sort((a, b) => b.totalTokens - a.totalTokens);
+
+    return {
+      totalPromptTokens,
+      totalCompletionTokens,
+      totalTokens,
+      requests,
+      providers,
+      models,
+      rows,
     };
   },
 });

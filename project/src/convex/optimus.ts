@@ -5,13 +5,19 @@ import { getUtcDayString, CLOUDFLARE_DAILY_BUDGET, NEAR_EXHAUSTION_RATIO } from 
 // A status type to indicate provider health
 export type ProviderStatus = "healthy" | "near-exhaustion" | "exhausted";
 
+function keyFor(provider: string, model: string): string {
+  return `${provider}:${model}`;
+}
+
 export const getNetworkHealth = query({
   args: {},
   handler: async (ctx) => {
     const now = Date.now();
     const rateStates = await ctx.db.query("providerRateState").collect();
-    const performance = await ctx.db.query("providerPerformance").collect();
     const catalog = await ctx.db.query("providerCatalog").collect();
+    
+    // Build O(1) lookup maps
+    const stateByKey = new Map(rateStates.map(s => [keyFor(s.provider, s.model), s]));
     
     // Cloudflare budget
     const utcDay = getUtcDayString(now);
@@ -34,9 +40,9 @@ export const getNetworkHealth = query({
       for (const modelDef of catalogProvider.models) {
         const providerId = catalogProvider.provider;
         const modelId = modelDef.id;
-        const key = `${providerId}:${modelId}`;
+        const key = keyFor(providerId, modelId);
         
-        const state = rateStates.find(s => s.provider === providerId && s.model === modelId);
+        const state = stateByKey.get(key);
         
         let status: ProviderStatus = "healthy";
         let reason = undefined;
@@ -103,6 +109,10 @@ export const rankCandidates = internalQuery({
     const rateStates = await ctx.db.query("providerRateState").collect();
     const performance = await ctx.db.query("providerPerformance").collect();
     
+    // Build O(1) lookup maps
+    const stateByKey = new Map(rateStates.map(s => [keyFor(s.provider, s.model), s]));
+    const perfByKey = new Map(performance.map(p => [keyFor(p.provider, p.model), p]));
+    
     const utcDay = getUtcDayString(now);
     const cfBudget = await ctx.db
       .query("cloudflareNeuronBudget")
@@ -116,8 +126,9 @@ export const rankCandidates = internalQuery({
         return { candidate, score: 0 };
       }
 
-      const state = rateStates.find(s => s.provider === candidate.provider && s.model === candidate.modelId);
-      const perf = performance.find(p => p.provider === candidate.provider && p.model === candidate.modelId);
+      const key = keyFor(candidate.provider, candidate.modelId);
+      const state = stateByKey.get(key);
+      const perf = perfByKey.get(key);
       
       let score = 100; // Base healthy score
       

@@ -1,4 +1,5 @@
 import initSqlJs, { type Database } from "sql.js";
+import sqlWasmUrl from "sql.js/dist/sql-wasm-browser.wasm?url";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 
@@ -12,30 +13,75 @@ export interface AnkiDeckData {
   cards: AnkiCard[];
 }
 
-function stableId(name: string): number {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    const char = name.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash |= 0;
-  }
-  return Math.abs(hash) || 1;
+const ANKI_SCHEMA_VERSION = 18;
+export { ANKI_SCHEMA_VERSION };
+
+export function generateGuid(): string {
+  const buf = new Uint32Array(5);
+  crypto.getRandomValues(buf);
+  return Array.from(buf, (n) => n.toString(36)).join("");
 }
 
-function generateGuid(): string {
-  const hex = "0123456789abcdef";
-  let guid = "";
-  for (let i = 0; i < 10; i++) {
-    guid += hex[Math.floor(Math.random() * 16)];
+/**
+ * Generate a random positive integer ID (mod 2^31) that fits in Anki's
+ * INTEGER PRIMARY KEY column. Uses crypto for entropy to avoid collisions
+ * across exports and same-millisecond runs.
+ */
+export function randomAnkiId(): number {
+  const buf = new Uint32Array(1);
+  crypto.getRandomValues(buf);
+  return buf[0] % 0x7fffffff || 1;
+}
+
+/**
+ * Anki uses a CRC32 checksum of the first field (sfld) to detect duplicate
+ * notes. This implementation matches Anki's `fieldChecksum` using the
+ * standard CRC32 (reflected) polynomial 0xEDB88320, taken mod 2^31.
+ */
+const CRC32_TABLE: Uint32Array = (() => {
+  const table = new Uint32Array(256);
+  for (let i = 0; i < 256; i++) {
+    let crc = i;
+    for (let j = 0; j < 8; j++) {
+      crc = crc & 1 ? (crc >>> 1) ^ 0xedb88320 : crc >>> 1;
+    }
+    table[i] = crc >>> 0;
   }
-  return guid;
+  return table;
+})();
+
+export function crc32(text: string): number {
+  let crc = 0xffffffff;
+  for (let i = 0; i < text.length; i++) {
+    const byte = text.charCodeAt(i) & 0xff;
+    crc = (crc >>> 8) ^ CRC32_TABLE[(crc ^ byte) & 0xff];
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+/**
+ * Strip Anki field-delimiter characters (\x1f unit separator) and the
+ * full C0 control range plus DEL (\x7f) that would corrupt the flds field.
+ * The \x1f is replaced with a space (Anki's field separator convention);
+ * all other control characters are stripped entirely.
+ */
+export function sanitizeField(text: string): string {
+  return text
+    // Anki uses \x1f as its internal field delimiter — replace with space
+    // eslint-disable-next-line no-control-regex
+    .replace(/\x1f/g, " ")
+    // Strip remaining C0 controls (0x00-0x1f except \x1f which we already handled)
+    // plus DEL (0x7f). This covers carriage-return (\x0d), form-feed (\x0c), null (\x00), etc.
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\x00-\x08\x0b-\x1f\x7f]/g, "")
+    .trim();
 }
 
 const NOW = Math.floor(Date.now() / 1000);
 
 async function createDB(): Promise<Database> {
   const SQL = await initSqlJs({
-    locateFile: (file: string) => `https://sql.js.org/dist/${file}`,
+    locateFile: () => sqlWasmUrl,
   });
   const db = new SQL.Database();
 
@@ -121,42 +167,76 @@ async function createDB(): Promise<Database> {
   return db;
 }
 
-function populateDb(db: Database, deckData: AnkiDeckData): number {
-  const modelId = stableId(deckData.name + "_model_14");
-  const deckId = stableId(deckData.name + "_deck");
+export function populateDb(db: Database, deckData: AnkiDeckData): number {
+  const modelId = randomAnkiId();
+  const deckId = randomAnkiId();
+  const isCloze = deckData.cards.some((card) => /\{\{c\d+::/i.test(card.front));
 
-  const model = {
-    css: ".card {\n  font-family: Arial, sans-serif;\n  font-size: 20px;\n  text-align: center;\n  color: #000;\n  background: #fff;\n}\nhr { border: none; border-top: 2px solid #ccc; margin: 15px 0; }",
-    did: deckId,
-    flds: [
-      { media: [], name: "Front", ord: 0, size: 20, font: "Arial", rtl: false, plainText: false },
-      { media: [], name: "Back", ord: 1, size: 20, font: "Arial", rtl: false, plainText: false },
-    ],
-    id: modelId,
-    latexPost: "\\end{document}",
-    latexPre:
-      "\\documentclass[12pt]{article}\n\\special{papersize=3in,4in}\n\\usepackage{amssymb,amsmath}\n\\pagestyle{empty}\n\\setlength{\\parindent}{0in}\n\\begin{document}\n",
-    name: deckData.name + " Basic",
-    req: [[0, "any", [0]]],
-    sortf: 0,
-    tags: [],
-    tmpls: [
-      {
-        afmt: "{{FrontSide}}\n\n<hr id=answer>\n\n{{Back}}",
-        bafmt: "",
-        bfont: "",
-        bsize: 0,
-        did: null,
-        name: "Card 1",
-        ord: 0,
-        qfmt: "{{Front}}",
-        rqfmt: "",
-      },
-    ],
-    type: 0,
-    usn: -1,
-    ver: 14,
-  };
+  const model = isCloze
+    ? {
+        css: ".card {\n  font-family: Arial, sans-serif;\n  font-size: 20px;\n  text-align: center;\n  color: #000;\n  background: #fff;\n}\n.cloze {\n  font-weight: bold;\n  color: blue;\n}\nhr { border: none; border-top: 2px solid #ccc; margin: 15px 0; }",
+        did: deckId,
+        flds: [
+          { media: [], name: "Text", ord: 0, size: 20, font: "Arial", rtl: false, plainText: false },
+          { media: [], name: "Back Extra", ord: 1, size: 20, font: "Arial", rtl: false, plainText: false },
+        ],
+        id: modelId,
+        latexPost: "\\end{document}",
+        latexPre:
+          "\\documentclass[12pt]{article}\n\\special{papersize=3in,4in}\n\\usepackage{amssymb,amsmath}\n\\pagestyle{empty}\n\\setlength{\\parindent}{0in}\n\\begin{document}\n",
+        name: deckData.name + " Cloze",
+        req: [[0, "any", [0]]],
+        sortf: 0,
+        tags: [],
+        tmpls: [
+          {
+            afmt: "{{cloze:Text}}<br>\n{{Back Extra}}",
+            bafmt: "",
+            bfont: "",
+            bsize: 0,
+            did: null,
+            name: "Card 1",
+            ord: 0,
+            qfmt: "{{cloze:Text}}",
+            rqfmt: "",
+          },
+        ],
+        type: 1,
+        usn: -1,
+        ver: 14,
+      }
+    : {
+        css: ".card {\n  font-family: Arial, sans-serif;\n  font-size: 20px;\n  text-align: center;\n  color: #000;\n  background: #fff;\n}\nhr { border: none; border-top: 2px solid #ccc; margin: 15px 0; }",
+        did: deckId,
+        flds: [
+          { media: [], name: "Front", ord: 0, size: 20, font: "Arial", rtl: false, plainText: false },
+          { media: [], name: "Back", ord: 1, size: 20, font: "Arial", rtl: false, plainText: false },
+        ],
+        id: modelId,
+        latexPost: "\\end{document}",
+        latexPre:
+          "\\documentclass[12pt]{article}\n\\special{papersize=3in,4in}\n\\usepackage{amssymb,amsmath}\n\\pagestyle{empty}\n\\setlength{\\parindent}{0in}\n\\begin{document}\n",
+        name: deckData.name + " Basic",
+        req: [[0, "any", [0]]],
+        sortf: 0,
+        tags: [],
+        tmpls: [
+          {
+            afmt: "{{FrontSide}}\n\n<hr id=answer>\n\n{{Back}}",
+            bafmt: "",
+            bfont: "",
+            bsize: 0,
+            did: null,
+            name: "Card 1",
+            ord: 0,
+            qfmt: "{{Front}}",
+            rqfmt: "",
+          },
+        ],
+        type: 0,
+        usn: -1,
+        ver: 14,
+      };
 
   const conf = {
     activeDecks: [deckId],
@@ -224,11 +304,12 @@ function populateDb(db: Database, deckData: AnkiDeckData): number {
 
   db.run(
     `INSERT INTO col (id, crt, mod, scm, ver, dty, usn, ls, conf, models, decks, dconf, tags)
-     VALUES (1, $1, $2, $3, 11, 0, -1, 0, $4, $5, $6, $7, '{}')`,
+     VALUES (1, $1, $2, $3, $4, 0, -1, 0, $5, $6, $7, $8, '{}')`,
     [
       NOW,
       NOW,
       NOW * 1000,
+      ANKI_SCHEMA_VERSION,
       JSON.stringify(conf),
       JSON.stringify(models),
       JSON.stringify(decks),
@@ -237,23 +318,41 @@ function populateDb(db: Database, deckData: AnkiDeckData): number {
   );
 
   deckData.cards.forEach((card, i) => {
-    const nid = NOW * 1000 + i;
-    const cid = nid + 1;
+    const nid = randomAnkiId();
     const guid = generateGuid();
-    const flds = card.front + "\x1f" + card.back;
-    const csum = Array.from(card.front).reduce((s, c) => s + c.charCodeAt(0), 0);
+    const sfld = sanitizeField(card.front);
+    const back = sanitizeField(card.back);
+    const flds = sfld + "\x1f" + back;
+    const csum = crc32(sfld) % 0x7fffffff;
 
     db.run(
       `INSERT INTO notes (id, guid, mid, mod, usn, tags, flds, sfld, csum, flags, data)
        VALUES ($1, $2, $3, $4, -1, '', $5, $6, $7, 0, '')`,
-      [nid, guid, modelId, NOW, flds, card.front, csum]
+      [nid, guid, modelId, NOW, flds, sfld, csum]
     );
 
-    db.run(
-      `INSERT INTO cards (id, nid, did, ord, mod, usn, type, queue, due, ivl, factor, reps, lapses, left, odue, odid, flags, data)
-       VALUES ($1, $2, $3, 0, $4, -1, 0, 0, $5, 0, 0, 0, 0, 0, 0, 0, 0, '')`,
-      [cid, nid, deckId, NOW, i + 1]
-    );
+    if (isCloze) {
+      const matches = [...card.front.matchAll(/\{\{c(\d+)::/gi)];
+      const indices = Array.from(new Set(matches.map((m) => parseInt(m[1]))));
+      const activeIndices = indices.length > 0 ? indices : [1];
+
+      activeIndices.forEach((clozeIdx) => {
+        const cid = randomAnkiId();
+        const ord = Math.max(0, clozeIdx - 1);
+        db.run(
+          `INSERT INTO cards (id, nid, did, ord, mod, usn, type, queue, due, ivl, factor, reps, lapses, left, ordue, odid, flags, data)
+           VALUES ($1, $2, $3, $4, $5, -1, 0, 0, $6, 0, 0, 0, 0, 0, 0, 0, 0, '')`,
+          [cid, nid, deckId, ord, NOW, i + 1]
+        );
+      });
+    } else {
+      const cid = randomAnkiId();
+      db.run(
+        `INSERT INTO cards (id, nid, did, ord, mod, usn, type, queue, due, ivl, factor, reps, lapses, left, odue, odid, flags, data)
+         VALUES ($1, $2, $3, 0, $4, -1, 0, 0, $5, 0, 0, 0, 0, 0, 0, 0, 0, '')`,
+        [cid, nid, deckId, NOW, i + 1]
+      );
+    }
   });
 
   return deckId;

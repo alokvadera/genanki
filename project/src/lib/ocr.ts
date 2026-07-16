@@ -1,0 +1,77 @@
+import * as pdfjsLib from "pdfjs-dist";
+import { createWorker } from "tesseract.js";
+
+interface OcrProgress {
+  status: string;
+  progress: number; // 0 to 1
+  currentPage: number;
+  totalPages: number;
+}
+
+/**
+ * Runs OCR on a PDF file page-by-page.
+ * Renders each page to a canvas and uses tesseract.js to extract text.
+ */
+export async function runOcrOnPdf(
+  file: File,
+  onProgress?: (progress: OcrProgress) => void
+): Promise<string> {
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const totalPages = pdf.numPages;
+  const textParts: string[] = [];
+
+  // Create Tesseract worker
+  const worker = await createWorker("eng");
+
+  try {
+    for (let i = 1; i <= totalPages; i++) {
+      if (onProgress) {
+        onProgress({
+          status: `Rendering page ${i}/${totalPages}...`,
+          progress: (i - 1) / totalPages,
+          currentPage: i,
+          totalPages,
+        });
+      }
+
+      // Render PDF page to canvas
+      const page = await pdf.getPage(i);
+      const viewport = page.getViewport({ scale: 2.0 }); // 2.0 scale for better OCR accuracy
+
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d");
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
+
+      if (!context) {
+        throw new Error("Could not get 2D context for canvas");
+      }
+
+      await page.render({
+        canvasContext: context,
+        viewport,
+        canvas,
+      } as any).promise;
+
+      // Run OCR on the rendered canvas
+      if (onProgress) {
+        onProgress({
+          status: `Running OCR on page ${i}/${totalPages}...`,
+          progress: (i - 0.5) / totalPages,
+          currentPage: i,
+          totalPages,
+        });
+      }
+
+      const { data } = await worker.recognize(canvas);
+      if (data && data.text) {
+        textParts.push(data.text.trim());
+      }
+    }
+  } finally {
+    await worker.terminate();
+  }
+
+  return textParts.join("\n\n");
+}

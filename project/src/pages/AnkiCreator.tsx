@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef, lazy, Suspense } from "react";
+import React, { useState, useCallback, useEffect, useRef, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Download, Layers, ArrowLeft, BarChart3, Clock3, Check } from "lucide-react";
 import { useAction, useMutation, useQuery } from "convex/react";
@@ -99,7 +99,25 @@ export default function AnkiCreator() {
   const [docPreviewDeckName, setDocPreviewDeckName] = useState("");
   const [docPreviewSummary, setDocPreviewSummary] = useState("");
   const [docPreviewWarnings, setDocPreviewWarnings] = useState<string[]>([]);
-  const [docFileName, setDocFileName] = useState("");
+  const [docFiles, setDocFiles] = useState<File[]>([]);
+  const docFileNames = docFiles.map((f) => f.name);
+
+  const clearDocState = useCallback(() => {
+    setDocPreviewCards(null);
+    setDocPreviewText("");
+    setDocPreviewSummary("");
+    setDocPreviewDeckName("");
+    setDocPreviewWarnings([]);
+    setDocInstructions("");
+    docFullTextRef.current = "";
+    setDocChapters([]);
+    setChaptersDetected(false);
+    setSelectedChapterIds(new Set());
+    setIsScanned(false);
+    setScannedFile(null);
+    setDocFiles([]);
+  }, []);
+
   const [docInstructions, setDocInstructions] = useState("");
   const [docCardCount, setDocCardCount] = useState(12);
   const [docDifficulty, setDocDifficulty] = useState<"beginner" | "intermediate" | "advanced">("intermediate");
@@ -124,6 +142,10 @@ export default function AnkiCreator() {
 
   // Provider selection state (shared by AI deck builder and document generation)
   const [preferredProvider, setPreferredProvider] = useState("auto");
+  const [cardType, setCardType] = useState<"basic" | "cloze">("basic");
+  const [ocrProgress, setOcrProgress] = useState<string | null>(null);
+  const [isScanned, setIsScanned] = useState(false);
+  const [scannedFile, setScannedFile] = useState<File | null>(null);
 
   // Real-time provider catalog subscription from Convex
   const providerCatalog = useQuery(api.providerCatalog.catalog);
@@ -145,9 +167,11 @@ export default function AnkiCreator() {
     if (catalogUpdatedAt === undefined) return; // still loading
     const isStale = catalogUpdatedAt === 0 || Date.now() - catalogUpdatedAt > STALE_MS;
     if (isStale) {
-      handleRefreshProviders();
+      React.startTransition(() => {
+        handleRefreshProviders();
+      });
     }
-  }, [catalogUpdatedAt, handleRefreshProviders]);
+  }, [catalogUpdatedAt, handleRefreshProviders, STALE_MS]);
 
   // Convex actions
   const createGenerationJob = useMutation(api.generationJobs.create);
@@ -255,36 +279,49 @@ export default function AnkiCreator() {
   }, [activeDeckId, addCards, recordAppEvent, showToast]);
 
   // --- Document processing helpers ---
-  const processDocument = useCallback(async (file: File) => {
+  const processFiles = useCallback(async (newFiles: File[]) => {
     setProcessing(true);
-    setDocFileName(file.name);
     setDocPreviewCards(null);
     setDocPreviewText("");
     setDocPreviewSummary("");
     setDocPreviewDeckName("");
     setDocPreviewWarnings([]);
-    setDocInstructions("");
-    docFullTextRef.current = "";
-    setDocChapters([]);
-    setChaptersDetected(false);
-    setSelectedChapterIds(new Set());
+
+    const updatedFiles = [...docFiles, ...newFiles];
+    setDocFiles(updatedFiles);
+
     try {
-      const doc = await extractDocument(file);
-      const text = doc.text;
-      if (!text || text.trim().length < 30) {
-        showToast("Could not extract enough text from the document");
-        setDocFileName("");
+      const parsedDocs = await Promise.all(
+        updatedFiles.map(async (file) => {
+          const doc = await extractDocument(file);
+          return { file, doc };
+        })
+      );
+
+      const scannedPdf = parsedDocs.find((d) => d.doc.isScanned);
+      if (scannedPdf) {
+        setIsScanned(true);
+        setScannedFile(scannedPdf.file);
+        setProcessing(false);
+        showToast(`Scanned PDF "${scannedPdf.file.name}" detected. Click 'Run OCR Extraction' to extract text.`);
         return;
       }
+
+      const text = parsedDocs
+        .map((pd) => `# File: ${pd.file.name}\n\n${pd.doc.text}`)
+        .join("\n\n");
+
+      if (!text.trim() || text.trim().length < 30) {
+        showToast("Could not extract enough text from the document(s)");
+        setDocFiles([]);
+        return;
+      }
+
       docFullTextRef.current = text;
       recordAppEvent("document_extracted", text.length);
       setDocPreviewText(text.slice(0, 500) + (text.length > 500 ? "..." : ""));
 
-      const detection = detectChapters({
-        text,
-        outline: doc.outline,
-        pageOffsets: doc.pageOffsets,
-      });
+      const detection = detectChapters({ text });
       if (detection.detected) {
         setDocChapters(detection.chapters);
         setChaptersDetected(true);
@@ -292,20 +329,90 @@ export default function AnkiCreator() {
         recordAppEvent("chapters_detected", detection.chapters.length);
         showToast(`Detected ${detection.chapters.length} chapters — pick which to include.`);
       } else {
-        showToast("Document ready. Add instructions, then start the run.");
+        setDocChapters([]);
+        setChaptersDetected(false);
+        setSelectedChapterIds(new Set());
+        showToast("Documents parsed successfully. Ready to generate cards.");
       }
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Failed to process document");
+      showToast(err instanceof Error ? err.message : "Failed to process document(s)");
     } finally {
       setProcessing(false);
     }
-  }, [recordAppEvent, showToast]);
+  }, [docFiles, recordAppEvent, showToast]);
+
+  const handleRemoveFile = useCallback(async (idx: number) => {
+    const updated = docFiles.filter((_, i) => i !== idx);
+    setDocFiles(updated);
+    if (updated.length === 0) {
+      clearDocState();
+      return;
+    }
+    setProcessing(true);
+    try {
+      const parsedDocs = await Promise.all(
+        updated.map(async (file) => {
+          const doc = await extractDocument(file);
+          return { file, doc };
+        })
+      );
+      const text = parsedDocs
+        .map((pd) => `# File: ${pd.file.name}\n\n${pd.doc.text}`)
+        .join("\n\n");
+
+      docFullTextRef.current = text;
+      setDocPreviewText(text.slice(0, 500) + (text.length > 500 ? "..." : ""));
+
+      const detection = detectChapters({ text });
+      if (detection.detected) {
+        setDocChapters(detection.chapters);
+        setChaptersDetected(true);
+        setSelectedChapterIds(new Set(detection.chapters.map((c) => c.id)));
+      } else {
+        setDocChapters([]);
+        setChaptersDetected(false);
+        setSelectedChapterIds(new Set());
+      }
+    } catch {
+      showToast("Error updating document list");
+    } finally {
+      setProcessing(false);
+    }
+  }, [docFiles, clearDocState, showToast]);
+
+  const runOcr = useCallback(async () => {
+    if (!scannedFile) return;
+    setProcessing(true);
+    setOcrProgress("Initializing OCR...");
+    try {
+      const { runOcrOnPdf } = await import("@/lib/ocr");
+      const text = await runOcrOnPdf(scannedFile, (p) => {
+        setOcrProgress(`OCR: Scanning page ${p.currentPage}/${p.totalPages} (${Math.round(p.progress * 100)}%)...`);
+      });
+
+      if (!text || text.trim().length < 30) {
+        showToast("Could not extract text via OCR");
+        return;
+      }
+
+      docFullTextRef.current = text;
+      setDocPreviewText(text.slice(0, 500) + (text.length > 500 ? "..." : ""));
+      setIsScanned(false);
+      setScannedFile(null);
+      showToast("OCR complete! Ready to generate cards.");
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : "OCR failed");
+    } finally {
+      setProcessing(false);
+      setOcrProgress(null);
+    }
+  }, [scannedFile, showToast]);
 
   const handleDocFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) processDocument(file);
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) processFiles(files);
     e.target.value = "";
-  }, [processDocument]);
+  }, [processFiles]);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -324,13 +431,13 @@ export default function AnkiCreator() {
     e.stopPropagation();
     dragDepth.current = 0;
     setDragActive(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file) processDocument(file);
-  }, [processDocument]);
+    const files = Array.from(e.dataTransfer.files || []);
+    if (files.length > 0) processFiles(files);
+  }, [processFiles]);
 
   const startDocumentRun = useCallback(async () => {
     const fullText = docFullTextRef.current.trim();
-    if (!fullText || !docFileName) { showToast("Upload a document before starting the run"); return; }
+    if (!fullText || docFiles.length === 0) { showToast("Upload a document before starting the run"); return; }
 
     // Scope the text to the selected chapters when chapter detection is active.
     let text = fullText;
@@ -370,6 +477,7 @@ export default function AnkiCreator() {
         text, instructions: docInstructions.trim() || undefined,
         cardCount: docCardCount, difficulty: docDifficulty, jobId,
         preferredProvider: preferredProvider === "auto" ? undefined : preferredProvider,
+        cardType,
       });
       const cards = result.cards.map((card: { front: string; back: string }) => ({
         front: card.front.trim(), back: card.back.trim(),
@@ -385,7 +493,7 @@ export default function AnkiCreator() {
     } finally {
       setProcessing(false);
     }
-  }, [createGenerationJob, docCardCount, docDifficulty, docFileName, docInstructions, docMode, preferredProvider, generateDeckFromDocument, showToast, chaptersDetected, docChapters, selectedChapterIds]);
+  }, [createGenerationJob, docCardCount, docDifficulty, docFiles, docInstructions, docMode, preferredProvider, cardType, generateDeckFromDocument, showToast, chaptersDetected, docChapters, selectedChapterIds]);
 
   const toggleChapter = useCallback((id: string) => {
     setSelectedChapterIds((prev) => {
@@ -402,38 +510,15 @@ export default function AnkiCreator() {
   const acceptDocCards = useCallback((createNewDeck: boolean) => {
     if (!docPreviewCards) return;
     if (createNewDeck) {
-      const deckName = docPreviewDeckName.trim() || docFileName.replace(/\.[^.]+$/, "") || "Document Deck";
+      const deckName = docPreviewDeckName.trim() || (docFiles[0]?.name.replace(/\.[^.]+$/, "") || "") || "Document Deck";
       createDeckWithCards(deckName, docPreviewCards);
       showToast(`Created "${deckName}" with ${docPreviewCards.length} card(s)`);
     } else {
       addCards(activeDeckId, docPreviewCards);
       showToast(`Added ${docPreviewCards.length} card(s) to deck`);
     }
-    setDocPreviewCards(null);
-    setDocPreviewText("");
-    setDocFileName("");
-    setDocPreviewSummary("");
-    setDocPreviewDeckName("");
-    setDocPreviewWarnings([]);
-    docFullTextRef.current = "";
-    setDocChapters([]);
-    setChaptersDetected(false);
-    setSelectedChapterIds(new Set());
-  }, [docPreviewCards, docPreviewDeckName, docFileName, activeDeckId, createDeckWithCards, addCards, showToast]);
-
-  const clearDocState = useCallback(() => {
-    setDocPreviewCards(null);
-    setDocPreviewText("");
-    setDocFileName("");
-    setDocPreviewSummary("");
-    setDocPreviewDeckName("");
-    setDocPreviewWarnings([]);
-    setDocInstructions("");
-    docFullTextRef.current = "";
-    setDocChapters([]);
-    setChaptersDetected(false);
-    setSelectedChapterIds(new Set());
-  }, []);
+    clearDocState();
+  }, [docPreviewCards, docPreviewDeckName, docFiles, activeDeckId, createDeckWithCards, addCards, showToast, clearDocState]);
 
   const editDocCard = useCallback((idx: number, front: string, back: string) => {
     if (!docPreviewCards) return;
@@ -465,6 +550,7 @@ export default function AnkiCreator() {
         prompt, deckName: aiDeckName.trim() || undefined,
         cardCount: aiCardCount, difficulty: aiDifficulty, jobId,
         preferredProvider: preferredProvider === "auto" ? undefined : preferredProvider,
+        cardType,
       });
       const cards = result.cards.map((card: { front: string; back: string }) => ({
         front: card.front.trim(), back: card.back.trim(),
@@ -479,7 +565,7 @@ export default function AnkiCreator() {
     } finally {
       setAiGenerating(false);
     }
-  }, [aiPrompt, aiDeckName, aiCardCount, aiDifficulty, preferredProvider, generateDeckFromPrompt, showToast, createGenerationJob]);
+  }, [aiPrompt, aiDeckName, aiCardCount, aiDifficulty, preferredProvider, cardType, generateDeckFromPrompt, showToast, createGenerationJob]);
 
   const acceptAiCards = useCallback((createNewDeck: boolean) => {
     if (!aiPreviewCards || aiPreviewCards.length === 0) { showToast("No AI cards to add"); return; }
@@ -566,7 +652,7 @@ export default function AnkiCreator() {
 
       {/* Header */}
       <header className="border-b-[3px] border-black bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+        <div className="w-full px-6 lg:px-10 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <a href="/" className="nb-border nb-shadow-sm px-3 py-1.5 bg-secondary font-bold text-sm nb-hover-shadow">
               <ArrowLeft className="w-4 h-4 inline -mt-0.5" />
@@ -574,7 +660,7 @@ export default function AnkiCreator() {
             <div>
               <h1 className="text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2">
                 <Layers className="w-6 h-6" />
-                Anki Deck Creator
+                genanki
               </h1>
               <p className="text-xs text-muted-foreground font-medium mt-0.5">
                 {decks.length} deck{decks.length !== 1 ? "s" : ""} · {deckCardCount} card{deckCardCount !== 1 ? "s" : ""}
@@ -602,7 +688,7 @@ export default function AnkiCreator() {
       </header>
 
       {/* Main Layout */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 flex flex-col lg:flex-row gap-6">
+      <div className="w-full px-6 lg:px-10 py-6 flex flex-col lg:flex-row gap-6">
         {/* Sidebar */}
         <DeckSidebar
           decks={decks}
@@ -629,8 +715,10 @@ export default function AnkiCreator() {
               docMode={docMode}
               docCardCount={docCardCount}
               docDifficulty={docDifficulty}
+              cardType={cardType}
+              onCardTypeChange={setCardType}
               docInstructions={docInstructions}
-              docFileName={docFileName}
+              docFileNames={docFileNames}
               docChapters={docChapters}
               chaptersDetected={chaptersDetected}
               selectedChapterIds={selectedChapterIds}
@@ -644,6 +732,10 @@ export default function AnkiCreator() {
               preferredProvider={preferredProvider}
               availableProviders={availableProviders}
               loadingProviders={loadingProviders || refreshingProviders}
+              isScanned={isScanned}
+              ocrProgress={ocrProgress}
+              onRunOcr={runOcr}
+              onRemoveFile={handleRemoveFile}
               onToggle={() => setShowDocUpload((v) => !v)}
               onModeChange={setDocMode}
               onDocCardCountChange={setDocCardCount}
@@ -673,6 +765,8 @@ export default function AnkiCreator() {
               aiDeckName={aiDeckName}
               aiCardCount={aiCardCount}
               aiDifficulty={aiDifficulty}
+              cardType={cardType}
+              onCardTypeChange={setCardType}
               aiPreviewCards={aiPreviewCards}
               aiPreviewDeckName={aiPreviewDeckName}
               aiPreviewSummary={aiPreviewSummary}

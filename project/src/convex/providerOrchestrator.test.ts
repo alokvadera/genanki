@@ -145,3 +145,65 @@ describe("computeAttemptCandidates", () => {
     expect(result.length).toBe(1);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Optimus Map-lookup refactoring — verify keyFor and map-based scoring
+// ---------------------------------------------------------------------------
+describe("optimus map-lookup", () => {
+  const sampleRateStates = [
+    { provider: "groq", model: "llama-3.1-8b-instant", remainingRequests: 10, remainingTokens: 50000, cooldownUntil: undefined, resetAt: undefined },
+    { provider: "cerebras", model: "gpt-oss-120b", remainingRequests: 1, remainingTokens: 1000, cooldownUntil: undefined, resetAt: Date.now() + 60000 },
+  ];
+  const samplePerfRecords = [
+    { provider: "groq", model: "llama-3.1-8b-instant", calls: 100, successes: 95, averageLatencyMs: 3000 },
+    { provider: "cerebras", model: "gpt-oss-120b", calls: 10, successes: 8, averageLatencyMs: 15000 },
+  ];
+
+  function keyFor(provider: string, model: string): string {
+    return `${provider}:${model}`;
+  }
+
+  it("builds state map and looks up by composite key", () => {
+    const stateByKey = new Map(sampleRateStates.map(s => [keyFor(s.provider, s.model), s]));
+    expect(stateByKey.size).toBe(2);
+    expect(stateByKey.get("groq:llama-3.1-8b-instant")?.remainingRequests).toBe(10);
+    expect(stateByKey.get("groq:llama-3.1-8b-instant")?.cooldownUntil).toBeUndefined();
+    expect(stateByKey.get("cerebras:gpt-oss-120b")?.remainingRequests).toBe(1);
+    expect(stateByKey.get("nonexistent:model")).toBeUndefined();
+  });
+
+  it("builds perf map and looks up by composite key", () => {
+    const perfByKey = new Map(samplePerfRecords.map(p => [keyFor(p.provider, p.model), p]));
+    expect(perfByKey.size).toBe(2);
+    expect(perfByKey.get("groq:llama-3.1-8b-instant")?.calls).toBe(100);
+    expect(perfByKey.get("groq:llama-3.1-8b-instant")?.averageLatencyMs).toBe(3000);
+    expect(perfByKey.get("cerebras:gpt-oss-120b")?.successes).toBe(8);
+  });
+
+  it("produces same lookups as .find() — state lookup", () => {
+    const stateByKey = new Map(sampleRateStates.map(s => [keyFor(s.provider, s.model), s]));
+    for (const state of sampleRateStates) {
+      const key = keyFor(state.provider, state.model);
+      const mapResult = stateByKey.get(key);
+      const findResult = sampleRateStates.find(s => s.provider === state.provider && s.model === state.model);
+      expect(mapResult).toEqual(findResult);
+    }
+  });
+
+  it("produces same lookups as .find() — perf lookup", () => {
+    const perfByKey = new Map(samplePerfRecords.map(p => [keyFor(p.provider, p.model), p]));
+    for (const perf of samplePerfRecords) {
+      const key = keyFor(perf.provider, perf.model);
+      const mapResult = perfByKey.get(key);
+      const findResult = samplePerfRecords.find(p => p.provider === perf.provider && p.model === perf.model);
+      expect(mapResult).toEqual(findResult);
+    }
+  });
+
+  it("missing key returns undefined (matches .find() returning undefined)", () => {
+    const stateByKey = new Map(sampleRateStates.map(s => [keyFor(s.provider, s.model), s]));
+    const perfByKey = new Map(samplePerfRecords.map(p => [keyFor(p.provider, p.model), p]));
+    expect(stateByKey.get("unknown:model")).toBeUndefined();
+    expect(perfByKey.get("unknown:model")).toBeUndefined();
+  });
+});

@@ -9,13 +9,12 @@ This project uses the following tech stack:
 - Shadcn UI (for UI components library)
 - Lucide Icons (for icons)
 - Convex (for backend & database)
-- Convex Auth (for authentication)
+- Convex Auth (for authentication, backend-only — frontend auth is removed)
 - Framer Motion (for animations)
-- Three js (for 3d models)
 
 All relevant files live in the 'src' directory.
 
-Use bun for the package manager.
+Use pnpm for the package manager.
 
 ## Setup
 
@@ -23,24 +22,21 @@ This project is set up already and running on a cloud environment, as well as a 
 
 ## Environment Variables
 
-The project is set up with project specific CONVEX_DEPLOYMENT and VITE_CONVEX_URL environment variables on the client side.
+Copy `.env.example` to `.env.local` and fill in the values. The frontend only needs `VITE_CONVEX_URL`. The Convex backend uses its own env vars for AI providers.
 
-The convex server has a separate set of environment variables that are accessible by the convex backend.
+### Client-side (`.env.local`):
+- `VITE_CONVEX_URL` — Convex deployment URL (required)
 
-Currently, these variables include auth-specific keys: JWKS, JWT_PRIVATE_KEY, and SITE_URL.
-
-For AI deck generation, configure one or more providers in the Convex backend environment:
-
-- `GROQ_API_KEY` primary provider
-- `CEREBRAS_API_KEY` fallback provider
-- `OPENROUTER_API_KEY` fallback provider for free OpenRouter models
-- `OPENROUTER_APP_NAME` optional, used for OpenRouter headers
-- `OPENROUTER_APP_URL` optional, used for OpenRouter headers
-- `KILO_API_KEY` optional fallback provider
-- `KILO_BASE_URL` required if you want Kilo enabled
-- `KILO_MODEL_IDS` or `KILO_MODELS` comma-separated model ids for Kilo
-
-The app records provider, model, attempt, ETA, and progress for each generation job so the frontend and backend stay in sync.
+### Convex backend environment:
+- `GROQ_API_KEY` — primary AI provider (required for generation)
+- `CEREBRAS_API_KEY` — fallback provider (optional)
+- `OPENROUTER_API_KEY` — fallback provider for free models (optional)
+- `OPENROUTER_APP_NAME` — OpenRouter header (optional)
+- `OPENROUTER_APP_URL` — OpenRouter header (optional)
+- `KILO_API_KEY` — fallback provider (optional)
+- `KILO_BASE_URL` — required if Kilo is enabled
+- `KILO_MODEL_IDS` — comma-separated model IDs for Kilo
+- `VLY_CONVEX_AUTH_ISSUER` — auth issuer URL (set to your deployment's `.convex.site` URL)
 
 ## Authentication
 
@@ -78,7 +74,7 @@ You must always create good-looking designer-level styles to your application.
 
 Use known images and emojis from online.
 
-If the user is logged in already, show the get started button to say "Dashboard" or "Profile" instead to take them there.
+(This app does not use authentication on the frontend — the landing page always shows the app entry point.)
 
 ## Responsiveness and formatting
 
@@ -86,8 +82,8 @@ Make sure pages are wrapped in a container to prevent the width stretching out o
 
 Always make sure that your designs are mobile responsive. Verify the formatting to ensure it has correct max and min widths as well as mobile responsiveness.
 
-- Always create sidebars for protected dashboard pages and navigate between pages
 - Always create navbars for landing pages
+- Always create sidebars for dashboard pages and navigate between pages
 - On these bars, the created logo should be clickable and redirect to the index page
 
 ## Animating with Framer Motion

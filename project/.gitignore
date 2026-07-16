@@ -1,0 +1,13 @@
+# Environment variable files — may contain secrets
+.env
+.env.*
+!.env.example
+
+# Dependencies & Build Output
+node_modules/
+dist/
+
+# Tooling and IDE caches
+.commandcode/
+.kilo/
+.DS_Store

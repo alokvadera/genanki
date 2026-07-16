@@ -17,6 +17,10 @@ import { buildDocumentSystemPrompt, buildSystemPrompt } from "./promptBuilder";
 import { attemptWithProviderFallback, assertWithinDeadline, type OrchestrationPatch } from "./providerOrchestrator";
 import { GenError, isGenerationCanceledError } from "./errors";
 
+// (P5) Import and re-export for backward compatibility — primary definition moved to generationTiming.ts
+import { formatSeconds } from "../lib/generationTiming";
+export { formatSeconds };
+
 const MAX_CARD_COUNT = 1000;
 const MAX_CHUNK_SIZE = 9000;
 const MAX_CHUNKS = 10;
@@ -26,15 +30,6 @@ export function clampCardCount(value: number): number {
     return 12;
   }
   return Math.min(MAX_CARD_COUNT, Math.max(1, Math.round(value)));
-}
-
-export function formatSeconds(seconds: number): string {
-  if (!Number.isFinite(seconds)) return "0s";
-  const safe = Math.max(0, Math.round(seconds));
-  const minutes = Math.floor(safe / 60);
-  const remaining = safe % 60;
-  if (minutes <= 0) return `${remaining}s`;
-  return `${minutes}m ${String(remaining).padStart(2, "0")}s`;
 }
 
 export function chunkText(text: string, maxChunks = MAX_CHUNKS): string[] {
@@ -171,6 +166,7 @@ export const generateDeckFromDocument = action({
     instructions: v.optional(v.string()),
     jobId: v.optional(v.id("generationJobs")),
     preferredProvider: v.optional(v.string()),
+    cardType: v.optional(v.union(v.literal("basic"), v.literal("cloze"))),
   },
   handler: async (ctx: ActionCtx, args) => {
     const text = args.text.trim();
@@ -189,9 +185,15 @@ export const generateDeckFromDocument = action({
     }
 
     const adaptiveSettings = await ctx.runQuery(api.rateLimits.adaptiveSettings, {});
-    const maxChunks = adaptiveSettings?.documentMaxChunks ?? MAX_CHUNKS;
     const completionPasses = adaptiveSettings?.completionPasses ?? 3;
-    const chunks = chunkText(text, maxChunks);
+    // Compute natural section count first, then cap: never drop sections below
+    // the natural count (fixes advisor silent section dropping — P3)
+    const naturalChunks = chunkText(text);
+    const maxChunks = Math.min(
+      adaptiveSettings?.documentMaxChunks ?? MAX_CHUNKS,
+      naturalChunks.length
+    );
+    const chunks = naturalChunks.length > maxChunks ? chunkText(text, maxChunks) : naturalChunks;
     const totalSections = chunks.length;
     const timeoutSeconds = estimateDocumentTimeoutSeconds(requestedCount, totalSections);
     const deadlineAt = Date.now() + timeoutSeconds * 1000;
@@ -214,6 +216,7 @@ export const generateDeckFromDocument = action({
 
     const allCards: Array<{ front: string; back: string }> = [];
     let parsedCardCount = 0;
+    let totalTokensUsed = 0;
     let resultDeckName = deckName;
     let resultSummary = "";
     const seen = new Set<string>();
@@ -225,7 +228,7 @@ export const generateDeckFromDocument = action({
     for (let i = 0; i < chunks.length; i++) {
       const remainingTarget = Math.max(1, requestedCount - allCards.length);
       const cardsForSection = Math.max(1, Math.ceil(remainingTarget / (chunks.length - i)));
-      const systemPrompt = buildDocumentSystemPrompt(cardsForSection, difficulty, deckName, instructions);
+      const systemPrompt = buildDocumentSystemPrompt(cardsForSection, difficulty, deckName, instructions, args.cardType);
       const userContent = [
         `Document content (section ${i + 1} of ${chunks.length}):`,
         chunks[i],
@@ -248,6 +251,9 @@ export const generateDeckFromDocument = action({
           parsedCardCount += parsed.cards.length;
           if (!resultDeckName) resultDeckName = parsed.deckName;
           if (!resultSummary) resultSummary = parsed.summary;
+
+          // Accumulate tokens used for telemetry (P5)
+          if (usage?.totalTokens) totalTokensUsed += usage.totalTokens;
 
           for (const card of parsed.cards) {
             const key = `${normalizeCardText(card.front)}::${normalizeCardText(card.back)}`;
@@ -293,7 +299,7 @@ export const generateDeckFromDocument = action({
       const missing = requestedCount - allCards.length;
       const source = chunks[pass % chunks.length];
       const completionSystemPrompt = [
-        buildDocumentSystemPrompt(missing, difficulty, deckName, instructions),
+        buildDocumentSystemPrompt(missing, difficulty, deckName, instructions, args.cardType),
         "This is a completion pass.",
         "Return only new cards that do not duplicate the existing cards.",
       ].join(" ");
@@ -315,6 +321,8 @@ export const generateDeckFromDocument = action({
         parser: parseAiDeckGeneration,
         onSuccess: async (parsed, candidate, content, usage) => {
           parsedCardCount += parsed.cards.length;
+          // Accumulate tokens for telemetry (P5)
+          if (usage?.totalTokens) totalTokensUsed += usage.totalTokens;
           for (const card of parsed.cards) {
             const key = `${normalizeCardText(card.front)}::${normalizeCardText(card.back)}`;
             if (!seen.has(key) && allCards.length < requestedCount) {
@@ -386,9 +394,10 @@ export const generateDeckFromDocument = action({
       generatedCount: allCards.slice(0, requestedCount).length,
       duplicateCount: Math.max(0, parsedCardCount - allCards.length),
       sourceChars: text.length,
+      tokensUsed: totalTokensUsed, // (P5) accumulate real token usage
       metric: allCards.length / requestedCount,
     });
-    await ctx.scheduler.runAfter(0, api.providerAdvisor.maybeRun, {});
+    // P1: Advisor moved to 6-hour cron — removed per-generation trigger
 
     return {
       deckName: resultDeckName || deckName || "Document Deck",
@@ -410,6 +419,7 @@ export const generateDeckFromPrompt = action({
     ),
     jobId: v.optional(v.id("generationJobs")),
     preferredProvider: v.optional(v.string()),
+    cardType: v.optional(v.union(v.literal("basic"), v.literal("cloze"))),
   },
   handler: async (ctx: ActionCtx, args) => {
     const prompt = args.prompt.trim();
@@ -445,7 +455,7 @@ export const generateDeckFromPrompt = action({
       totalSections: 1,
     });
 
-    const systemPrompt = buildSystemPrompt(requestedCount, difficulty, deckName);
+    const systemPrompt = buildSystemPrompt(requestedCount, difficulty, deckName, args.cardType);
     const userContent = [
       `Topic or source text: ${prompt}`,
       `Preferred deck name: ${deckName || "auto-generate"}`,
@@ -453,12 +463,13 @@ export const generateDeckFromPrompt = action({
       `Difficulty: ${difficulty}`,
     ].join("\n");
 
-    const maxTokens = Math.min(12000, requestedCount * 90 + 300);
+    const maxTokens = Math.min(2000, requestedCount * 90 + 300);
     
     let resultCards: any[] = [];
     let resultDeckName = deckName;
     let resultSummary = "";
     let parsedCardCount = 0;
+    let promptTokensUsed = 0; // (P5) capture tokens from onSuccess
 
     const res = await attemptWithProviderFallback({
       candidates,
@@ -473,6 +484,7 @@ export const generateDeckFromPrompt = action({
         resultDeckName = parsed.deckName;
         resultSummary = parsed.summary;
         parsedCardCount = parsed.cards.length;
+        if (usage?.totalTokens) promptTokensUsed = usage.totalTokens; // (P5)
 
         await updateJob(ctx, args.jobId, {
           status: "succeeded",
@@ -542,9 +554,10 @@ export const generateDeckFromPrompt = action({
       kind: "prompt",
       requestedCount,
       generatedCount: Math.min(requestedCount, parsedCardCount),
+      tokensUsed: promptTokensUsed, // (P5)
       metric: Math.min(requestedCount, parsedCardCount) / requestedCount,
     });
-    await ctx.scheduler.runAfter(0, api.providerAdvisor.maybeRun, {});
+    // P1: Advisor moved to 6-hour cron — removed per-generation trigger
     return {
       deckName: resultDeckName,
       summary: resultSummary,

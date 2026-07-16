@@ -26,12 +26,22 @@ export const emailOtp = Email({
         },
         {
           headers: {
-            "x-api-key": "vlytothemoon2025",
+            "x-api-key": process.env.VLY_EMAIL_API_KEY ?? "",
           },
         },
       );
     } catch (error) {
-      throw new Error(JSON.stringify(error));
+      // Log diagnostics server-side only — never leak upstream details to the client
+      if (error && typeof error === "object" && "isAxiosError" in error) {
+        const axiosErr = error as { response?: { status?: number }; message?: string };
+        console.error("otp send failed", {
+          status: axiosErr.response?.status,
+          message: axiosErr.message,
+        });
+      } else {
+        console.error("otp send failed", error);
+      }
+      throw new Error("Could not send the verification code. Please try again or contact support.");
     }
   },
 });

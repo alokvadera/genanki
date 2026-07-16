@@ -1,5 +1,5 @@
 import { cronJobs } from "convex/server";
-import { internal } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import { internalMutation } from "./_generated/server";
 
 export const cleanupTelemetry = internalMutation({
@@ -77,6 +77,14 @@ crons.interval(
   "optimus health check",
   { minutes: 5 },
   internal.optimus.runHealthCheck,
+);
+
+// P1: Advisor runs every 6 hours instead of per-generation to avoid extra LLM
+// calls and silent adaptiveSettings overwrites.
+crons.interval(
+  "provider advisor",
+  { hours: 6 },
+  api.providerAdvisor.maybeRun,
 );
 
 export default crons;
