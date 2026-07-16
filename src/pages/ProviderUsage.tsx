@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { BarChart3, ArrowLeft, Cpu, Layers, Zap } from "lucide-react";
 import { useQuery } from "convex/react";
@@ -6,6 +6,8 @@ import { Link } from "react-router";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
+import { OptimusDashboard } from "@/components/OptimusDashboard";
+import { PROVIDERS, getKeyFromLabel } from "@/lib/providerConfig";
 
 function formatTokens(value: number): string {
   return new Intl.NumberFormat("en-US").format(Math.max(0, Math.round(value)));
@@ -18,11 +20,19 @@ function formatTime(value: number): string {
 export default function ProviderUsage() {
   const summary = useQuery(api.providerUsage.summary, { daysBack: 30 });
   const recent = useQuery(api.providerUsage.recent, { limit: 20 }) ?? [];
+  const providerStates = useQuery(api.rateLimits.providerStates, {}) ?? [];
+  const adaptiveSettings = useQuery(api.rateLimits.adaptiveSettings, {});
+  const latestInsight = useQuery(api.rateLimits.latestInsight, {});
+  const cloudflareBudget = useQuery(api.rateLimits.cloudflareBudget, {});
+  const [now, setNow] = useState(() => Date.now());
 
-  const providerOrder = useMemo(
-    () => ["Groq", "Cerebras", "Kilo", "OpenRouter"],
-    []
-  );
+  useEffect(() => {
+    if (providerStates.length === 0) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [providerStates.length]);
+
+  const providerOrder = PROVIDERS.map((p) => p.label);
 
   const providerStats = summary?.providers ?? [];
   const modelStats = summary?.models ?? [];
@@ -47,18 +57,20 @@ export default function ProviderUsage() {
                 Provider Usage
               </h1>
               <p className="text-xs text-muted-foreground font-medium mt-0.5">
-                Groq is the primary provider. Cerebras, Kilo, and OpenRouter only step in when needed.
+                Groq is the primary provider. Cerebras, Kilo, OpenRouter, and Cloudflare Workers AI only step in when needed.
               </p>
             </div>
           </div>
           <div className="hidden sm:flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
             <span className="nb-border bg-secondary px-2 py-1">Primary: Groq</span>
-            <span className="nb-border bg-white px-2 py-1">Fallbacks: Cerebras, Kilo, OpenRouter</span>
+            <span className="nb-border bg-white px-2 py-1">Fallbacks: Cerebras, Kilo, OpenRouter, Cloudflare</span>
           </div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        <OptimusDashboard />
+        
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {[
             { label: "Total tokens", value: formatTokens(totalTokens), icon: Cpu },
@@ -106,13 +118,14 @@ export default function ProviderUsage() {
 
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {providerOrder.map((providerName) => {
+              const providerKey = getKeyFromLabel(providerName);
               const stat = providerStats.find(
-                (item) => item.providerLabel.toLowerCase() === providerName.toLowerCase()
+                (item) => item.provider === providerKey
               );
               return (
                 <div key={providerName} className="nb-border-2 bg-muted/20 p-4">
                   <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-                    {providerName === "Groq" ? "Primary" : "Fallback"}
+                    {providerKey === "groq" ? "Primary" : "Fallback"}
                   </p>
                   <h3 className="text-base font-bold tracking-tight mt-1">{providerName}</h3>
                   <p className="text-sm text-muted-foreground font-medium mt-1">
@@ -124,6 +137,71 @@ export default function ProviderUsage() {
                     <p>Prompt: {formatTokens(stat?.promptTokens ?? 0)}</p>
                     <p>Completion: {formatTokens(stat?.completionTokens ?? 0)}</p>
                   </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="nb-border bg-white nb-shadow-sm p-5">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between mb-4">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-1">
+                Live Capacity
+              </p>
+              <h2 className="text-lg font-bold tracking-tight">Provider budget and cooldown state</h2>
+            </div>
+            <p className="text-xs text-muted-foreground font-medium">
+              Reservations prevent concurrent runs from exhausting the same provider.
+            </p>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {providerOrder.map((providerName) => {
+              const providerKey = getKeyFromLabel(providerName) ?? providerName.toLowerCase();
+              const rows = providerStates.filter(
+                (row) => row.provider === providerKey,
+              );
+              const cooling = rows.some((row) => row.cooldownUntil > now);
+              const latest = rows[0];
+              return (
+                <div key={providerName} className="nb-border-2 bg-muted/20 p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="text-sm font-bold tracking-tight">{providerName}</h3>
+                    <span className={`text-[10px] font-bold uppercase tracking-[0.15em] px-2 py-1 ${cooling ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}`}>
+                      {cooling ? "Cooling" : "Ready"}
+                    </span>
+                  </div>
+                  {latest ? (
+                    <>
+                      <p className="text-xs text-muted-foreground font-medium mt-2 truncate">{latest.model}</p>
+                      <div className="mt-3 grid grid-cols-2 gap-2 text-xs font-medium text-muted-foreground">
+                        <p>Requests left {latest.remainingRequests ?? "tracked"}</p>
+                        <p>Tokens left {latest.remainingTokens ?? "tracked"}</p>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground font-medium mt-2">
+                        Last status: {latest.lastStatus ?? "not called"}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-xs text-muted-foreground font-medium mt-2">No calls tracked yet.</p>
+                  )}
+                  {providerKey === "cloudflare" && (
+                    <div className="mt-4 pt-4 border-t border-border">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-1">
+                        Daily Free Tier
+                      </p>
+                      <p className="text-xs font-medium text-muted-foreground">
+                        {cloudflareBudget ? formatTokens(cloudflareBudget.neuronsUsed) : 0} / 10,000 Neurons
+                      </p>
+                      <div className="mt-2 h-1.5 w-full bg-white overflow-hidden nb-border">
+                        <motion.div
+                          className={`h-full ${cloudflareBudget && cloudflareBudget.neuronsUsed >= 10000 ? 'bg-amber-500' : 'bg-primary'}`}
+                          initial={false}
+                          animate={{ width: `${Math.min(100, Math.max(0, ((cloudflareBudget?.neuronsUsed ?? 0) / 10000) * 100))}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
