@@ -6,7 +6,12 @@ const OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models";
 const GROQ_MODELS_URL = "https://api.groq.com/openai/v1/models";
 const CEREBRAS_MODELS_URL = "https://api.cerebras.ai/v1/models";
 
-export type ProviderName = "groq" | "cerebras" | "openrouter" | "kilo";
+/** Maximum response body we'll read from any outbound LLM API call.
+ *  A well-formed chat-completion response is typically <100 KB. This cap
+ *  prevents resource-exhaustion / cost DoS from unexpectedly large bodies. */
+const MAX_RESPONSE_BYTES = 2_000_000;
+
+export type ProviderName = "groq" | "cerebras" | "openrouter" | "kilo" | "cloudflare";
 
 export type AiModelCandidate = {
   provider: ProviderName;
@@ -53,6 +58,25 @@ type ChatCompletionResponse = {
   };
 };
 
+export type RateLimitSnapshot = {
+  remainingRequests?: number;
+  remainingTokens?: number;
+  resetSeconds?: number;
+};
+
+export class ProviderRequestError extends Error {
+  status: number;
+  retryAfterSeconds?: number;
+  rateLimit: RateLimitSnapshot;
+
+  constructor(providerLabel: string, status: number, message: string, rateLimit: RateLimitSnapshot = {}) {
+    super(`${providerLabel} request failed (${status}): ${message}`);
+    this.name = "ProviderRequestError";
+    this.status = status;
+    this.rateLimit = rateLimit;
+  }
+}
+
 let cachedCatalog: { fetchedAt: number; catalogs: ProviderCatalog[] } | null = null;
 let cachedOpenRouterFree: { fetchedAt: number; models: AiModelCandidate[] } | null = null;
 let cachedGroq: { fetchedAt: number; models: AiModelCandidate[] } | null = null;
@@ -98,13 +122,68 @@ async function fetchJson<T>(url: string, init: RequestInit = {}, timeoutMs = REQ
   try {
     const response = await fetch(url, { ...init, signal: controller.signal });
     if (!response.ok) {
-      const text = await response.text();
+      const text = await readBoundedResponse(response);
       throw new Error(`Request failed (${response.status}): ${text}`);
     }
-    return (await response.json()) as T;
+    const bodyText = await readBoundedResponse(response);
+    return JSON.parse(bodyText) as T;
   } finally {
     clearTimeout(timeout);
   }
+}
+
+/**
+ * Read the full response body as text, enforcing a byte-size cap to prevent
+ * resource-exhaustion / cost DoS from unexpectedly large provider responses.
+ */
+async function readBoundedResponse(response: Response): Promise<string> {
+  const contentLength = Number(response.headers.get("content-length"));
+  let remaining = MAX_RESPONSE_BYTES;
+  const decoder = new TextDecoder();
+  const chunks: string[] = [];
+
+  const reader = response.body?.getReader();
+  if (!reader) {
+    if (Number.isFinite(contentLength) && contentLength > MAX_RESPONSE_BYTES) {
+      throw new ProviderRequestError("Provider", 502, `Response too large: ${contentLength} bytes exceeds limit of ${MAX_RESPONSE_BYTES}`);
+    }
+    return await response.text();
+  }
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (value) {
+      remaining -= value.length;
+      if (remaining < 0) {
+        reader.cancel();
+        throw new ProviderRequestError("Provider", 502, `Response body exceeded ${MAX_RESPONSE_BYTES} byte limit`);
+      }
+      chunks.push(decoder.decode(value, { stream: true }));
+    }
+  }
+
+  return chunks.join("") + decoder.decode();
+}
+
+function parseHeaderNumber(response: Response, name: string): number | undefined {
+  const value = Number(response.headers.get(name));
+  return Number.isFinite(value) ? Math.max(0, value) : undefined;
+}
+
+function readRateLimitSnapshot(response: Response, provider: ProviderName): RateLimitSnapshot {
+  if (provider === "cerebras") {
+    return {
+      remainingRequests: parseHeaderNumber(response, "x-ratelimit-remaining-requests-day"),
+      remainingTokens: parseHeaderNumber(response, "x-ratelimit-remaining-tokens-minute"),
+      resetSeconds: parseHeaderNumber(response, "x-ratelimit-reset-tokens-minute"),
+    };
+  }
+  return {
+    remainingRequests: parseHeaderNumber(response, "x-ratelimit-remaining-requests"),
+    remainingTokens: parseHeaderNumber(response, "x-ratelimit-remaining-tokens"),
+    resetSeconds: parseHeaderNumber(response, "x-ratelimit-reset-tokens"),
+  };
 }
 
 function supportsJsonModeFromParameters(params?: string[]): boolean {
@@ -196,7 +275,8 @@ async function loadOpenRouterFreeModels(): Promise<AiModelCandidate[]> {
     const ordered = [router, ...shuffleInPlace(models.filter((m) => m.modelId !== router.modelId))];
     cachedOpenRouterFree = { fetchedAt: Date.now(), models: ordered };
     return ordered;
-  } catch {
+  } catch (err) {
+    console.error("[AiProviders] Failed to load OpenRouter free models:", err);
     const fallback: AiModelCandidate[] = [
       {
         provider: "openrouter",
@@ -249,7 +329,8 @@ async function loadGroqModels(): Promise<AiModelCandidate[]> {
       .sort((a, b) => (GROQ_MODEL_PRIORITY.get(a.modelId) ?? 99) - (GROQ_MODEL_PRIORITY.get(b.modelId) ?? 99));
     cachedGroq = { fetchedAt: Date.now(), models };
     return models;
-  } catch {
+  } catch (err) {
+    console.error("[AiProviders] Failed to load Groq models:", err);
     const fallback: AiModelCandidate[] = [
       "llama-3.1-8b-instant",
       "llama-3.3-70b-versatile",
@@ -296,8 +377,8 @@ async function loadCerebrasModels(): Promise<AiModelCandidate[]> {
       cachedCerebras = { fetchedAt: Date.now(), models };
       return models;
     }
-  } catch {
-    // fall back to the documented model below
+  } catch (err) {
+    console.error("[AiProviders] Failed to load Cerebras models (falling back to default):", err);
   }
 
   const fallback: AiModelCandidate[] = [
@@ -341,6 +422,48 @@ async function loadKiloModels(): Promise<AiModelCandidate[]> {
   }));
 }
 
+/**
+ * Cloudflare Workers AI — serverless open-source model inference with an
+ * ongoing free daily allocation (10,000 Neurons/day). OpenAI-compatible
+ * endpoint, so it plugs into `callChatCompletion` unchanged.
+ *
+ * Requires: CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN.
+ * Optional:  CLOUDFLARE_MODEL_IDS (comma-separated, cheapest-first).
+ */
+const CLOUDFLARE_DEFAULT_MODELS = [
+  "@cf/meta/llama-3.2-3b-instruct",
+  "@cf/qwen/qwen3-30b-a3b-fp8",
+  "@cf/meta/llama-3.1-8b-instruct-fp8-fast",
+];
+
+async function loadCloudflareModels(): Promise<AiModelCandidate[]> {
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+  const apiToken = process.env.CLOUDFLARE_API_TOKEN;
+  if (!accountId || !apiToken) {
+    return [];
+  }
+
+  const modelIds = (process.env.CLOUDFLARE_MODEL_IDS || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const models = modelIds.length > 0 ? modelIds : CLOUDFLARE_DEFAULT_MODELS;
+
+  const baseUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/v1`;
+  const headers = createHeaders(apiToken);
+
+  return models.map((modelId) => ({
+    provider: "cloudflare" as const,
+    providerLabel: "Cloudflare Workers AI",
+    providerIndex: 4,
+    modelId,
+    modelName: modelId,
+    supportsJsonMode: true,
+    baseUrl,
+    headers,
+  }));
+}
+
 export async function buildModelCandidates(): Promise<AiModelCandidate[]> {
   const cached = cachedCatalog;
   if (cached && Date.now() - cached.fetchedAt < MODEL_CACHE_TTL_MS) {
@@ -349,7 +472,16 @@ export async function buildModelCandidates(): Promise<AiModelCandidate[]> {
 
   const catalogs: ProviderCatalog[] = [];
 
-  const groqModels = await loadGroqModels();
+  // Fetch every provider's catalog in parallel — they are independent.
+  const [groqModels, cerebrasModels, kiloModels, openRouterModels, cloudflareModels] =
+    await Promise.all([
+      loadGroqModels(),
+      loadCerebrasModels(),
+      loadKiloModels(),
+      loadOpenRouterFreeModels(),
+      loadCloudflareModels(),
+    ]);
+
   if (groqModels.length > 0) {
     catalogs.push({
       provider: "groq",
@@ -361,7 +493,6 @@ export async function buildModelCandidates(): Promise<AiModelCandidate[]> {
     });
   }
 
-  const cerebrasModels = await loadCerebrasModels();
   if (cerebrasModels.length > 0) {
     catalogs.push({
       provider: "cerebras",
@@ -373,7 +504,6 @@ export async function buildModelCandidates(): Promise<AiModelCandidate[]> {
     });
   }
 
-  const kiloModels = await loadKiloModels();
   if (kiloModels.length > 0) {
     catalogs.push({
       provider: "kilo",
@@ -385,7 +515,6 @@ export async function buildModelCandidates(): Promise<AiModelCandidate[]> {
     });
   }
 
-  const openRouterModels = await loadOpenRouterFreeModels();
   if (openRouterModels.length > 0) {
     catalogs.push({
       provider: "openrouter",
@@ -394,6 +523,17 @@ export async function buildModelCandidates(): Promise<AiModelCandidate[]> {
       baseUrl: "https://openrouter.ai/api/v1",
       headers: openRouterModels[0].headers,
       models: openRouterModels,
+    });
+  }
+
+  if (cloudflareModels.length > 0) {
+    catalogs.push({
+      provider: "cloudflare",
+      label: "Cloudflare Workers AI",
+      providerIndex: 4,
+      baseUrl: cloudflareModels[0].baseUrl,
+      headers: cloudflareModels[0].headers,
+      models: cloudflareModels,
     });
   }
 
@@ -417,6 +557,7 @@ export type ChatUsage = {
 export type ChatCallResult = {
   content: string;
   usage: ChatUsage | null;
+  rateLimit: RateLimitSnapshot;
 };
 
 function normalizeUsage(usage?: ChatCompletionResponse["usage"]): ChatUsage | null {
@@ -464,12 +605,18 @@ export async function callChatCompletion({
     signal: AbortSignal.timeout(timeoutMs),
   });
 
+  const rateLimit = readRateLimitSnapshot(response, candidate.provider);
+
   if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`${candidate.providerLabel} request failed (${response.status}): ${text}`);
+    const text = await readBoundedResponse(response);
+    const retryAfter = Number(response.headers.get("retry-after"));
+    const error = new ProviderRequestError(candidate.providerLabel, response.status, text, rateLimit);
+    if (Number.isFinite(retryAfter) && retryAfter > 0) error.retryAfterSeconds = retryAfter;
+    throw error;
   }
 
-  const data = (await response.json()) as ChatCompletionResponse;
+  const bodyText = await readBoundedResponse(response);
+  const data = JSON.parse(bodyText) as ChatCompletionResponse;
   const content = data.choices?.[0]?.message?.content?.trim();
   if (!content) {
     throw new Error(`${candidate.providerLabel} returned an empty response`);
@@ -478,5 +625,6 @@ export async function callChatCompletion({
   return {
     content,
     usage: normalizeUsage(data.usage),
+    rateLimit,
   };
 }
