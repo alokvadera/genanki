@@ -5,7 +5,6 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "prebuild": "convex codegen",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "format": "prettier --write .",
