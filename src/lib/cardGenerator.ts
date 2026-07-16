@@ -1,5 +1,17 @@
 import type { AnkiCard } from "./anki";
 
+// (P2) Cap backs to keep cards usable — match AI schema intent
+const MAX_BACK = 240;
+const MAX_FRONT = 300;
+
+function clampBack(s: string): string {
+  return s.length > MAX_BACK ? s.slice(0, MAX_BACK).trim() + "…" : s.trim();
+}
+
+function clampFront(s: string): string {
+  return s.length > MAX_FRONT ? s.slice(0, MAX_FRONT).trim() + "…" : s.trim();
+}
+
 /**
  * Splits text into meaningful chunks for card generation.
  */
@@ -78,19 +90,19 @@ function extractListCards(text: string): AnkiCard[] {
     const item = match[1]?.trim();
     const desc = match[2]?.trim();
     if (item && desc && item.length > 3 && desc.length > 5) {
-      cards.push({ front: item, back: desc });
+      cards.push({ front: clampFront(item), back: clampBack(desc) });
     }
   }
 
   // Match bullet points: "- Item: description" or "• Item - description"
   const bulletPattern =
-    /(?:^|\n)\s*[•\-\*]\s*(.+?)(?:\s*[-–—:]\s*(.+?))?(?=\n\s*[•\-\*]|\n\n|$)/gs;
+    /(?:^|\n)\s*[•\-*]\s*(.+?)(?:\s*[-–—:]\s*(.+?))?(?=\n\s*[•\-*]|\n\n|$)/gs;
 
   while ((match = bulletPattern.exec(text)) !== null) {
     const item = match[1]?.trim();
     const desc = match[2]?.trim();
     if (item && desc && item.length > 3 && desc.length > 5) {
-      cards.push({ front: item, back: desc });
+      cards.push({ front: clampFront(item), back: clampBack(desc) });
     }
   }
 
@@ -123,9 +135,13 @@ function extractQACards(text: string): AnkiCard[] {
  */
 function extractHeadingCards(text: string): AnkiCard[] {
   const cards: AnkiCard[] = [];
-  // Match markdown-style headings or ALL CAPS lines followed by content
+  // Match markdown-style headings or ALL CAPS lines (standalone, not sentence)
+  // P6: ALL-CAPS must be a standalone line — \n after all-caps required;
+  // max length reduced from 60 to 40 to avoid matching long prose runs.
+  // The shared \n between heading and content stays OUTSIDE the alternatives
+  // so markdown headings (# ...) continue to work correctly.
   const headingPattern =
-    /(?:^|\n)(?:#{1,3}\s*(.+)|([A-Z][A-Z\s]{5,60}))\n([^\n#]{10,300})/g;
+    /(?:^|\n)(?:#{1,3}\s*(.+)|([A-Z][A-Z\s]{5,40}))\n([^\n#]{10,300})/g;
 
   let match;
   while ((match = headingPattern.exec(text)) !== null) {
@@ -133,8 +149,8 @@ function extractHeadingCards(text: string): AnkiCard[] {
     const content = match[3]?.trim();
     if (heading && content && heading.length > 3 && content.length > 10) {
       cards.push({
-        front: heading,
-        back: content,
+        front: clampFront(heading),
+        back: clampBack(content),
       });
     }
   }
@@ -143,50 +159,83 @@ function extractHeadingCards(text: string): AnkiCard[] {
 }
 
 /**
- * Generate flashcards from text content using multiple extraction strategies.
- * Returns deduplicated cards.
+ * Build a meaningful question from a declarative statement.
+ * Instead of appending "?" to a statement, generates a question like
+ * "What is X?" or "Explain the concept described: <statement>".
+ * Returns null if no good question can be formed.
  */
-export function generateCardsFromText(text: string): AnkiCard[] {
+function buildQuestionFromStatement(statement: string): string | null {
+  const clean = statement.replace(/\s+/g, " ").trim();
+
+  // If the statement is short (like a term), ask "What is X?"
+  if (clean.length <= 60 && !clean.includes(",")) {
+    return `What is ${clean.replace(/[.!?]$/, "")}?`;
+  }
+
+  // For longer statements, use an "Explain" prefix with the key idea
+  // Extract the subject (roughly the first noun phrase)
+  const subjectMatch = clean.match(/^([A-Z][^.,]{3,50})/);
+  if (subjectMatch) {
+    const subject = subjectMatch[1].trim();
+    return `Explain: ${subject}`;
+  }
+
+  return null;
+}
+
+/**
+ * Generate flashcards from text content using multiple extraction strategies.
+ * Returns deduplicated cards, trimmed to maxCards (default 30).
+ * Caps input size to avoid blocking the main thread on huge documents.
+ */
+export function generateCardsFromText(text: string, maxCards = 30): AnkiCard[] {
   if (!text || text.trim().length < 30) {
     return [];
   }
 
+  // Guard against huge inputs — cap at 50k chars to avoid blocking
+  const cappedText = text.length > 50_000 ? text.slice(0, 50_000) : text;
+
   const allCards: AnkiCard[] = [];
 
   // Strategy 1: Definition patterns
-  allCards.push(...extractDefinitionCards(text));
+  allCards.push(...extractDefinitionCards(cappedText));
 
   // Strategy 2: Q&A patterns
-  allCards.push(...extractQACards(text));
+  allCards.push(...extractQACards(cappedText));
 
   // Strategy 3: Heading-based cards
-  allCards.push(...extractHeadingCards(text));
+  allCards.push(...extractHeadingCards(cappedText));
 
   // Strategy 4: List-based cards
-  allCards.push(...extractListCards(text));
+  allCards.push(...extractListCards(cappedText));
 
   // Strategy 5: Chunk-based cards (paragraph → question)
-  const chunks = splitIntoChunks(text);
+  // Only generate these if we don't already have enough structured cards
+  const chunks = splitIntoChunks(cappedText);
   for (const chunk of chunks) {
-    // Generate a question from the first sentence
+    // Generate a meaningful question from the first sentence
     const firstSentence = chunk.match(/^[^.!?]+[.!?]/)?.[0]?.trim();
     if (firstSentence && firstSentence.length > 15 && firstSentence.length < 200) {
-      // Convert statement to question
-      let question = firstSentence
-        .replace(/\.$/, "?")
-        .replace(/^(What is|What are)/, "Define");
+      // Don't create nonsense questions by appending "?" to statements.
+      // Generate a meaningful question prefix based on the content.
+      const statement = firstSentence.replace(/[.!?]$/, "").trim();
 
-      // If it doesn't start with a question word, wrap it
-      if (!/^(What|How|Why|When|Where|Who|Which|Is|Are|Can|Do|Does)/i.test(question)) {
-        question = `Explain: ${firstSentence.replace(/\.$/, "")}`;
+      // Skip if it's already a question
+      if (/^(What|How|Why|When|Where|Who|Which|Is|Are|Can|Do|Does|Define|Explain|Describe|List|Name)\b/i.test(statement)) {
+        continue;
       }
+
+      // Build a question by asking about the key concept in the sentence
+      const question = buildQuestionFromStatement(statement);
+      if (!question) continue;
 
       // Use remaining text as answer
       const remaining = chunk.slice(firstSentence.length).trim();
       const answer = remaining || chunk;
 
       if (!allCards.some((c) => c.front === question)) {
-        allCards.push({ front: question, back: answer });
+        allCards.push({ front: clampFront(question), back: clampBack(answer) });
       }
     }
   }
@@ -202,5 +251,5 @@ export function generateCardsFromText(text: string): AnkiCard[] {
     }
   }
 
-  return unique;
+  return unique.slice(0, Math.max(1, maxCards));
 }

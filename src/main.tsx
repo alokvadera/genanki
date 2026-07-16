@@ -1,14 +1,18 @@
 import { Toaster } from "@/components/ui/sonner";
-import { VlyToolbar } from "../vly-toolbar-readonly.tsx";
 import { ConvexProvider, ConvexReactClient } from "convex/react";
 import React, { StrictMode, useEffect, lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router";
 import "./index.css";
+import "katex/dist/katex.min.css";
 
 // Lazy load route components for better code splitting
 const Landing = lazy(() => import("./pages/Landing.tsx"));
+
+// Lazy-load the dev toolbar — only imported when running on a *.vly.sh preview
+const VlyToolbar = lazy(() => import("../vly-toolbar-readonly.tsx"));
 const AnkiCreator = lazy(() => import("./pages/AnkiCreator.tsx"));
+const History = lazy(() => import("./pages/History.tsx"));
 const ProviderUsage = lazy(() => import("./pages/ProviderUsage.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 
@@ -109,9 +113,13 @@ function RouteSyncer() {
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <RootErrorBoundary>
-      <ToolbarErrorBoundary>
-        <VlyToolbar />
-      </ToolbarErrorBoundary>
+      {import.meta.env.DEV && window.location.hostname.endsWith(".vly.sh") && (
+        <Suspense fallback={null}>
+          <ToolbarErrorBoundary>
+            <VlyToolbar />
+          </ToolbarErrorBoundary>
+        </Suspense>
+      )}
       <ConvexProvider client={convex}>
         <BrowserRouter>
           <RouteSyncer />
@@ -119,6 +127,10 @@ createRoot(document.getElementById("root")!).render(
             <Routes>
               <Route path="/" element={<Landing />} />
               <Route path="/app" element={<AnkiCreator />} />
+              <Route path="/runs" element={<History />} />
+              <Route path="/runs/:jobId" element={<History />} />
+              <Route path="/history" element={<History />} />
+              <Route path="/history/:jobId" element={<History />} />
               <Route path="/usage" element={<ProviderUsage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

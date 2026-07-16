@@ -1,6 +1,6 @@
 import { useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
-import { ShieldAlert, Activity, CheckCircle2, ShieldCheck, BrainCircuit, ChevronDown, ChevronUp } from "lucide-react";
+import { ShieldAlert, Activity, ShieldCheck, BrainCircuit, ChevronDown, ChevronUp } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useState } from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";

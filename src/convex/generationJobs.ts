@@ -79,6 +79,16 @@ export const update = mutation({
     cancelRequestedAt: v.optional(v.number()),
     canceledAt: v.optional(v.number()),
     error: v.optional(v.string()),
+    fallbackTrail: v.optional(
+      v.array(
+        v.object({
+          provider: v.string(),
+          model: v.string(),
+          outcome: v.string(),
+          reason: v.string(),
+        }),
+      ),
+    ),
   },
   handler: async (ctx, args) => {
     const patch: Record<string, unknown> = { updatedAt: Date.now() };
@@ -104,6 +114,7 @@ export const update = mutation({
     if (args.cancelRequestedAt !== undefined) patch.cancelRequestedAt = args.cancelRequestedAt;
     if (args.canceledAt !== undefined) patch.canceledAt = args.canceledAt;
     if (args.error !== undefined) patch.error = args.error;
+    if (args.fallbackTrail !== undefined) patch.fallbackTrail = args.fallbackTrail;
     await ctx.db.patch(args.jobId, patch);
   },
 });
@@ -144,5 +155,41 @@ export const listRecent = query({
       .withIndex("by_createdAt")
       .order("desc")
       .take(limit);
+  },
+});
+
+export const listActive = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = Math.min(50, Math.max(1, Math.round(args.limit ?? 20)));
+    const rows = await ctx.db
+      .query("generationJobs")
+      .withIndex("by_createdAt")
+      .order("desc")
+      .take(Math.min(100, limit * 3));
+
+    return rows
+      .filter((job) => job.status === "queued" || job.status === "running")
+      .slice(0, limit);
+  },
+});
+
+export const listArchived = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = Math.min(100, Math.max(1, Math.round(args.limit ?? 50)));
+    const rows = await ctx.db
+      .query("generationJobs")
+      .withIndex("by_createdAt")
+      .order("desc")
+      .take(Math.min(200, limit * 4));
+
+    return rows
+      .filter((job) => job.status !== "queued" && job.status !== "running")
+      .slice(0, limit);
   },
 });

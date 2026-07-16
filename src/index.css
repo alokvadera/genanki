@@ -123,6 +123,13 @@
   [role="button"]:not([disabled]) {
     cursor: pointer;
   }
+  /* Style inputs and select boxes with custom focus styling for neobrutalist look */
+  input:focus, select:focus, textarea:focus {
+    @apply outline-none ring-0;
+    box-shadow: 2px 2px 0px #1a1a1a;
+    transform: translate(-1px, -1px);
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+  }
 }
 
 /* Neobrutalism utility classes */
@@ -138,9 +145,9 @@
 .nb-hover-shadow {
   transition: box-shadow 0.15s ease, transform 0.15s ease;
 }
-.nb-hover-shadow:hover {
+.nb-hover-shadow:hover:not(:disabled) {
   box-shadow: 6px 6px 0px #1a1a1a;
-  transform: translate(-1px, -1px);
+  transform: translate(-1.5px, -1.5px);
 }
 .nb-active-shadow {
   box-shadow: 2px 2px 0px #1a1a1a;
@@ -152,3 +159,20 @@
 .nb-border-2 {
   border: 2px solid #1a1a1a;
 }
+
+/* Custom select styling for neobrutalist theme */
+select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%231a1a1a' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
+  background-position: right 0.5rem center;
+  background-repeat: no-repeat;
+  background-size: 1.25em 1.25em;
+  padding-right: 2rem !important;
+}
+
+.dark select {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%23f5f0e8' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
+}
+

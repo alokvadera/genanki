@@ -5,8 +5,9 @@ import {
   callChatCompletion,
   ProviderRequestError,
   type AiModelCandidate,
+  type ChatUsage,
 } from "./aiProviders";
-import { formatSeconds } from "./deckGeneration"; // need to move formatSeconds or leave it
+import { formatSeconds } from "../lib/generationTiming";
 import { GenError, isTimeoutError, isGenerationCanceledError } from "./errors";
 
 const FALLBACK_PENALTY_SECONDS = 12;
@@ -85,7 +86,7 @@ type AttemptOptions<T> = {
   userContent: string;
   maxTokens: number;
   parser: (content: string) => T;
-  onSuccess: (result: T, candidate: CandidateExt, content: string, usage: any) => Promise<void>;
+  onSuccess: (result: T, candidate: CandidateExt, content: string, usage: ChatUsage | null) => Promise<void>;
   updateJob: (patch: OrchestrationPatch) => Promise<void>;
   assertJobActive: () => Promise<void>;
   context: OrchestrationContext;

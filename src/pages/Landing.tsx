@@ -7,6 +7,10 @@ import {
   ArrowRight,
   Sparkles,
   BookOpen,
+  Files,
+  Camera,
+  HelpCircle,
+  Calculator,
 } from "lucide-react";
 
 const features = [
@@ -17,22 +21,34 @@ const features = [
     color: "bg-secondary",
   },
   {
-    icon: <Zap className="w-6 h-6" />,
-    title: "Instant Cards",
-    desc: "Add front/back cards with a single click. Bulk import from CSV files for speed.",
+    icon: <HelpCircle className="w-6 h-6" />,
+    title: "Cloze Deletion Support",
+    desc: "Generate fill-in-the-blank style cards automatically. Perfect for memorizing terms, phrases, and key definitions.",
+    color: "bg-[#ffe066]",
+  },
+  {
+    icon: <Calculator className="w-6 h-6" />,
+    title: "LaTeX & Rich Markdown",
+    desc: "Format math equations ($x$) and code snippets beautifully. Auto-escapes HTML for native compatibility in Anki.",
     color: "bg-[#4ecdc4]",
+  },
+  {
+    icon: <Camera className="w-6 h-6" />,
+    title: "Client-Side OCR Engine",
+    desc: "Extract text from scanned PDFs directly in your browser using local Tesseract.js. Your documents never leave your device.",
+    color: "bg-accent",
+  },
+  {
+    icon: <Files className="w-6 h-6" />,
+    title: "Multi-File Upload & Merge",
+    desc: "Upload and parse multiple PDF, Word, TXT, or MD documents concurrently, merging them automatically into a single custom deck.",
+    color: "bg-[#a8e6cf]",
   },
   {
     icon: <Download className="w-6 h-6" />,
     title: "Export .apkg",
     desc: "Download production-ready Anki packages. Import directly into Anki desktop or mobile.",
-    color: "bg-accent",
-  },
-  {
-    icon: <FileText className="w-6 h-6" />,
-    title: "CSV Import",
-    desc: "Paste semicolon-separated text or upload CSV/TSV files to add hundreds of cards at once.",
-    color: "bg-[#a8e6cf]",
+    color: "bg-white",
   },
 ];
 
@@ -40,13 +56,13 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-background">
       {/* Nav */}
-      <nav className="nb-border-b bg-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+      <nav className="border-b-[3px] border-black bg-white">
+        <div className="w-full px-6 lg:px-10 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="nb-border nb-shadow-sm bg-secondary p-2">
               <Layers className="w-5 h-5" />
             </div>
-            <span className="font-bold text-lg tracking-tight">Anki Maker</span>
+            <span className="font-bold text-lg tracking-tight">genanki</span>
           </div>
           <a
             href="/app"
@@ -59,7 +75,7 @@ export default function Landing() {
       </nav>
 
       {/* Hero */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-16 sm:pt-24 pb-16">
+      <section className="w-full px-6 lg:px-10 pt-16 sm:pt-24 pb-16">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -77,8 +93,8 @@ export default function Landing() {
             </span>
           </h1>
           <p className="text-base sm:text-lg text-muted-foreground max-w-xl leading-relaxed mb-8 font-medium">
-            Create flashcard decks with a clean, fast interface. Add cards one by one
-            or bulk-import from CSV. Export as{" "}
+            Create flashcard decks using AI smart text extractions, local PDF OCR scanning, 
+            multi-file aggregation, and Cloze deletions. Export as{" "}
             <span className="font-bold text-foreground">.apkg</span> and open directly in Anki.
           </p>
           <div className="flex flex-wrap gap-3">
@@ -111,7 +127,7 @@ export default function Landing() {
               <div className="w-3 h-3 bg-secondary nb-border-2" />
               <div className="w-3 h-3 bg-[#4ecdc4] nb-border-2" />
               <span className="text-[10px] font-bold text-muted-foreground ml-2 uppercase tracking-widest">
-                Anki Maker
+                genanki
               </span>
             </div>
             <div className="grid grid-cols-2 gap-3 p-3">
@@ -145,8 +161,8 @@ export default function Landing() {
       </section>
 
       {/* Features */}
-      <section id="features" className="nb-border-t bg-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
+      <section id="features" className="border-t-[3px] border-black bg-white">
+        <div className="w-full px-6 lg:px-10 py-16 sm:py-20">
           <motion.div
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
@@ -187,8 +203,8 @@ export default function Landing() {
       </section>
 
       {/* How It Works */}
-      <section className="nb-border-t">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
+      <section className="border-t-[3px] border-black">
+        <div className="w-full px-6 lg:px-10 py-16 sm:py-20">
           <motion.div
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
@@ -206,18 +222,18 @@ export default function Landing() {
             {[
               {
                 step: "01",
-                title: "Add Cards",
-                desc: "Type your question and answer, or paste a whole batch from a spreadsheet.",
+                title: "Add Documents or Topics",
+                desc: "Paste a topic, drag-and-drop multiple documents (PDF/Word/TXT/MD), or scan physical sheets directly in-browser using local OCR.",
               },
               {
                 step: "02",
-                title: "Organize Decks",
-                desc: "Create multiple decks, rename them, and manage your collection in one place.",
+                title: "Configure & Edit Cards",
+                desc: "Select card format (Basic Q&A or Cloze deletions), edit generated Markdown math/LaTeX text, and control difficulty scoping page-by-page.",
               },
               {
                 step: "03",
                 title: "Export & Study",
-                desc: "Download the .apkg file and open it in Anki. Start learning immediately.",
+                desc: "Instantly download your custom database package (.apkg) containing all formatting and cards, ready to study.",
               },
             ].map((s, i) => (
               <motion.div
@@ -242,8 +258,8 @@ export default function Landing() {
       </section>
 
       {/* CTA */}
-      <section className="nb-border-t bg-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-20 text-center">
+      <section className="border-t-[3px] border-black bg-white">
+        <div className="w-full px-6 lg:px-10 py-16 sm:py-20 text-center">
           <motion.div
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
@@ -263,17 +279,17 @@ export default function Landing() {
               className="nb-border nb-shadow nb-hover-shadow bg-primary text-primary-foreground px-8 py-3.5 font-bold text-base inline-flex items-center gap-2"
             >
               <Sparkles className="w-5 h-5" />
-              Open Anki Maker
+              Open genanki
             </a>
           </motion.div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="nb-border-t">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <footer className="border-t-[3px] border-black">
+        <div className="w-full px-6 lg:px-10 py-6 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground font-medium">
-            Built with <span className="font-bold text-foreground">Freebuff</span> — freebuff.com
+            © {new Date().getFullYear()} genanki. All rights reserved.
           </p>
           <div className="flex gap-4 text-xs text-muted-foreground font-medium">
             <a href="/" className="hover:text-foreground transition-colors">

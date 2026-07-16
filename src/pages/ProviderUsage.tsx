@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
 import { OptimusDashboard } from "@/components/OptimusDashboard";
 import { PROVIDERS, getKeyFromLabel } from "@/lib/providerConfig";
+import { CLOUDFLARE_DAILY_BUDGET } from "@/convex/budget";
 
 function formatTokens(value: number): string {
   return new Intl.NumberFormat("en-US").format(Math.max(0, Math.round(value)));
@@ -21,8 +22,6 @@ export default function ProviderUsage() {
   const summary = useQuery(api.providerUsage.summary, { daysBack: 30 });
   const recent = useQuery(api.providerUsage.recent, { limit: 20 }) ?? [];
   const providerStates = useQuery(api.rateLimits.providerStates, {}) ?? [];
-  const adaptiveSettings = useQuery(api.rateLimits.adaptiveSettings, {});
-  const latestInsight = useQuery(api.rateLimits.latestInsight, {});
   const cloudflareBudget = useQuery(api.rateLimits.cloudflareBudget, {});
   const [now, setNow] = useState(() => Date.now());
 
@@ -44,7 +43,7 @@ export default function ProviderUsage() {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b-[3px] border-black bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-3">
+        <div className="w-full px-6 lg:px-10 py-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <Button asChild variant="outline" className="nb-border nb-shadow-sm nb-hover-shadow font-bold text-sm px-3 h-9">
               <Link to="/app">
@@ -68,7 +67,7 @@ export default function ProviderUsage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+      <main className="w-full px-6 lg:px-10 py-6 space-y-6">
         <OptimusDashboard />
         
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -191,13 +190,13 @@ export default function ProviderUsage() {
                         Daily Free Tier
                       </p>
                       <p className="text-xs font-medium text-muted-foreground">
-                        {cloudflareBudget ? formatTokens(cloudflareBudget.neuronsUsed) : 0} / 10,000 Neurons
+                        {cloudflareBudget ? formatTokens(cloudflareBudget.neuronsUsed) : 0} / {formatTokens(CLOUDFLARE_DAILY_BUDGET)} Neurons
                       </p>
                       <div className="mt-2 h-1.5 w-full bg-white overflow-hidden nb-border">
                         <motion.div
-                          className={`h-full ${cloudflareBudget && cloudflareBudget.neuronsUsed >= 10000 ? 'bg-amber-500' : 'bg-primary'}`}
+                          className={`h-full ${cloudflareBudget && cloudflareBudget.neuronsUsed >= CLOUDFLARE_DAILY_BUDGET ? 'bg-amber-500' : 'bg-primary'}`}
                           initial={false}
-                          animate={{ width: `${Math.min(100, Math.max(0, ((cloudflareBudget?.neuronsUsed ?? 0) / 10000) * 100))}%` }}
+                          animate={{ width: `${Math.min(100, Math.max(0, ((cloudflareBudget?.neuronsUsed ?? 0) / CLOUDFLARE_DAILY_BUDGET) * 100))}%` }}
                         />
                       </div>
                     </div>

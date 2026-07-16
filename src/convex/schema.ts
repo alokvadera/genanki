@@ -34,10 +34,52 @@ const schema = defineSchema(
 
     // add other tables here
 
-    rateLimits: defineTable({
-      userId: v.string(),
-      timestamp: v.number(),
-    }).index("by_user", ["userId"]),
+    providerRateState: defineTable({
+      provider: v.string(),
+      model: v.string(),
+      windowStartedAt: v.number(),
+      requestsUsed: v.number(),
+      tokensUsed: v.number(),
+      dayStartedAt: v.number(),
+      dayRequestsUsed: v.number(),
+      cooldownUntil: v.number(),
+      lastStatus: v.optional(v.number()),
+      remainingRequests: v.optional(v.number()),
+      remainingTokens: v.optional(v.number()),
+      resetAt: v.optional(v.number()),
+      updatedAt: v.number(),
+    })
+      .index("by_provider_model", ["provider", "model"])
+      .index("by_updatedAt", ["updatedAt"]),
+
+    providerPerformance: defineTable({
+      provider: v.string(),
+      model: v.string(),
+      calls: v.number(),
+      successes: v.number(),
+      failures: v.number(),
+      timeouts: v.number(),
+      averageLatencyMs: v.number(),
+      averageTokens: v.number(),
+      updatedAt: v.number(),
+    }).index("by_provider_model", ["provider", "model"]),
+
+    adaptiveSettings: defineTable({
+      key: v.string(),
+      documentMaxChunks: v.number(),
+      completionPasses: v.number(),
+      updatedAt: v.number(),
+      source: v.string(),
+    }).index("by_key", ["key"]),
+
+    systemInsights: defineTable({
+      kind: v.string(),
+      status: v.string(),
+      summary: v.string(),
+      recommendation: v.string(),
+      triggerCalls: v.number(),
+      createdAt: v.number(),
+    }).index("by_createdAt", ["createdAt"]),
 
     generationJobs: defineTable({
       kind: v.union(v.literal("prompt"), v.literal("document")),
@@ -74,6 +116,16 @@ const schema = defineSchema(
       ),
       resultPartial: v.optional(v.boolean()),
       resultWarnings: v.optional(v.array(v.string())),
+      fallbackTrail: v.optional(
+        v.array(
+          v.object({
+            provider: v.string(),
+            model: v.string(),
+            outcome: v.string(),
+            reason: v.string(),
+          }),
+        ),
+      ),
       cancelRequestedAt: v.optional(v.number()),
       canceledAt: v.optional(v.number()),
       createdAt: v.number(),
@@ -93,7 +145,47 @@ const schema = defineSchema(
       createdAt: v.number(),
     })
       .index("by_createdAt", ["createdAt"])
-      .index("by_provider_createdAt", ["provider", "createdAt"]),
+      .index("by_provider_createdAt", ["provider", "createdAt"])
+      .index("by_jobId_createdAt", ["jobId", "createdAt"]),
+
+    generationTelemetry: defineTable({
+      event: v.string(), // "summary" | "attempt"
+      jobId: v.optional(v.id("generationJobs")),
+      kind: v.optional(v.union(v.literal("prompt"), v.literal("document"))),
+      requestedCount: v.optional(v.number()),
+      generatedCount: v.optional(v.number()),
+      duplicateCount: v.optional(v.number()),
+      sourceChars: v.optional(v.number()),
+      parseFailures: v.optional(v.number()),
+      durationMs: v.optional(v.number()),
+      tokensUsed: v.optional(v.number()),
+      metric: v.optional(v.number()),
+      
+      // new fields for "attempt" events
+      provider: v.optional(v.string()),
+      model: v.optional(v.string()),
+      outcome: v.optional(v.string()),
+      latencyMs: v.optional(v.number()),
+      neurons: v.optional(v.number()),
+      
+      createdAt: v.number(),
+    })
+      .index("by_createdAt", ["createdAt"])
+      .index("by_jobId_createdAt", ["jobId", "createdAt"]),
+
+    cloudflareNeuronBudget: defineTable({
+      utcDay: v.string(), // e.g. "2024-03-10"
+      neuronsUsed: v.number(),
+      updatedAt: v.number(),
+    }).index("by_utcDay", ["utcDay"]),
+
+    providerCatalog: defineTable({
+      provider: v.string(),
+      label: v.string(),
+      modelCount: v.number(),
+      models: v.array(v.object({ id: v.string(), name: v.string() })),
+      updatedAt: v.number(),
+    }).index("by_provider", ["provider"]),
 
     // tableName: defineTable({
     //   ...

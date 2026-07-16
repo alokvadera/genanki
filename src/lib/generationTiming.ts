@@ -1,3 +1,12 @@
+export function formatSeconds(seconds: number): string {
+  if (!Number.isFinite(seconds)) return "0s";
+  const safe = Math.max(0, Math.round(seconds));
+  const minutes = Math.floor(safe / 60);
+  const remaining = safe % 60;
+  if (minutes <= 0) return `${remaining}s`;
+  return `${minutes}m ${String(remaining).padStart(2, "0")}s`;
+}
+
 export function estimatePromptEtaSeconds(
   cardCount: number,
   modelCount: number,
