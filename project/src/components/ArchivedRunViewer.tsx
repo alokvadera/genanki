@@ -44,6 +44,74 @@ function getStatusTone(status: GenerationJob["status"]): string {
   return "bg-amber-100 text-amber-800";
 }
 
+function formatWarning(warning: string) {
+  const jsonStart = warning.indexOf("[");
+  if (jsonStart !== -1) {
+    const prefix = warning.slice(0, jsonStart).trim();
+    const jsonStr = warning.slice(jsonStart).trim();
+    try {
+      const parsed = JSON.parse(jsonStr);
+      if (Array.isArray(parsed)) {
+        return (
+          <div className="space-y-1">
+            <span className="font-bold">{prefix}</span>
+            <ul className="pl-4 mt-1 list-disc text-xs space-y-1">
+              {parsed.map((err: any, idx: number) => {
+                const path = err.path ? ` (${err.path.join(".")})` : "";
+                return (
+                  <li key={idx} className="text-amber-800">
+                    <span className="font-semibold">{err.message || "Validation error"}</span>
+                    <span className="text-amber-600/80 font-mono text-[10px]">{path}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        );
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return <span>{warning}</span>;
+}
+
+function formatErrorReason(reason?: string) {
+  if (!reason) return "";
+  
+  if (reason.includes("<!DOCTYPE") || reason.includes("<html") || reason.includes("<body")) {
+    const titleMatch = reason.match(/<title>([\s\S]*?)<\/title>/i);
+    const title = titleMatch ? titleMatch[1].trim() : "Error page (404/500)";
+    const cleanPreview = reason.split("<")[0].trim() || `Server error: ${title}`;
+    
+    return (
+      <details className="mt-1 cursor-pointer">
+        <summary className="text-xs text-amber-800 font-semibold hover:text-amber-950">
+          {cleanPreview} (click to view HTML error response)
+        </summary>
+        <pre className="mt-2 text-[10px] bg-muted/40 p-2 overflow-auto max-h-[160px] nb-border whitespace-pre-wrap font-mono break-all text-amber-800">
+          {reason}
+        </pre>
+      </details>
+    );
+  }
+
+  if (reason.length > 200) {
+    return (
+      <details className="mt-1 cursor-pointer">
+        <summary className="text-xs text-muted-foreground font-semibold hover:text-foreground">
+          {reason.slice(0, 150)}... (click to expand)
+        </summary>
+        <pre className="mt-2 text-[10px] bg-muted/40 p-2 overflow-auto max-h-[160px] nb-border whitespace-pre-wrap font-mono break-all">
+          {reason}
+        </pre>
+      </details>
+    );
+  }
+
+  return <p className="text-xs text-muted-foreground font-medium break-all">{reason}</p>;
+}
+
 export function ArchivedRunViewer({
   job,
   historyHref,
@@ -139,9 +207,9 @@ export function ArchivedRunViewer({
       {job.resultWarnings?.length ? (
         <div className="mt-4 nb-border-2 bg-amber-50 p-3">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-800">Warnings</p>
-          <ul className="mt-2 space-y-1 text-sm text-amber-900 font-medium">
+          <ul className="mt-2 space-y-2 text-sm text-amber-900 font-medium">
             {job.resultWarnings.map((warning) => (
-              <li key={warning}>{warning}</li>
+              <li key={warning} className="nb-border bg-white p-2.5">{formatWarning(warning)}</li>
             ))}
           </ul>
         </div>
@@ -316,7 +384,7 @@ export function ArchivedRunViewer({
                         {record.outcome}
                       </span>
                     </div>
-                    <p className="text-xs text-muted-foreground font-medium">{record.reason}</p>
+                    {formatErrorReason(record.reason)}
                   </div>
                 ))}
               </div>
