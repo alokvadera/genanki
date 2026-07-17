@@ -1,0 +1,88 @@
+version: "2"
+type: frontend
+tech_stack:
+  - TypeScript
+  - React
+  - Vite
+  - Tailwind CSS
+  - Convex
+routes:
+  - path: /
+    file: src/pages/Landing.tsx
+    auth_required: false
+    description: Landing presentation page introducing Anki Maker.
+  - path: /app
+    file: src/pages/AnkiCreator.tsx
+    auth_required: false
+    description: Core deck builder, importer, exporter workspace.
+  - path: /runs
+    file: src/pages/History.tsx
+    auth_required: false
+    description: Generation telemetry logs and fallback trails history.
+  - path: /usage
+    file: src/pages/ProviderUsage.tsx
+    auth_required: false
+    description: Metrics, costs, and token consumption breakdowns.
+features:
+  - name: Text Topic Generation
+    description: Generates flashcards by supplying a topic text prompt.
+    files:
+      - src/pages/AnkiCreator.tsx
+      - src/components/AiDeckBuilder.tsx
+    entry_route: /app
+    user_interactions:
+      - Input prompt details into text area
+      - Configure card count slider and difficulty select
+      - Choose AI provider from selector
+      - Click Generate Cards button
+      - Review and edit cards in preview grid
+      - Export generated cards into current deck
+    api_calls:
+      - method: POST
+        endpoint: /convex/deckGeneration/createGenerationJob
+    auth_required: false
+  - name: Document Extraction & Generation
+    description: Extract text content from Word, PDF, or scanned pages, with chapter selection scoping.
+    files:
+      - src/pages/AnkiCreator.tsx
+      - src/components/DocUploadSection.tsx
+      - src/lib/docParser.ts
+    entry_route: /app
+    user_interactions:
+      - Upload document (PDF, Word, TXT, MD) via drag-and-drop or select file
+      - Select chapters or headers from detected outline checklist
+      - Choose basic or Cloze deletion cards
+      - Run local in-browser OCR if scanned PDF
+      - Trigger document deck generation run
+    api_calls:
+      - method: POST
+        endpoint: /convex/deckGeneration/createGenerationJob
+    auth_required: false
+  - name: Deck Management
+    description: Save, edit, delete, and package cards and decks locally.
+    files:
+      - src/hooks/use-deck-store.ts
+      - src/lib/anki.ts
+      - src/components/DeckDetailModal.tsx
+    entry_route: /app
+    user_interactions:
+      - Create new deck using side menu button
+      - Rename deck, delete deck
+      - Edit front or back content of custom card
+      - Add card manually using basic input form
+      - Export selected deck as standard binary package .apkg
+    api_calls: []
+    auth_required: false
+  - name: Runs History Dashboard
+    description: Monitors and views details of past run telemetry logs.
+    files:
+      - src/pages/History.tsx
+      - src/components/ArchivedRunViewer.tsx
+    entry_route: /runs
+    user_interactions:
+      - Click run items from side list
+      - Check succeeded, failed, or progress status
+      - Inspect model fallback trail diagram
+    api_calls: []
+    auth_required: false
+known_limitations: []
