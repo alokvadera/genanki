@@ -18,6 +18,22 @@ function formatTime(value: number): string {
   return formatDistanceToNow(value, { addSuffix: true });
 }
 
+const PROVIDER_COLORS: Record<string, { bar: string; bg: string; text: string }> = {
+  groq: { bar: "bg-indigo-500", bg: "bg-indigo-50", text: "text-indigo-700" },
+  cerebras: { bar: "bg-teal-500", bg: "bg-teal-50", text: "text-teal-700" },
+  cloudflare: { bar: "bg-amber-500", bg: "bg-amber-50", text: "text-amber-700" },
+  kilo: { bar: "bg-rose-500", bg: "bg-rose-50", text: "text-rose-700" },
+  openrouter: { bar: "bg-purple-500", bg: "bg-purple-50", text: "text-purple-700" },
+};
+
+function getProviderColor(provider: string) {
+  const key = provider.toLowerCase();
+  for (const [k, v] of Object.entries(PROVIDER_COLORS)) {
+    if (key.includes(k)) return v;
+  }
+  return { bar: "bg-primary", bg: "bg-muted/20", text: "text-foreground" };
+}
+
 export default function ProviderUsage() {
   const summary = useQuery(api.providerUsage.summary, { daysBack: 30 });
   const recent = useQuery(api.providerUsage.recent, { limit: 20 }) ?? [];
@@ -72,10 +88,10 @@ export default function ProviderUsage() {
         
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {[
-            { label: "Total tokens", value: formatTokens(totalTokens), icon: Cpu, shadow: "nb-shadow-indigo" },
-            { label: "Prompt tokens", value: formatTokens(promptTokens), icon: Layers, shadow: "nb-shadow-teal" },
-            { label: "Completion tokens", value: formatTokens(completionTokens), icon: Zap, shadow: "nb-shadow-rose" },
-            { label: "Requests", value: formatTokens(requests), icon: BarChart3, shadow: "nb-shadow-amber" },
+            { label: "Total tokens", value: formatTokens(totalTokens), icon: Cpu, shadow: "nb-shadow-indigo", tint: "bg-indigo-50", accent: "text-indigo-600" },
+            { label: "Prompt tokens", value: formatTokens(promptTokens), icon: Layers, shadow: "nb-shadow-teal", tint: "bg-teal-50", accent: "text-teal-600" },
+            { label: "Completion tokens", value: formatTokens(completionTokens), icon: Zap, shadow: "nb-shadow-rose", tint: "bg-rose-50", accent: "text-rose-600" },
+            { label: "Requests", value: formatTokens(requests), icon: BarChart3, shadow: "nb-shadow-amber", tint: "bg-amber-50", accent: "text-amber-600" },
           ].map((item, index) => {
             const Icon = item.icon;
             return (
@@ -84,16 +100,16 @@ export default function ProviderUsage() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
-                className={`nb-border bg-white p-4 ${item.shadow}`}
+                className={`nb-border p-4 ${item.shadow} ${item.tint}`}
               >
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                    <p className={`text-[10px] font-bold uppercase tracking-[0.2em] ${item.accent}`}>
                       {item.label}
                     </p>
                     <p className="text-2xl font-bold tracking-tight mt-1">{item.value}</p>
                   </div>
-                  <div className="nb-border bg-secondary p-3">
+                  <div className="nb-border bg-white p-3">
                     <Icon className="w-5 h-5" />
                   </div>
                 </div>
@@ -105,7 +121,7 @@ export default function ProviderUsage() {
         <section className="nb-border bg-white nb-shadow-indigo p-5">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between mb-4">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-1">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-600 mb-1">
                 Provider Order
               </p>
               <h2 className="text-lg font-bold tracking-tight">Groq starts first</h2>
@@ -145,7 +161,7 @@ export default function ProviderUsage() {
         <section className="nb-border bg-white nb-shadow-teal p-5">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between mb-4">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-1">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-teal-600 mb-1">
                 Live Capacity
               </p>
               <h2 className="text-lg font-bold tracking-tight">Provider budget and cooldown state</h2>
@@ -163,7 +179,7 @@ export default function ProviderUsage() {
               const cooling = rows.some((row) => row.cooldownUntil > now);
               const latest = rows[0];
               return (
-                <div key={providerName} className="nb-border-2 bg-muted/20 p-4">
+                <div key={providerName} className={`nb-border-2 p-4 ${getProviderColor(providerName).bg}`}>
                   <div className="flex items-center justify-between gap-2">
                     <h3 className="text-sm font-bold tracking-tight">{providerName}</h3>
                     <span className={`text-[10px] font-bold uppercase tracking-[0.15em] px-2 py-1 ${cooling ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}`}>
@@ -211,7 +227,7 @@ export default function ProviderUsage() {
           <div className="nb-border bg-white nb-shadow-rose p-5">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-1">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-rose-600 mb-1">
                   Provider Breakdown
                 </p>
                 <h2 className="text-lg font-bold tracking-tight">By provider</h2>
@@ -225,10 +241,10 @@ export default function ProviderUsage() {
                 providerStats.map((stat) => {
                   const percent = totalTokens > 0 ? Math.max(4, (stat.totalTokens / totalTokens) * 100) : 4;
                   return (
-                    <div key={stat.provider} className="nb-border-2 bg-muted/20 p-4">
+                    <div key={stat.provider} className={`nb-border-2 p-4 ${getProviderColor(stat.provider).bg}`}>
                       <div className="flex items-start justify-between gap-4">
                         <div>
-                          <p className="text-sm font-bold tracking-tight">{stat.providerLabel}</p>
+                          <p className={`text-sm font-bold tracking-tight ${getProviderColor(stat.provider).text}`}>{stat.providerLabel}</p>
                           <p className="text-xs text-muted-foreground font-medium mt-0.5">
                             {stat.requests} request(s)
                           </p>
@@ -240,7 +256,7 @@ export default function ProviderUsage() {
                       </div>
                       <div className="mt-3 h-2 w-full bg-white overflow-hidden nb-border">
                         <motion.div
-                          className="h-full bg-primary"
+                          className={`h-full ${getProviderColor(stat.provider).bar}`}
                           initial={false}
                           animate={{ width: `${Math.min(100, percent)}%` }}
                         />
@@ -260,7 +276,7 @@ export default function ProviderUsage() {
           <div className="nb-border bg-white nb-shadow-indigo p-5">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-1">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-600 mb-1">
                   Model Breakdown
                 </p>
                 <h2 className="text-lg font-bold tracking-tight">By model</h2>
@@ -272,7 +288,7 @@ export default function ProviderUsage() {
                 <p className="text-sm text-muted-foreground font-medium">No model usage recorded yet.</p>
               ) : (
                 modelStats.map((stat, index) => (
-                  <div key={`${stat.provider}:${stat.model}`} className="nb-border-2 bg-muted/20 p-3">
+                  <div key={`${stat.provider}:${stat.model}`} className={`nb-border-2 p-3 ${getProviderColor(stat.provider).bg}`}>
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="text-sm font-bold tracking-tight truncate">{stat.providerLabel}</p>
@@ -289,7 +305,7 @@ export default function ProviderUsage() {
                     </p>
                     <div className="mt-2 h-1.5 w-full bg-white overflow-hidden nb-border">
                       <motion.div
-                        className="h-full bg-primary"
+                        className={`h-full ${getProviderColor(stat.provider).bar}`}
                         initial={false}
                         animate={{ width: `${Math.max(5, 100 - index * 2)}%` }}
                       />
@@ -304,7 +320,7 @@ export default function ProviderUsage() {
         <section className="nb-border bg-white nb-shadow-amber p-5">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-1">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-600 mb-1">
                 Recent Calls
               </p>
               <h2 className="text-lg font-bold tracking-tight">Latest provider activity</h2>
@@ -316,7 +332,7 @@ export default function ProviderUsage() {
               <p className="text-sm text-muted-foreground font-medium">No recent calls yet.</p>
             ) : (
               recent.map((row) => (
-                <div key={row._id} className="nb-border-2 bg-muted/20 p-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                <div key={row._id} className={`nb-border-2 p-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between ${getProviderColor(row.provider).bg}`}>
                   <div className="min-w-0">
                     <p className="text-sm font-bold tracking-tight truncate">
                       {row.providerLabel} / {row.model}

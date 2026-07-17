@@ -8,6 +8,22 @@ import type { Doc } from "@/convex/_generated/dataModel";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 
+const PROVIDER_COLORS: Record<string, { bar: string; bg: string; text: string }> = {
+  groq: { bar: "bg-indigo-500", bg: "bg-indigo-50", text: "text-indigo-700" },
+  cerebras: { bar: "bg-teal-500", bg: "bg-teal-50", text: "text-teal-700" },
+  cloudflare: { bar: "bg-amber-500", bg: "bg-amber-50", text: "text-amber-700" },
+  kilo: { bar: "bg-rose-500", bg: "bg-rose-50", text: "text-rose-700" },
+  openrouter: { bar: "bg-purple-500", bg: "bg-purple-50", text: "text-purple-700" },
+};
+
+function getProviderColor(provider: string) {
+  const key = provider.toLowerCase();
+  for (const [k, v] of Object.entries(PROVIDER_COLORS)) {
+    if (key.includes(k)) return v;
+  }
+  return { bar: "bg-primary", bg: "bg-muted/20", text: "text-foreground" };
+}
+
 type GenerationJob = Doc<"generationJobs">;
 
 type ArchivedRunViewerProps = {
@@ -162,7 +178,7 @@ export function ArchivedRunViewer({
   const recentCalls = usage?.rows ?? [];
 
   return (
-    <section className="nb-border bg-white nb-shadow-sm p-5">
+    <section className="nb-border bg-white nb-shadow-teal p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-2">
@@ -250,17 +266,17 @@ export function ArchivedRunViewer({
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
-              { label: "Total tokens", value: formatTokens(totalTokens), icon: Cpu },
-              { label: "Prompt", value: formatTokens(promptTokens), icon: Layers },
-              { label: "Completion", value: formatTokens(completionTokens), icon: Sparkles },
-              { label: "Requests", value: formatTokens(requests), icon: BarChart3 },
+              { label: "Total tokens", value: formatTokens(totalTokens), icon: Cpu, tint: "bg-indigo-50", accent: "text-indigo-600" },
+              { label: "Prompt", value: formatTokens(promptTokens), icon: Layers, tint: "bg-teal-50", accent: "text-teal-600" },
+              { label: "Completion", value: formatTokens(completionTokens), icon: Sparkles, tint: "bg-rose-50", accent: "text-rose-600" },
+              { label: "Requests", value: formatTokens(requests), icon: BarChart3, tint: "bg-amber-50", accent: "text-amber-600" },
             ].map((item) => {
               const Icon = item.icon;
               return (
-                <div key={item.label} className="nb-border-2 bg-muted/20 p-3">
+                <div key={item.label} className={`nb-border-2 p-3 ${item.tint}`}>
                   <div className="flex items-center justify-between gap-2">
                     <div>
-                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                      <p className={`text-[10px] font-bold uppercase tracking-[0.2em] ${item.accent}`}>
                         {item.label}
                       </p>
                       <p className="text-lg font-bold tracking-tight mt-1">{item.value}</p>
@@ -277,7 +293,7 @@ export function ArchivedRunViewer({
           <div className="nb-border-2 bg-muted/20 p-4">
             <div className="flex items-center justify-between gap-3 mb-3">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-rose-600">
                   Provider breakdown
                 </p>
                 <h3 className="text-sm font-bold tracking-tight mt-1">Tokens by provider</h3>
@@ -294,7 +310,7 @@ export function ArchivedRunViewer({
                 providerRows.map((row) => {
                   const percent = totalTokens > 0 ? Math.max(4, (row.totalTokens / totalTokens) * 100) : 4;
                   return (
-                    <div key={row.provider} className="nb-border bg-white p-3">
+                    <div key={row.provider} className={`nb-border p-3 ${getProviderColor(row.provider).bg}`}>
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <p className="text-sm font-bold tracking-tight">{row.providerLabel}</p>
@@ -309,7 +325,7 @@ export function ArchivedRunViewer({
                       </div>
                       <div className="mt-2 h-2 w-full bg-muted overflow-hidden nb-border">
                         <motion.div
-                          className="h-full bg-primary"
+                          className={`h-full ${getProviderColor(row.provider).bar}`}
                           initial={false}
                           animate={{ width: `${Math.min(100, percent)}%` }}
                         />
@@ -327,7 +343,7 @@ export function ArchivedRunViewer({
           <div className="nb-border-2 bg-muted/20 p-4">
             <div className="flex items-center justify-between gap-3 mb-3">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-600">
                   Model breakdown
                 </p>
                 <h3 className="text-sm font-bold tracking-tight mt-1">Tokens by model</h3>
@@ -341,7 +357,7 @@ export function ArchivedRunViewer({
                 <p className="text-sm text-muted-foreground font-medium">No model usage was recorded for this run.</p>
               ) : (
                 modelRows.map((row) => (
-                  <div key={`${row.provider}:${row.model}`} className="nb-border bg-white p-3">
+                  <div key={`${row.provider}:${row.model}`} className={`nb-border p-3 ${getProviderColor(row.provider).bg}`}>
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="text-sm font-bold tracking-tight truncate">{row.providerLabel}</p>
@@ -369,7 +385,7 @@ export function ArchivedRunViewer({
           <div className="nb-border-2 bg-muted/20 p-4">
             <div className="flex items-center justify-between gap-3 mb-3">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-600">
                   Recent calls
                 </p>
                 <h3 className="text-sm font-bold tracking-tight mt-1">Per-run provider calls</h3>
@@ -383,7 +399,7 @@ export function ArchivedRunViewer({
                 <p className="text-sm text-muted-foreground font-medium">No calls recorded for this run.</p>
               ) : (
                 recentCalls.map((row) => (
-                  <div key={row._id} className="nb-border bg-white p-3">
+                  <div key={row._id} className={`nb-border p-3 ${getProviderColor(row.provider).bg}`}>
                     <p className="text-sm font-bold tracking-tight truncate">
                       {row.providerLabel} / {row.model}
                     </p>
@@ -403,7 +419,7 @@ export function ArchivedRunViewer({
 
           {job.fallbackTrail?.length ? (
             <div className="nb-border-2 bg-muted/20 p-4">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-rose-600">
                 Provider Fallback Trail
               </p>
               <div className="mt-3 grid gap-2 max-h-[320px] overflow-auto pr-1">
