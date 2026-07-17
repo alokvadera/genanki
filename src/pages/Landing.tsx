@@ -19,36 +19,42 @@ const features = [
     title: "Create Decks",
     desc: "Organize your flashcards into custom decks. Rename, add, and manage multiple decks at once.",
     color: "bg-secondary",
+    shadow: "nb-shadow-amber",
   },
   {
     icon: <HelpCircle className="w-6 h-6" />,
     title: "Cloze Deletion Support",
     desc: "Generate fill-in-the-blank style cards automatically. Perfect for memorizing terms, phrases, and key definitions.",
     color: "bg-[#ffe066]",
+    shadow: "nb-shadow-indigo",
   },
   {
     icon: <Calculator className="w-6 h-6" />,
     title: "LaTeX & Rich Markdown",
     desc: "Format math equations ($x$) and code snippets beautifully. Auto-escapes HTML for native compatibility in Anki.",
     color: "bg-[#4ecdc4]",
+    shadow: "nb-shadow-teal",
   },
   {
     icon: <Camera className="w-6 h-6" />,
     title: "Client-Side OCR Engine",
     desc: "Extract text from scanned PDFs directly in your browser using local Tesseract.js. Your documents never leave your device.",
     color: "bg-accent",
+    shadow: "nb-shadow-rose",
   },
   {
     icon: <Files className="w-6 h-6" />,
     title: "Multi-File Upload & Merge",
     desc: "Upload and parse multiple PDF, Word, TXT, or MD documents concurrently, merging them automatically into a single custom deck.",
     color: "bg-[#a8e6cf]",
+    shadow: "nb-shadow-indigo",
   },
   {
     icon: <Download className="w-6 h-6" />,
     title: "Export .apkg",
     desc: "Download production-ready Anki packages. Import directly into Anki desktop or mobile.",
     color: "bg-white",
+    shadow: "nb-shadow-amber",
   },
 ];
 
@@ -121,7 +127,7 @@ export default function Landing() {
           transition={{ duration: 0.5, delay: 0.15 }}
           className="mt-14 sm:mt-20 max-w-2xl mx-auto"
         >
-          <div className="nb-border nb-shadow-lg bg-white p-1">
+          <div className="nb-border nb-shadow-indigo bg-white p-1">
             <div className="nb-border-2 bg-muted p-3 flex items-center gap-2 mb-3">
               <div className="w-3 h-3 bg-accent nb-border-2" />
               <div className="w-3 h-3 bg-secondary nb-border-2" />
@@ -165,8 +171,7 @@ export default function Landing() {
         <div className="w-full px-6 lg:px-10 py-16 sm:py-20">
           <motion.div
             initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
+            animate={{ opacity: 1 }}
           >
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">
               Everything you need
@@ -181,11 +186,10 @@ export default function Landing() {
               <motion.div
                 key={f.title}
                 initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.08 }}
               >
-                <div className="nb-border nb-shadow-sm nb-hover-shadow bg-white p-6 h-full">
+                <div className={`nb-border ${f.shadow} nb-hover-shadow bg-white p-6 h-full`}>
                   <div
                     className={`nb-border-2 ${f.color} inline-block p-2.5 mb-4`}
                   >
@@ -203,12 +207,11 @@ export default function Landing() {
       </section>
 
       {/* How It Works */}
-      <section className="border-t-[3px] border-black">
+      <section className="border-t-[3px] border-black bg-secondary/30">
         <div className="w-full px-6 lg:px-10 py-16 sm:py-20">
           <motion.div
             initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
+            animate={{ opacity: 1 }}
           >
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">
               Three steps
@@ -239,12 +242,11 @@ export default function Landing() {
               <motion.div
                 key={s.step}
                 initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
                 className="relative"
               >
-                <span className="nb-border inline-block bg-secondary text-3xl font-bold px-3 py-1 mb-4">
+                <span className={`nb-border inline-block text-3xl font-bold px-3 py-1 mb-4 ${["bg-primary text-primary-foreground", "bg-secondary", "bg-accent text-accent-foreground"][i]}`}>
                   {s.step}
                 </span>
                 <h3 className="font-bold text-lg mb-1.5">{s.title}</h3>
@@ -262,8 +264,7 @@ export default function Landing() {
         <div className="w-full px-6 lg:px-10 py-16 sm:py-20 text-center">
           <motion.div
             initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
+            animate={{ opacity: 1 }}
           >
             <div className="inline-block nb-border nb-shadow bg-accent px-4 py-1.5 text-xs font-bold mb-6 uppercase tracking-widest text-accent-foreground">
               No signup required
