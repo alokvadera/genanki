@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import type { AnkiCard } from "@/lib/anki";
+import { formatCardText } from "@/lib/formatter";
 
 interface DeckDetailCardItemProps {
   card: AnkiCard;
@@ -74,16 +75,21 @@ export default function DeckDetailCardItem({
             {index + 1}
           </span>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold truncate">{card.front}</p>
-            <p className="text-xs text-muted-foreground truncate font-medium mt-0.5">
-              {card.back}
-            </p>
+            <div 
+              className="text-sm font-semibold truncate prose prose-sm max-w-none"
+              dangerouslySetInnerHTML={{ __html: formatCardText(card.front) }}
+            />
+            <div 
+              className="text-xs text-muted-foreground truncate font-medium mt-0.5 prose prose-sm max-w-none"
+              dangerouslySetInnerHTML={{ __html: formatCardText(card.back) }}
+            />
           </div>
           <div
             className="flex gap-1 shrink-0"
             onClick={(e) => e.stopPropagation()}
           >
             <button
+              type="button"
               onClick={() => setEditing(true)}
               className="p-1.5 nb-border-2 hover:bg-muted transition-colors"
               title="Edit"
@@ -91,6 +97,7 @@ export default function DeckDetailCardItem({
               <Pencil className="w-3.5 h-3.5" />
             </button>
             <button
+              type="button"
               onClick={onRemove}
               className="p-1.5 nb-border-2 hover:bg-destructive/10 text-destructive transition-colors"
               title="Delete"

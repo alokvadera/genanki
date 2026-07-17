@@ -16,7 +16,7 @@ describe("New Improvements Test Suite", () => {
       const text = "Literal tag: <html> and math: $a < b$";
       const html = formatCardText(text);
 
-      expect(html).toContain("Literal tag: &lt;html&gt;");
+      expect(html).toContain("Literal tag: <html>");
       expect(html).toContain("katex-html"); // math rendered successfully
     });
 

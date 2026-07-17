@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 import type { AnkiCard } from "@/lib/anki";
 
 export interface Deck {
@@ -8,7 +8,6 @@ export interface Deck {
 }
 
 const STORAGE_KEY = "genanki-decks";
-const SAVE_DEBOUNCE_MS = 500;
 
 function uid(): string {
   const buf = new Uint32Array(2);
@@ -27,13 +26,14 @@ function isValidAnkiCard(card: unknown): card is AnkiCard {
   );
 }
 
-function isValidDeck(deck: unknown): deck is Deck {
-  if (typeof deck !== "object" || deck === null) return false;
+function sanitizeDeck(deck: unknown): Deck | null {
+  if (typeof deck !== "object" || deck === null) return null;
   const obj = deck as Record<string, unknown>;
-  if (typeof obj.id !== "string" || obj.id.trim().length === 0) return false;
-  if (typeof obj.name !== "string") return false;
-  if (!Array.isArray(obj.cards)) return false;
-  return obj.cards.every(isValidAnkiCard);
+  if (typeof obj.id !== "string" || obj.id.trim().length === 0) return null;
+  if (typeof obj.name !== "string") return null;
+  if (!Array.isArray(obj.cards)) return null;
+  const validCards = obj.cards.filter(isValidAnkiCard);
+  return { id: obj.id, name: obj.name, cards: validCards };
 }
 
 function createStarterDecks(): Deck[] {
@@ -51,9 +51,13 @@ function loadFromStorage(): { decks: Deck[]; activeId: string } {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        const validDecks = parsed.filter(isValidDeck);
+        const validDecks = parsed.map(sanitizeDeck).filter((d): d is Deck => d !== null);
         if (validDecks.length > 0) {
-          return { decks: validDecks, activeId: validDecks[0].id };
+          const savedActiveId = localStorage.getItem("genanki-active-deck-id");
+          const activeId = savedActiveId && validDecks.some((d) => d.id === savedActiveId)
+            ? savedActiveId
+            : validDecks[0].id;
+          return { decks: validDecks, activeId };
         }
       }
     }
@@ -76,29 +80,20 @@ export function useDeckStore() {
   const [decks, setDecks] = useState<Deck[]>(initial.decks);
   const [activeDeckId, setActiveDeckId] = useState<string>(initial.activeId);
   const [openedDeckId, setOpenedDeckId] = useState<string | null>(null);
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Update ref to latest decks on every render
-  const latestDecks = useRef(decks);
-  latestDecks.current = decks;
+  // Helper to update decks and save synchronously
+  const setDecksAndSave = useCallback((updater: Deck[] | ((prev: Deck[]) => Deck[])) => {
+    setDecks((prev) => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      saveToStorage(next);
+      return next;
+    });
+  }, []);
 
-  // Debounced save to localStorage
-  useEffect(() => {
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
-      saveToStorage(decks);
-      saveTimer.current = null;
-    }, SAVE_DEBOUNCE_MS);
-  }, [decks]);
-
-  // Flush pending save on unmount only
-  useEffect(() => {
-    return () => {
-      if (saveTimer.current) {
-        clearTimeout(saveTimer.current);
-        saveToStorage(latestDecks.current);
-      }
-    };
+  // Helper to update active deck ID and save synchronously
+  const setActiveDeckIdAndSave = useCallback((id: string) => {
+    setActiveDeckId(id);
+    localStorage.setItem("genanki-active-deck-id", id);
   }, []);
 
   const activeDeck = decks.find((d) => d.id === activeDeckId);
@@ -106,10 +101,10 @@ export function useDeckStore() {
 
   const addDeck = useCallback(() => {
     const newDeck: Deck = { id: uid(), name: `Deck ${decks.length + 1}`, cards: [] };
-    setDecks((prev) => [...prev, newDeck]);
-    setActiveDeckId(newDeck.id);
+    setDecksAndSave((prev) => [...prev, newDeck]);
+    setActiveDeckIdAndSave(newDeck.id);
     return newDeck;
-  }, [decks.length]);
+  }, [decks.length, setDecksAndSave, setActiveDeckIdAndSave]);
 
   const removeDeck = useCallback(
     (id: string, showToast: (msg: string) => void) => {
@@ -117,65 +112,65 @@ export function useDeckStore() {
         showToast("You need at least one deck");
         return;
       }
-      setDecks((prev) => prev.filter((d) => d.id !== id));
+      setDecksAndSave((prev) => prev.filter((d) => d.id !== id));
       if (activeDeckId === id) {
         const remaining = decks.filter((d) => d.id !== id);
-        setActiveDeckId(remaining[0].id);
+        setActiveDeckIdAndSave(remaining[0].id);
       }
       if (openedDeckId === id) {
         setOpenedDeckId(null);
       }
     },
-    [decks, activeDeckId, openedDeckId],
+    [decks, activeDeckId, openedDeckId, setDecksAndSave, setActiveDeckIdAndSave],
   );
 
   const renameDeck = useCallback((id: string, name: string) => {
     if (!name.trim()) return;
-    setDecks((prev) => prev.map((d) => (d.id === id ? { ...d, name: name.trim() } : d)));
-  }, []);
+    setDecksAndSave((prev) => prev.map((d) => (d.id === id ? { ...d, name: name.trim() } : d)));
+  }, [setDecksAndSave]);
 
   const addCard = useCallback(
     (deckId: string, front: string, back: string) => {
-      setDecks((prev) =>
+      setDecksAndSave((prev) =>
         prev.map((d) =>
           d.id === deckId ? { ...d, cards: [...d.cards, { front, back }] } : d,
         ),
       );
     },
-    [],
+    [setDecksAndSave],
   );
 
   const addCards = useCallback((deckId: string, cards: AnkiCard[]) => {
-    setDecks((prev) =>
+    setDecksAndSave((prev) =>
       prev.map((d) => (d.id === deckId ? { ...d, cards: [...d.cards, ...cards] } : d)),
     );
-  }, []);
+  }, [setDecksAndSave]);
 
   const createDeckWithCards = useCallback((name: string, cards: AnkiCard[]) => {
     const newDeck: Deck = { id: uid(), name, cards };
-    setDecks((prev) => [...prev, newDeck]);
-    setActiveDeckId(newDeck.id);
+    setDecksAndSave((prev) => [...prev, newDeck]);
+    setActiveDeckIdAndSave(newDeck.id);
     setOpenedDeckId(newDeck.id);
     return newDeck;
-  }, []);
+  }, [setDecksAndSave, setActiveDeckIdAndSave]);
 
   const removeCard = useCallback((deckId: string, idx: number) => {
-    setDecks((prev) =>
+    setDecksAndSave((prev) =>
       prev.map((d) =>
         d.id === deckId ? { ...d, cards: d.cards.filter((_, i) => i !== idx) } : d,
       ),
     );
-  }, []);
+  }, [setDecksAndSave]);
 
   const editCard = useCallback((deckId: string, idx: number, front: string, back: string) => {
-    setDecks((prev) =>
+    setDecksAndSave((prev) =>
       prev.map((d) =>
         d.id === deckId
           ? { ...d, cards: d.cards.map((c, i) => (i === idx ? { front, back } : c)) }
           : d,
       ),
     );
-  }, []);
+  }, [setDecksAndSave]);
 
   const totalCards = decks.reduce((sum, d) => sum + d.cards.length, 0);
 
@@ -185,7 +180,7 @@ export function useDeckStore() {
     activeDeck,
     openedDeckId,
     openedDeck,
-    setActiveDeckId,
+    setActiveDeckId: setActiveDeckIdAndSave,
     setOpenedDeckId,
     addDeck,
     removeDeck,

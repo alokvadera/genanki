@@ -839,12 +839,12 @@ export default function AnkiCreator() {
             onCancel={() => { setShowImport(false); setImportText(""); }}
           />
 
-          {/* Cards List */}
           <CardsList
             activeDeck={activeDeck}
             activeDeckId={activeDeckId}
             onRemoveCard={removeCard}
             onPreview={setPreviewCard}
+            onEditCard={editCard}
           />
         </main>
       </div>

@@ -104,8 +104,8 @@ describe("CardsList", () => {
     render(<CardsList {...defaultProps} />);
     const cardRow = getCardRow("What is 2+2?");
     const buttons = within(cardRow).getAllByRole("button");
-    // Expand is the middle button (index 1: after preview, before delete)
-    fireEvent.click(buttons[1]);
+    // Click chevron to expand
+    fireEvent.click(buttons[2]);
     expect(screen.getByText("Front")).toBeInTheDocument();
     expect(screen.getByText("Back")).toBeInTheDocument();
   });
@@ -115,10 +115,10 @@ describe("CardsList", () => {
     const cardRow = getCardRow("What is 2+2?");
     const buttons = within(cardRow).getAllByRole("button");
     // Expand
-    fireEvent.click(buttons[1]);
+    fireEvent.click(buttons[2]);
     expect(screen.getByText("Front")).toBeInTheDocument();
     // Collapse
-    fireEvent.click(buttons[1]);
+    fireEvent.click(buttons[2]);
     // framer-motion AnimatePresence keeps the element briefly during exit animation
     await waitFor(() => {
       const frontLabels = screen.queryAllByText("Front");
@@ -133,8 +133,8 @@ describe("CardsList", () => {
     const card0Buttons = within(card0Row).getAllByRole("button");
     const card1Buttons = within(card1Row).getAllByRole("button");
     // Expand both
-    fireEvent.click(card0Buttons[1]);
-    fireEvent.click(card1Buttons[1]);
+    fireEvent.click(card0Buttons[2]);
+    fireEvent.click(card1Buttons[2]);
     // Both should have Front/Back labels
     const frontLabels = screen.queryAllByText("Front");
     expect(frontLabels.length).toBe(2);
@@ -144,7 +144,7 @@ describe("CardsList", () => {
     render(<CardsList {...defaultProps} />);
     const card0Row = getCardRow("What is 2+2?");
     const buttons = within(card0Row).getAllByRole("button");
-    fireEvent.click(buttons[1]);
+    fireEvent.click(buttons[2]);
     expect(screen.getByText("Front")).toBeInTheDocument();
     expect(screen.getByText("Back")).toBeInTheDocument();
   });
