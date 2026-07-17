@@ -8,7 +8,7 @@ export const aiFlashcardSchema = z.object({
 export const aiDeckGenerationSchema = z.object({
   deckName: z.string().trim().max(80).optional().default(""),
   summary: z.string().trim().max(240).optional().default(""),
-  cards: z.array(aiFlashcardSchema).max(100),
+  cards: z.array(aiFlashcardSchema).min(1).max(100),
 });
 
 export type AiFlashcard = z.infer<typeof aiFlashcardSchema>;

@@ -2,6 +2,34 @@ import { marked } from "marked";
 import katex from "katex";
 
 /**
+ * Sanitize HTML to remove potentially dangerous elements and attributes.
+ * This prevents XSS attacks while allowing safe HTML formatting.
+ */
+function sanitizeHtml(html: string): string {
+  // Remove script tags and their content
+  let sanitized = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "");
+  
+  // Remove event handler attributes (onclick, onerror, onload, etc.)
+  sanitized = sanitized.replace(/\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "");
+  
+  // Remove javascript: URLs
+  sanitized = sanitized.replace(/href\s*=\s*(?:"javascript:[^"]*"|'javascript:[^']*')/gi, "");
+  sanitized = sanitized.replace(/src\s*=\s*(?:"javascript:[^"]*"|'javascript:[^']*')/gi, "");
+  
+  // Remove data: URLs except for images (optional, can be restrictive)
+  // sanitized = sanitized.replace(/(?:href|src)\s*=\s*(?:"data:[^"]*"|'data:[^']*')/gi, "");
+  
+  // Remove <iframe>, <object>, <embed>, <form> tags
+  sanitized = sanitized.replace(/<(iframe|object|embed|form)\b[^<]*(?:(?!<\/\1>)<[^<]*)*<\/\1>/gi, "");
+  sanitized = sanitized.replace(/<(iframe|object|embed|form)\b[^>]*\/?>/gi, "");
+  
+  // Remove style attributes that could contain expressions
+  sanitized = sanitized.replace(/style\s*=\s*(?:"[^"]*expression\([^"]*"|'[^']*expression\([^']*')/gi, "");
+  
+  return sanitized;
+}
+
+/**
  * Format markdown and math (LaTeX) to HTML for rendering in the web preview UI.
  * Extracts math blocks first so marked doesn't corrupt math symbols (like underscores),
  * escapes HTML for safety/literal tag display, parses with marked, then restores math.
@@ -39,7 +67,7 @@ export function formatCardText(text: string): string {
   });
 
   // 2. Extract inline math ($...$ or \(...\))
-  processed = processed.replace(/\$([^\$]+?)\$/g, (_, math) => {
+  processed = processed.replace(/\$(?!\s)([^\$]+?)(?<!\s)\$/g, (_, math) => {
     const key = `INLINEMATH${placeholderCounter++}`;
     let html = "";
     try {
@@ -82,6 +110,9 @@ export function formatCardText(text: string): string {
     html = html.split(key).join(placeholders[key]);
   });
 
+  // 6. Sanitize the final HTML to remove dangerous elements
+  html = sanitizeHtml(html);
+
   return html;
 }
 
@@ -95,6 +126,6 @@ export function formatMathForAnki(text: string): string {
   // Convert $$...$$ to \[...\]
   formatted = formatted.replace(/\$\$([\s\S]+?)\$\$/g, (_, math) => `\\[${math.trim()}\\]`);
   // Convert $...$ to \(...\)
-  formatted = formatted.replace(/\$([^\$]+?)\$/g, (_, math) => `\\(${math.trim()}\\)`);
+  formatted = formatted.replace(/\$(?!\s)([^\$]+?)(?<!\s)\$/g, (_, math) => `\\(${math.trim()}\\)`);
   return formatted;
 }
