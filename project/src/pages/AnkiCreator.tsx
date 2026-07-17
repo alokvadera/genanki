@@ -16,6 +16,7 @@ import AddCardForm from "@/components/AddCardForm";
 import BulkImportPanel from "@/components/BulkImportPanel";
 import CardsList from "@/components/CardsList";
 import PreviewModal from "@/components/PreviewModal";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 // Lazy-load the heavy AI-powered sections — these import convex actions, docParser,
 // cardGenerator, and their transitive deps (pdfjs-dist, mammoth, etc.).
@@ -709,86 +710,90 @@ export default function AnkiCreator() {
         {/* Main Content */}
         <main className="flex-1 min-w-0">
           {/* Doc Upload Section — lazy-loaded */}
-          <Suspense fallback={<SectionFallback />}>
-            <DocUploadSection
-              showDocUpload={showDocUpload}
-              docMode={docMode}
-              docCardCount={docCardCount}
-              docDifficulty={docDifficulty}
-              cardType={cardType}
-              onCardTypeChange={setCardType}
-              docInstructions={docInstructions}
-              docFileNames={docFileNames}
-              docChapters={docChapters}
-              chaptersDetected={chaptersDetected}
-              selectedChapterIds={selectedChapterIds}
-              docPreviewCards={docPreviewCards}
-              docPreviewText={docPreviewText}
-              docPreviewSummary={docPreviewSummary}
-              docPreviewWarnings={docPreviewWarnings}
-              processing={processing}
-              dragActive={dragActive}
-              docFileInputRef={docFileInputRef}
-              preferredProvider={preferredProvider}
-              availableProviders={availableProviders}
-              loadingProviders={loadingProviders || refreshingProviders}
-              isScanned={isScanned}
-              ocrProgress={ocrProgress}
-              onRunOcr={runOcr}
-              onRemoveFile={handleRemoveFile}
-              onToggle={() => setShowDocUpload((v) => !v)}
-              onModeChange={setDocMode}
-              onDocCardCountChange={setDocCardCount}
-              onDocDifficultyChange={setDocDifficulty}
-              onDocInstructionsChange={setDocInstructions}
-              onToggleChapter={toggleChapter}
-              onSelectAllChapters={selectAllChapters}
-              onProviderChange={setPreferredProvider}
-              onRefreshProviders={handleRefreshProviders}
-              onStartRun={startDocumentRun}
-              onAcceptCards={acceptDocCards}
-              onDiscard={clearDocState}
-              onEditDocCard={editDocCard}
-              onRemoveDocCard={removeDocCard}
-              onDrag={handleDrag}
-              onDrop={handleDrop}
-              onFileChange={handleDocFileChange}
-              onBrowseClick={() => docFileInputRef.current?.click()}
-            />
-          </Suspense>
+          <ErrorBoundary fallback={<div className="nb-border bg-white p-5 mb-6 text-sm text-destructive font-bold">Document upload section failed to load. Please refresh the page.</div>}>
+            <Suspense fallback={<SectionFallback />}>
+              <DocUploadSection
+                showDocUpload={showDocUpload}
+                docMode={docMode}
+                docCardCount={docCardCount}
+                docDifficulty={docDifficulty}
+                cardType={cardType}
+                onCardTypeChange={setCardType}
+                docInstructions={docInstructions}
+                docFileNames={docFileNames}
+                docChapters={docChapters}
+                chaptersDetected={chaptersDetected}
+                selectedChapterIds={selectedChapterIds}
+                docPreviewCards={docPreviewCards}
+                docPreviewText={docPreviewText}
+                docPreviewSummary={docPreviewSummary}
+                docPreviewWarnings={docPreviewWarnings}
+                processing={processing}
+                dragActive={dragActive}
+                docFileInputRef={docFileInputRef}
+                preferredProvider={preferredProvider}
+                availableProviders={availableProviders}
+                loadingProviders={loadingProviders || refreshingProviders}
+                isScanned={isScanned}
+                ocrProgress={ocrProgress}
+                onRunOcr={runOcr}
+                onRemoveFile={handleRemoveFile}
+                onToggle={() => setShowDocUpload((v) => !v)}
+                onModeChange={setDocMode}
+                onDocCardCountChange={setDocCardCount}
+                onDocDifficultyChange={setDocDifficulty}
+                onDocInstructionsChange={setDocInstructions}
+                onToggleChapter={toggleChapter}
+                onSelectAllChapters={selectAllChapters}
+                onProviderChange={setPreferredProvider}
+                onRefreshProviders={handleRefreshProviders}
+                onStartRun={startDocumentRun}
+                onAcceptCards={acceptDocCards}
+                onDiscard={clearDocState}
+                onEditDocCard={editDocCard}
+                onRemoveDocCard={removeDocCard}
+                onDrag={handleDrag}
+                onDrop={handleDrop}
+                onFileChange={handleDocFileChange}
+                onBrowseClick={() => docFileInputRef.current?.click()}
+              />
+            </Suspense>
+          </ErrorBoundary>
 
           {/* AI Deck Builder — lazy-loaded */}
-          <Suspense fallback={<SectionFallback />}>
-            <AiDeckBuilder
-              showAiBuilder={showAiBuilder}
-              aiPrompt={aiPrompt}
-              aiDeckName={aiDeckName}
-              aiCardCount={aiCardCount}
-              aiDifficulty={aiDifficulty}
-              cardType={cardType}
-              onCardTypeChange={setCardType}
-              aiPreviewCards={aiPreviewCards}
-              aiPreviewDeckName={aiPreviewDeckName}
-              aiPreviewSummary={aiPreviewSummary}
-              aiGenerating={aiGenerating}
-              activeDeckName={activeDeck?.name}
-              preferredProvider={preferredProvider}
-              availableProviders={availableProviders}
-              loadingProviders={loadingProviders || refreshingProviders}
-              onToggle={() => setShowAiBuilder((v) => !v)}
-              onPromptChange={setAiPrompt}
-              onDeckNameChange={setAiDeckName}
-              onCardCountChange={setAiCardCount}
-              onDifficultyChange={setAiDifficulty}
-              onProviderChange={setPreferredProvider}
-              onRefreshProviders={handleRefreshProviders}
-              onGenerate={handleAiGenerate}
-              onAcceptCards={acceptAiCards}
-              onDiscard={clearAiState}
-              onAiPreviewEdit={editAiPreviewCard}
-              onAiPreviewRemove={removeAiPreviewCard}
-            />
-          </Suspense>
+          <ErrorBoundary fallback={<div className="nb-border bg-white p-5 mb-6 text-sm text-destructive font-bold">AI deck builder failed to load. Please refresh the page.</div>}>
+            <Suspense fallback={<SectionFallback />}>
+              <AiDeckBuilder
+                showAiBuilder={showAiBuilder}
+                aiPrompt={aiPrompt}
+                aiDeckName={aiDeckName}
+                aiCardCount={aiCardCount}
+                aiDifficulty={aiDifficulty}
+                cardType={cardType}
+                onCardTypeChange={setCardType}
+                aiPreviewCards={aiPreviewCards}
+                aiPreviewDeckName={aiPreviewDeckName}
+                aiPreviewSummary={aiPreviewSummary}
+                aiGenerating={aiGenerating}
+                activeDeckName={activeDeck?.name}
+                preferredProvider={preferredProvider}
+                availableProviders={availableProviders}
+                loadingProviders={loadingProviders || refreshingProviders}
+                onToggle={() => setShowAiBuilder((v) => !v)}
+                onPromptChange={setAiPrompt}
+                onDeckNameChange={setAiDeckName}
+                onCardCountChange={setAiCardCount}
+                onDifficultyChange={setAiDifficulty}
+                onProviderChange={setPreferredProvider}
+                onRefreshProviders={handleRefreshProviders}
+                onGenerate={handleAiGenerate}
+                onAcceptCards={acceptAiCards}
+                onDiscard={clearAiState}
+                onAiPreviewEdit={editAiPreviewCard}
+                onAiPreviewRemove={removeAiPreviewCard}
+              />
+            </Suspense>
+          </ErrorBoundary>
 
           {/* Add Card Form */}
           <AddCardForm
@@ -822,17 +827,19 @@ export default function AnkiCreator() {
       </div>
 
       {/* Deck Detail Modal — lazy-loaded */}
-      <Suspense fallback={null}>
-        <DeckDetailModal
-          openedDeck={openedDeck}
-          exporting={exporting}
-          onClose={() => setOpenedDeckId(null)}
-          onExport={handleExportDeck}
-          onEditCard={editCard}
-          onRemoveCard={removeCard}
-          onPreview={setPreviewCard}
-        />
-      </Suspense>
+      <ErrorBoundary fallback={null}>
+        <Suspense fallback={null}>
+          <DeckDetailModal
+            openedDeck={openedDeck}
+            exporting={exporting}
+            onClose={() => setOpenedDeckId(null)}
+            onExport={handleExportDeck}
+            onEditCard={editCard}
+            onRemoveCard={removeCard}
+            onPreview={setPreviewCard}
+          />
+        </Suspense>
+      </ErrorBoundary>
 
       {/* Preview Modal */}
       <PreviewModal

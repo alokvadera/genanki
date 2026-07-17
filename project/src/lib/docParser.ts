@@ -4,6 +4,34 @@ import mammoth from "mammoth/mammoth.browser";
 // Set worker source to CDN for browser compatibility
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 
+// Maximum file size limits (in bytes)
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+const MAX_TEXT_LENGTH = 500_000; // 500K characters
+
+/**
+ * Validate file size before processing.
+ * Throws an error if the file exceeds the maximum allowed size.
+ */
+function validateFileSize(file: File): void {
+  if (file.size > MAX_FILE_SIZE) {
+    const sizeMB = Math.round(file.size / (1024 * 1024));
+    const maxMB = Math.round(MAX_FILE_SIZE / (1024 * 1024));
+    throw new Error(
+      `File "${file.name}" is too large (${sizeMB}MB). Maximum allowed size is ${maxMB}MB.`
+    );
+  }
+}
+
+/**
+ * Truncate text to maximum allowed length.
+ */
+function truncateText(text: string): string {
+  if (text.length > MAX_TEXT_LENGTH) {
+    return text.slice(0, MAX_TEXT_LENGTH) + "\n\n[Text truncated due to size limits]";
+  }
+  return text;
+}
+
 /** A resolved outline (bookmark) entry mapped to a character offset in the extracted text. */
 export interface OutlineEntry {
   title: string;
@@ -37,6 +65,8 @@ export async function extractTextFromPdf(file: File): Promise<string> {
  * destinations be mapped onto ranges of the flattened text.
  */
 export async function extractPdfWithStructure(file: File): Promise<ExtractedDoc> {
+  validateFileSize(file);
+  
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
   const textParts: string[] = [];
@@ -60,7 +90,9 @@ export async function extractPdfWithStructure(file: File): Promise<ExtractedDoc>
     }
   }
 
-  const text = textParts.join(separator);
+  let text = textParts.join(separator);
+  text = truncateText(text);
+  
   const outline = await resolveOutline(pdf, pageOffsets);
   const isScanned = text.trim().length < 100 && pdf.numPages > 0;
 
@@ -145,16 +177,21 @@ async function resolveDestPageIndex(
  * Extract text from a plain text file.
  */
 export async function extractTextFromTxt(file: File): Promise<string> {
-  return await file.text();
+  validateFileSize(file);
+  
+  const text = await file.text();
+  return truncateText(text);
 }
 
 /**
  * Extract text from a Word .docx file using mammoth (browser build).
  */
 export async function extractTextFromDocx(file: File): Promise<string> {
+  validateFileSize(file);
+  
   const arrayBuffer = await file.arrayBuffer();
   const result = await mammoth.extractRawText({ arrayBuffer });
-  return result.value;
+  return truncateText(result.value);
 }
 
 /**

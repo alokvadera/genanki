@@ -16,6 +16,26 @@ function uid(): string {
   return buf[0].toString(36) + buf[1].toString(36);
 }
 
+function isValidAnkiCard(card: unknown): card is AnkiCard {
+  if (typeof card !== "object" || card === null) return false;
+  const obj = card as Record<string, unknown>;
+  return (
+    typeof obj.front === "string" &&
+    typeof obj.back === "string" &&
+    obj.front.trim().length > 0 &&
+    obj.back.trim().length > 0
+  );
+}
+
+function isValidDeck(deck: unknown): deck is Deck {
+  if (typeof deck !== "object" || deck === null) return false;
+  const obj = deck as Record<string, unknown>;
+  if (typeof obj.id !== "string" || obj.id.trim().length === 0) return false;
+  if (typeof obj.name !== "string") return false;
+  if (!Array.isArray(obj.cards)) return false;
+  return obj.cards.every(isValidAnkiCard);
+}
+
 function createStarterDecks(): Deck[] {
   return [
     { id: uid(), name: "My First Deck", cards: [] },
@@ -31,7 +51,10 @@ function loadFromStorage(): { decks: Deck[]; activeId: string } {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return { decks: parsed as Deck[], activeId: (parsed as Deck[])[0].id };
+        const validDecks = parsed.filter(isValidDeck);
+        if (validDecks.length > 0) {
+          return { decks: validDecks, activeId: validDecks[0].id };
+        }
       }
     }
   } catch {
@@ -55,14 +78,28 @@ export function useDeckStore() {
   const [openedDeckId, setOpenedDeckId] = useState<string | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Update ref to latest decks on every render
+  const latestDecks = useRef(decks);
+  latestDecks.current = decks;
+
   // Debounced save to localStorage
   useEffect(() => {
     if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => saveToStorage(decks), SAVE_DEBOUNCE_MS);
-    return () => {
-      if (saveTimer.current) clearTimeout(saveTimer.current);
-    };
+    saveTimer.current = setTimeout(() => {
+      saveToStorage(decks);
+      saveTimer.current = null;
+    }, SAVE_DEBOUNCE_MS);
   }, [decks]);
+
+  // Flush pending save on unmount only
+  useEffect(() => {
+    return () => {
+      if (saveTimer.current) {
+        clearTimeout(saveTimer.current);
+        saveToStorage(latestDecks.current);
+      }
+    };
+  }, []);
 
   const activeDeck = decks.find((d) => d.id === activeDeckId);
   const openedDeck = decks.find((d) => d.id === openedDeckId);
