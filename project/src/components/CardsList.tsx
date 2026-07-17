@@ -30,9 +30,9 @@ export default function CardsList({
   }, []);
 
   return (
-    <div className="nb-border bg-white nb-shadow-sm">
+    <div className="nb-border bg-white nb-shadow-indigo">
       <div className="p-4 border-b-[3px] border-black flex items-center justify-between">
-        <h2 className="font-bold text-sm flex items-center gap-2">
+        <h2 className="font-bold text-xs uppercase tracking-[0.2em] flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
           <Layers className="w-4 h-4" />
           CARDS ({activeDeck?.cards.length ?? 0})
         </h2>

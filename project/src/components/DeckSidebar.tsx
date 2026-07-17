@@ -36,9 +36,9 @@ export default function DeckSidebar({
 }: DeckSidebarProps) {
   return (
     <aside className="lg:w-64 shrink-0">
-      <div className="nb-border bg-white nb-shadow-sm p-4">
+      <div className="nb-border bg-white nb-shadow-indigo p-4">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-bold text-sm">DECKS</h2>
+          <h2 className="font-bold text-xs uppercase tracking-[0.2em] text-indigo-600 dark:text-indigo-400">DECKS</h2>
           <Button
             onClick={onAddDeck}
             size="sm"

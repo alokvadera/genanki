@@ -90,7 +90,7 @@ export default function History() {
       </header>
 
       <main className="w-full px-6 lg:px-10 py-6">
-        <section className="nb-border-2 bg-black text-white nb-shadow-sm p-4 sm:p-5 mb-6">
+        <section className="nb-border-2 bg-black text-white nb-shadow-amber p-4 sm:p-5 mb-6">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3">
               <div className="border-2 border-white bg-primary p-2">
@@ -115,7 +115,7 @@ export default function History() {
         </section>
 
         {activeJobs.length > 0 && (
-          <section className="nb-border bg-white nb-shadow-sm p-4 sm:p-5 mb-6">
+          <section className="nb-border bg-white nb-shadow-rose p-4 sm:p-5 mb-6">
             <div className="flex items-end justify-between gap-3 mb-4">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary mb-1">Live now</p>
@@ -209,7 +209,7 @@ export default function History() {
           </section>
         )}
 
-        <div className="nb-border bg-white nb-shadow-sm p-4 sm:p-5 mb-6">
+        <div className="nb-border bg-white nb-shadow-teal p-4 sm:p-5 mb-6">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-1">
@@ -226,7 +226,7 @@ export default function History() {
         </div>
 
         <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-          <aside className="nb-border bg-white nb-shadow-sm p-4">
+          <aside className="nb-border bg-white nb-shadow-indigo p-4">
             <div className="flex items-center justify-between gap-3 mb-4">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
@@ -341,7 +341,7 @@ export default function History() {
                 }
               />
             ) : (
-              <div className="nb-border bg-white nb-shadow-sm p-6">
+              <div className="nb-border bg-white nb-shadow-indigo p-6">
                 <p className="text-sm font-bold">No archived run selected</p>
                 <p className="mt-2 text-sm text-muted-foreground font-medium">
                   Finish a generation first, then come back here to inspect the archived run.

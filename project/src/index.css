@@ -45,71 +45,60 @@
 /* Neobrutalism Minimalism Theme */
 :root {
   --radius: 0px;
-  --background: #f5f0e8;
-  --foreground: #1a1a1a;
+  --background: #fdfcf7; /* elegant warm cream */
+  --foreground: #18181b; /* zinc 900 */
   --card: #ffffff;
-  --card-foreground: #1a1a1a;
+  --card-foreground: #18181b;
   --popover: #ffffff;
-  --popover-foreground: #1a1a1a;
-  --primary: #1a1a1a;
+  --popover-foreground: #18181b;
+  --primary: #4f46e5; /* elegant indigo */
   --primary-foreground: #ffffff;
-  --secondary: #ffe066;
-  --secondary-foreground: #1a1a1a;
-  --muted: #e8e3db;
-  --muted-foreground: #555555;
-  --accent: #ff6b6b;
+  --secondary: #fbbf24; /* warm honey yellow */
+  --secondary-foreground: #18181b;
+  --muted: #f4f4f5; /* zinc 100 */
+  --muted-foreground: #71717a; /* zinc 500 */
+  --accent: #f43f5e; /* vibrant rose */
   --accent-foreground: #ffffff;
-  --destructive: #ff4444;
-  --border: #1a1a1a;
-  --input: #e8e3db;
-  --ring: #1a1a1a;
-  --chart-1: #ff6b6b;
-  --chart-2: #4ecdc4;
-  --chart-3: #ffe066;
-  --chart-4: #a8e6cf;
-  --chart-5: #dda0dd;
+  --destructive: #ef4444;
+  --border: #18181b; /* zinc 900 border */
+  --input: #f4f4f5;
+  --ring: #4f46e5;
+  --grid-color: rgba(24, 24, 27, 0.04);
+  --chart-1: #4f46e5;
+  --chart-2: #0d9488;
+  --chart-3: #fbbf24;
+  --chart-4: #22c55e;
+  --chart-5: #a855f7;
   --sidebar: #ffffff;
-  --sidebar-foreground: #1a1a1a;
-  --sidebar-primary: #1a1a1a;
+  --sidebar-foreground: #18181b;
+  --sidebar-primary: #4f46e5;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #ffe066;
-  --sidebar-accent-foreground: #1a1a1a;
-  --sidebar-border: #1a1a1a;
-  --sidebar-ring: #1a1a1a;
+  --sidebar-accent: #fbbf24;
+  --sidebar-accent-foreground: #18181b;
+  --sidebar-border: #18181b;
+  --sidebar-ring: #4f46e5;
 }
 
 .dark {
-  --background: #1a1a1a;
-  --foreground: #f5f0e8;
-  --card: #2a2a2a;
-  --card-foreground: #f5f0e8;
-  --popover: #2a2a2a;
-  --popover-foreground: #f5f0e8;
-  --primary: #f5f0e8;
-  --primary-foreground: #1a1a1a;
-  --secondary: #b8960a;
-  --secondary-foreground: #ffffff;
-  --muted: #333333;
-  --muted-foreground: #aaaaaa;
-  --accent: #ff6b6b;
+  --background: #09090b; /* zinc 950 deep dark */
+  --foreground: #fafafa; /* zinc 50 */
+  --card: #18181b; /* zinc 900 */
+  --card-foreground: #fafafa;
+  --popover: #18181b;
+  --popover-foreground: #fafafa;
+  --primary: #818cf8; /* soft indigo */
+  --primary-foreground: #09090b;
+  --secondary: #fcd34d; /* amber yellow */
+  --secondary-foreground: #09090b;
+  --muted: #27272a; /* zinc 800 */
+  --muted-foreground: #a1a1aa; /* zinc 400 */
+  --accent: #fb7185; /* rose */
   --accent-foreground: #ffffff;
-  --destructive: #ff4444;
-  --border: #f5f0e8;
-  --input: #333333;
-  --ring: #f5f0e8;
-  --chart-1: #ff6b6b;
-  --chart-2: #4ecdc4;
-  --chart-3: #ffe066;
-  --chart-4: #a8e6cf;
-  --chart-5: #dda0dd;
-  --sidebar: #2a2a2a;
-  --sidebar-foreground: #f5f0e8;
-  --sidebar-primary: #f5f0e8;
-  --sidebar-primary-foreground: #1a1a1a;
-  --sidebar-accent: #b8960a;
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #f5f0e8;
-  --sidebar-ring: #f5f0e8;
+  --destructive: #f87171;
+  --border: #fafafa; /* white border */
+  --input: #27272a;
+  --ring: #818cf8;
+  --grid-color: rgba(250, 250, 250, 0.04);
 }
 
 @layer base {
@@ -118,6 +107,8 @@
   }
   body {
     @apply bg-background text-foreground;
+    background-image: radial-gradient(var(--grid-color) 1.5px, transparent 1.5px);
+    background-size: 20px 20px;
   }
   button:not([disabled]),
   [role="button"]:not([disabled]) {
@@ -126,38 +117,50 @@
   /* Style inputs and select boxes with custom focus styling for neobrutalist look */
   input:focus, select:focus, textarea:focus {
     @apply outline-none ring-0;
-    box-shadow: 2px 2px 0px #1a1a1a;
+    box-shadow: 2px 2px 0px var(--border);
     transform: translate(-1px, -1px);
     transition: transform 0.1s ease, box-shadow 0.1s ease;
   }
 }
 
-/* Neobrutalism utility classes */
+/* Neobrutalism utility classes with variables to look correct in dark mode */
 .nb-shadow {
-  box-shadow: 4px 4px 0px #1a1a1a;
+  box-shadow: 4px 4px 0px var(--border);
 }
 .nb-shadow-sm {
-  box-shadow: 2px 2px 0px #1a1a1a;
+  box-shadow: 2px 2px 0px var(--border);
 }
 .nb-shadow-lg {
-  box-shadow: 6px 6px 0px #1a1a1a;
+  box-shadow: 6px 6px 0px var(--border);
+}
+.nb-shadow-indigo {
+  box-shadow: 4px 4px 0px #4f46e5;
+}
+.nb-shadow-teal {
+  box-shadow: 4px 4px 0px #0d9488;
+}
+.nb-shadow-rose {
+  box-shadow: 4px 4px 0px #f43f5e;
+}
+.nb-shadow-amber {
+  box-shadow: 4px 4px 0px #d97706;
 }
 .nb-hover-shadow {
   transition: box-shadow 0.15s ease, transform 0.15s ease;
 }
 .nb-hover-shadow:hover:not(:disabled) {
-  box-shadow: 6px 6px 0px #1a1a1a;
+  box-shadow: 6px 6px 0px var(--border);
   transform: translate(-1.5px, -1.5px);
 }
 .nb-active-shadow {
-  box-shadow: 2px 2px 0px #1a1a1a;
+  box-shadow: 2px 2px 0px var(--border);
   transform: translate(1px, 1px);
 }
 .nb-border {
-  border: 3px solid #1a1a1a;
+  border: 3px solid var(--border);
 }
 .nb-border-2 {
-  border: 2px solid #1a1a1a;
+  border: 2px solid var(--border);
 }
 
 /* Custom select styling for neobrutalist theme */

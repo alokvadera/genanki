@@ -72,10 +72,10 @@ export default function ProviderUsage() {
         
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {[
-            { label: "Total tokens", value: formatTokens(totalTokens), icon: Cpu },
-            { label: "Prompt tokens", value: formatTokens(promptTokens), icon: Layers },
-            { label: "Completion tokens", value: formatTokens(completionTokens), icon: Zap },
-            { label: "Requests", value: formatTokens(requests), icon: BarChart3 },
+            { label: "Total tokens", value: formatTokens(totalTokens), icon: Cpu, shadow: "nb-shadow-indigo" },
+            { label: "Prompt tokens", value: formatTokens(promptTokens), icon: Layers, shadow: "nb-shadow-teal" },
+            { label: "Completion tokens", value: formatTokens(completionTokens), icon: Zap, shadow: "nb-shadow-rose" },
+            { label: "Requests", value: formatTokens(requests), icon: BarChart3, shadow: "nb-shadow-amber" },
           ].map((item, index) => {
             const Icon = item.icon;
             return (
@@ -84,7 +84,7 @@ export default function ProviderUsage() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
-                className="nb-border bg-white nb-shadow-sm p-4"
+                className={`nb-border bg-white p-4 ${item.shadow}`}
               >
                 <div className="flex items-center justify-between gap-3">
                   <div>
@@ -102,7 +102,7 @@ export default function ProviderUsage() {
           })}
         </section>
 
-        <section className="nb-border bg-white nb-shadow-sm p-5">
+        <section className="nb-border bg-white nb-shadow-indigo p-5">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between mb-4">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-1">
@@ -142,7 +142,7 @@ export default function ProviderUsage() {
           </div>
         </section>
 
-        <section className="nb-border bg-white nb-shadow-sm p-5">
+        <section className="nb-border bg-white nb-shadow-teal p-5">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between mb-4">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-1">
@@ -208,7 +208,7 @@ export default function ProviderUsage() {
         </section>
 
         <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-          <div className="nb-border bg-white nb-shadow-sm p-5">
+          <div className="nb-border bg-white nb-shadow-rose p-5">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-1">
@@ -257,7 +257,7 @@ export default function ProviderUsage() {
             </div>
           </div>
 
-          <div className="nb-border bg-white nb-shadow-sm p-5">
+          <div className="nb-border bg-white nb-shadow-indigo p-5">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-1">
@@ -301,7 +301,7 @@ export default function ProviderUsage() {
           </div>
         </section>
 
-        <section className="nb-border bg-white nb-shadow-sm p-5">
+        <section className="nb-border bg-white nb-shadow-amber p-5">
           <div className="flex items-center justify-between mb-4">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-1">
