@@ -5,8 +5,7 @@ import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Link } from "react-router";
 import { Button } from "@/components/ui/button";
-import { generateAnkiPackage, type AnkiCard } from "@/lib/anki";
-import { extractDocument } from "@/lib/docParser";
+import type { AnkiCard } from "@/lib/anki";
 import { generateCardsFromText } from "@/lib/cardGenerator";
 import { detectChapters, sliceSelectedChapters, type DetectedChapter } from "@/lib/chapterDetection";
 import { estimateDocumentTimeoutSeconds, estimatePromptTimeoutSeconds } from "@/lib/generationTiming";
@@ -294,6 +293,7 @@ export default function AnkiCreator() {
     try {
       const parsedDocs = await Promise.all(
         updatedFiles.map(async (file) => {
+          const { extractDocument } = await import("@/lib/docParser");
           const doc = await extractDocument(file);
           return { file, doc };
         })
@@ -353,6 +353,7 @@ export default function AnkiCreator() {
     try {
       const parsedDocs = await Promise.all(
         updated.map(async (file) => {
+          const { extractDocument } = await import("@/lib/docParser");
           const doc = await extractDocument(file);
           return { file, doc };
         })
@@ -607,6 +608,7 @@ export default function AnkiCreator() {
     if (!activeDeck) return;
     setExporting(true);
     try {
+      const { generateAnkiPackage } = await import("@/lib/anki");
       await generateAnkiPackage({ name: activeDeck.name, cards: activeDeck.cards });
       recordAppEvent("export_succeeded", activeDeck.cards.length);
       showToast(`Exported "${activeDeck.name}" successfully!`);
@@ -621,6 +623,7 @@ export default function AnkiCreator() {
   const handleExportDeck = useCallback(async (deck: Deck) => {
     setExporting(true);
     try {
+      const { generateAnkiPackage } = await import("@/lib/anki");
       await generateAnkiPackage({ name: deck.name, cards: deck.cards });
       recordAppEvent("export_succeeded", deck.cards.length);
       showToast(`Exported "${deck.name}" successfully!`);

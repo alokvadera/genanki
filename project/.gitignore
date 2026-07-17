@@ -18,3 +18,5 @@ chrome-profile-debug/
 
 # Test coverage
 coverage/
+
+testsprite_tests/tmp/config.json
