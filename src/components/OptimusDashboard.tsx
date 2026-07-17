@@ -29,24 +29,27 @@ export function OptimusDashboard() {
   let StatusIcon = ShieldCheck;
   let statusColor = "text-green-600";
   let bgStatusColor = "bg-green-50";
+  let shadowColor = "nb-shadow-teal";
 
   if (exhausted > 0) {
     overallStatus = "Active Rerouting";
     StatusIcon = ShieldAlert;
     statusColor = "text-red-600";
     bgStatusColor = "bg-red-50";
+    shadowColor = "nb-shadow-rose";
   } else if (nearExhaustion > 0) {
     overallStatus = "Monitoring Load";
     StatusIcon = Activity;
     statusColor = "text-amber-600";
     bgStatusColor = "bg-amber-50";
+    shadowColor = "nb-shadow-amber";
   }
 
   return (
     <Collapsible
       open={isOpen}
       onOpenChange={setIsOpen}
-      className={`nb-border nb-shadow-sm transition-colors duration-300 ${bgStatusColor}`}
+      className={`nb-border ${shadowColor} transition-colors duration-300 ${bgStatusColor}`}
     >
       <CollapsibleTrigger className="w-full flex items-center justify-between p-3 hover:bg-black/5 transition-colors group">
         <div className="flex items-center gap-3">
