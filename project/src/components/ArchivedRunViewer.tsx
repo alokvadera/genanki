@@ -79,6 +79,37 @@ function formatWarning(warning: string) {
 function formatErrorReason(reason?: string) {
   if (!reason) return "";
   
+  try {
+    const jsonStart = reason.indexOf("[{");
+    if (jsonStart !== -1) {
+      const prefix = reason.slice(0, jsonStart).trim();
+      const jsonStr = reason.slice(jsonStart);
+      const parsed = JSON.parse(jsonStr);
+      if (Array.isArray(parsed) && parsed[0]?.code) {
+        return (
+          <details className="mt-1 cursor-pointer">
+            <summary className="text-xs text-amber-800 font-semibold hover:text-amber-950">
+              {prefix || "Validation failed"} ({parsed.length} errors, click to expand)
+            </summary>
+            <ul className="pl-6 mt-2 list-disc text-[10px] space-y-1 text-amber-900 nb-border bg-amber-50/50 p-3 max-h-[160px] overflow-auto">
+              {parsed.map((err: any, idx: number) => {
+                const path = err.path ? ` (${err.path.join(".")})` : "";
+                return (
+                  <li key={idx}>
+                    <span className="font-bold">{err.message || "Validation error"}</span>
+                    <span className="text-amber-700 font-mono ml-1">{path}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          </details>
+        );
+      }
+    }
+  } catch {
+    // Ignore and fallback to standard formatting
+  }
+
   if (reason.includes("<!DOCTYPE") || reason.includes("<html") || reason.includes("<body")) {
     const titleMatch = reason.match(/<title>([\s\S]*?)<\/title>/i);
     const title = titleMatch ? titleMatch[1].trim() : "Error page (404/500)";
@@ -87,7 +118,7 @@ function formatErrorReason(reason?: string) {
     return (
       <details className="mt-1 cursor-pointer">
         <summary className="text-xs text-amber-800 font-semibold hover:text-amber-950">
-          {cleanPreview} (click to view HTML error response)
+          {cleanPreview} (click to view HTML)
         </summary>
         <pre className="mt-2 text-[10px] bg-muted/40 p-2 overflow-auto max-h-[160px] nb-border whitespace-pre-wrap font-mono break-all text-amber-800">
           {reason}
@@ -215,7 +246,7 @@ export function ArchivedRunViewer({
         </div>
       ) : null}
 
-      <div className="mt-4 grid gap-4 xl:grid-cols-[0.92fr_1.08fr]">
+      <div className="mt-4 grid gap-4 2xl:grid-cols-[0.92fr_1.08fr]">
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
