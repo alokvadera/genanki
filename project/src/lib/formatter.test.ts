@@ -42,9 +42,9 @@ describe("formatter", () => {
       expect(result).toContain("$20");
     });
 
-    it("escapes HTML tags in text", () => {
-      const result = formatCardText("Use <div> tags");
-      expect(result).toContain("&lt;div&gt;");
+    it("preserves HTML tags in text visually", () => {
+      const result = formatCardText("Use <strong>bold</strong> tags");
+      expect(result).toContain("<strong>bold</strong>");
     });
 
     it("handles markdown bold", () => {
@@ -71,7 +71,7 @@ describe("formatter", () => {
     it("sanitizes script tags", () => {
       const result = formatCardText("Test <script>alert('xss')</script> end");
       expect(result).not.toContain("<script>");
-      expect(result).toContain("alert");
+      expect(result).not.toContain("alert");
     });
 
     it("sanitizes onclick event handlers", () => {
@@ -81,7 +81,9 @@ describe("formatter", () => {
 
     it("sanitizes javascript: URLs in raw HTML", () => {
       const result = formatCardText('<a href="javascript:alert(1)">click</a>');
-      expect(result).not.toContain("<a");
+      expect(result).toContain("<a");
+      expect(result).not.toContain("javascript:");
+      expect(result).not.toContain("alert");
       expect(result).toContain("click");
     });
 
@@ -107,8 +109,9 @@ describe("formatter", () => {
 
     it("sanitizes style expression attacks", () => {
       const result = formatCardText('<div style="background: expression(alert(1))">x</div>');
-      expect(result).toContain("expression");
-      expect(result).not.toContain("<div");
+      expect(result).toContain("<div");
+      expect(result).not.toContain("style");
+      expect(result).not.toContain("expression");
     });
 
     it("handles multiple math blocks in one text", () => {

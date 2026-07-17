@@ -79,9 +79,9 @@ describe("PreviewModal", () => {
       back: "Script: <script>alert('xss')</script> & entities",
     };
     render(<PreviewModal {...defaultProps} previewCard={specialCard} />);
-    // React escapes HTML so <script> should be displayed as text, not executed
-    expect(screen.getByText("What is <html> & \"quotes\"?")).toBeInTheDocument();
-    expect(screen.getByText("Script: <script>alert('xss')</script> & entities")).toBeInTheDocument();
+    // Since raw HTML tags are preserved, html tags render as elements and script tags are sanitized/removed
+    expect(screen.getByText(/What is.*& "quotes"\?/)).toBeInTheDocument();
+    expect(screen.getByText(/Script:.*& entities/)).toBeInTheDocument();
   });
 
   it("renders front card in a secondary background box", () => {

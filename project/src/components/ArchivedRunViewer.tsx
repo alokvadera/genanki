@@ -7,6 +7,7 @@ import { Link } from "react-router";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
+import { formatCardText } from "@/lib/formatter";
 
 const PROVIDER_COLORS: Record<string, { bar: string; bg: string; text: string }> = {
   groq: { bar: "bg-indigo-500", bg: "bg-indigo-50", text: "text-indigo-700" },
@@ -454,13 +455,19 @@ export function ArchivedRunViewer({
                         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-1">
                           Front
                         </p>
-                        <p className="text-sm font-medium break-words">{card.front}</p>
+                        <div
+                          className="text-sm font-medium break-words prose prose-sm max-w-none"
+                          dangerouslySetInnerHTML={{ __html: formatCardText(card.front) }}
+                        />
                       </div>
                       <div className="nb-border bg-muted/20 p-3">
                         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-1">
                           Back
                         </p>
-                        <p className="text-sm font-medium break-words">{card.back}</p>
+                        <div
+                          className="text-sm font-medium break-words prose prose-sm max-w-none"
+                          dangerouslySetInnerHTML={{ __html: formatCardText(card.back) }}
+                        />
                       </div>
                     </div>
                   </div>

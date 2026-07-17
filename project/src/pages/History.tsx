@@ -320,10 +320,22 @@ export default function History() {
                     <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                       Run details
                     </p>
-                    <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                    <div className="mt-3 grid gap-3 grid-cols-2 sm:grid-cols-5">
                       <div className="nb-border bg-white p-3">
                         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Status</p>
                         <p className="text-sm font-bold tracking-tight mt-1">{selectedJob.status}</p>
+                      </div>
+                      <div className="nb-border bg-white p-3">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Progress</p>
+                        <p className="text-sm font-bold tracking-tight mt-1">
+                          {selectedJob.status === "succeeded" ? "100%" : `${Math.round((selectedJob.progress ?? 0) * 100)}%`}
+                        </p>
+                      </div>
+                      <div className="nb-border bg-white p-3">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">ETA</p>
+                        <p className="text-sm font-bold tracking-tight mt-1">
+                          {selectedJob.status === "succeeded" ? "0s" : formatDuration(selectedJob.etaSeconds ?? 0)}
+                        </p>
                       </div>
                       <div className="nb-border bg-white p-3">
                         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Budget</p>

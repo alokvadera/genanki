@@ -91,12 +91,6 @@ export function formatCardText(text: string): string {
     return key;
   });
 
-  // 3. Escape HTML characters in markdown text
-  processed = processed
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-
   // 4. Compile markdown to HTML
   let html = "";
   try {

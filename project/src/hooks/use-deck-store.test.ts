@@ -87,12 +87,14 @@ describe("useDeckStore — initialization", () => {
     expect(result.current.decks[0].name).toBe("My First Deck");
   });
 
-  it("falls back when deck cards have empty front", () => {
+  it("sanitizes invalid cards but preserves the deck", () => {
     mockStore["genanki-decks"] = JSON.stringify([
-      { id: "x", name: "Test", cards: [{ front: "", back: "ok" }] },
+      { id: "x", name: "Test", cards: [{ front: "", back: "ok" }, { front: "ok", back: "ok" }] },
     ]);
     const { result } = renderHook(() => useDeckStore());
-    expect(result.current.decks[0].name).toBe("My First Deck");
+    expect(result.current.decks[0].name).toBe("Test");
+    expect(result.current.decks[0].cards.length).toBe(1);
+    expect(result.current.decks[0].cards[0].front).toBe("ok");
   });
 
   it("falls back when deck name is not a string", () => {
