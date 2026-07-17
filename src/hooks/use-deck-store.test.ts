@@ -79,6 +79,38 @@ describe("useDeckStore — initialization", () => {
     expect(result.current.decks).toHaveLength(3);
   });
 
+  it("falls back when decks have missing id", () => {
+    mockStore["genanki-decks"] = JSON.stringify([
+      { name: "Bad Deck", cards: [] },
+    ]);
+    const { result } = renderHook(() => useDeckStore());
+    expect(result.current.decks[0].name).toBe("My First Deck");
+  });
+
+  it("falls back when deck cards have empty front", () => {
+    mockStore["genanki-decks"] = JSON.stringify([
+      { id: "x", name: "Test", cards: [{ front: "", back: "ok" }] },
+    ]);
+    const { result } = renderHook(() => useDeckStore());
+    expect(result.current.decks[0].name).toBe("My First Deck");
+  });
+
+  it("falls back when deck name is not a string", () => {
+    mockStore["genanki-decks"] = JSON.stringify([
+      { id: "x", name: 123, cards: [] },
+    ]);
+    const { result } = renderHook(() => useDeckStore());
+    expect(result.current.decks[0].name).toBe("My First Deck");
+  });
+
+  it("falls back when cards is not an array", () => {
+    mockStore["genanki-decks"] = JSON.stringify([
+      { id: "x", name: "Test", cards: "not-array" },
+    ]);
+    const { result } = renderHook(() => useDeckStore());
+    expect(result.current.decks[0].name).toBe("My First Deck");
+  });
+
   it("initializes openedDeckId as null", () => {
     const { result } = renderHook(() => useDeckStore());
     expect(result.current.openedDeckId).toBeNull();
@@ -283,6 +315,35 @@ describe("useDeckStore — store management", () => {
 
     expect(result.current.openedDeckId).toBe(result.current.decks[2].id);
     expect(result.current.openedDeck!.id).toBe(result.current.decks[2].id);
+  });
+
+  it("removing the opened deck resets openedDeckId to null", () => {
+    const { result } = renderHook(() => useDeckStore());
+    const deckId = result.current.decks[0].id;
+
+    act(() => {
+      result.current.setOpenedDeckId(deckId);
+    });
+    expect(result.current.openedDeckId).toBe(deckId);
+
+    act(() => {
+      result.current.removeDeck(deckId);
+    });
+    expect(result.current.openedDeckId).toBeNull();
+  });
+
+  it("removing the active deck switches to next available", () => {
+    const { result } = renderHook(() => useDeckStore());
+    const firstId = result.current.decks[0].id;
+
+    act(() => {
+      result.current.setActiveDeckId(firstId);
+    });
+
+    act(() => {
+      result.current.removeDeck(firstId);
+    });
+    expect(result.current.activeDeckId).not.toBe(firstId);
   });
 
   it("saves to localStorage on state changes", () => {
