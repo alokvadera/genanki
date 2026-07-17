@@ -58,8 +58,10 @@
     "hono": "^4.10.7",
     "input-otp": "^1.4.2",
     "jszip": "^3.10.1",
+    "katex": "^0.16.11",
     "lucide-react": "^0.555.0",
     "mammoth": "^1.12.0",
+    "marked": "^15.0.0",
     "next-themes": "^0.4.6",
     "pdfjs-dist": "^6.1.200",
     "react": "^19.2.0",
@@ -74,11 +76,9 @@
     "sql.js": "^1.14.1",
     "tailwind-merge": "^3.4.0",
     "tailwindcss": "^4.1.17",
+    "tesseract.js": "^5.1.0",
     "vaul": "^1.1.2",
-    "zod": "^4.1.13",
-    "marked": "^15.0.0",
-    "katex": "^0.16.11",
-    "tesseract.js": "^5.1.0"
+    "zod": "^4.1.13"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
@@ -89,6 +89,7 @@
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
+    "@vitest/coverage-v8": "^4.1.10",
     "eslint": "^9.39.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.0.1",

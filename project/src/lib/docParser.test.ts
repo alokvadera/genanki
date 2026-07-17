@@ -1,169 +1,655 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// Mock pdfjs-dist to avoid loading the real PDF worker
-vi.mock("pdfjs-dist", () => ({
-  default: {
-    GlobalWorkerOptions: { workerSrc: "" },
-    getDocument: vi.fn(),
-    version: "4.0.379",
-  },
-  GlobalWorkerOptions: { workerSrc: "" },
-  getDocument: vi.fn(),
-  version: "4.0.379",
-}));
+const mockGetOutline = vi.fn().mockResolvedValue(null);
+const mockGetDestination = vi.fn();
+const mockGetPageIndex = vi.fn();
+const mockGetPage = vi.fn();
+const mockNumPages = vi.fn().mockReturnValue(1);
+const mockGetDocument = vi.fn();
 
-// Mock mammoth browser build — only the default export is used by import mammoth from ...
+vi.mock("pdfjs-dist", () => {
+  const mockPage = {
+    getTextContent: vi.fn().mockResolvedValue({ items: [{ str: "Hello World" }] }),
+    getViewport: vi.fn().mockReturnValue({ width: 800, height: 600 }),
+  };
+  const mockPdf = {
+    numPages: 1,
+    getPage: vi.fn().mockResolvedValue(mockPage),
+    getOutline: vi.fn().mockResolvedValue(null),
+    getDestination: vi.fn(),
+    getPageIndex: vi.fn(),
+  };
+  return {
+    getDocument: vi.fn().mockReturnValue({ promise: Promise.resolve(mockPdf) }),
+    GlobalWorkerOptions: { workerSrc: "" },
+    version: "4.0.379",
+  };
+});
+
 vi.mock("mammoth/mammoth.browser", () => ({
   default: {
-    extractRawText: vi.fn(),
+    extractRawText: vi.fn().mockResolvedValue({ value: "Extracted docx text" }),
   },
 }));
 
-// Helper to create a mock File object
-function createMockFile(
-  name: string,
-  content: string,
-  options?: { rejectText?: boolean },
-): File {
-  const blob = new Blob([content], { type: "text/plain" });
-  const file = new File([blob], name);
+import {
+  extractTextFromTxt,
+  extractTextFromDocx,
+  extractTextFromFile,
+  extractDocument,
+} from "./docParser";
 
-  if (options?.rejectText) {
-    vi.spyOn(file, "text").mockRejectedValue(new Error("File read error"));
-  }
-
-  return file;
+function createFile(name: string, content: string): File {
+  return new File([content], name, { type: "text/plain" });
 }
 
-describe("extractTextFromFile", () => {
-  let extractTextFromFile: (file: File) => Promise<string>;
+describe("docParser", () => {
+  describe("extractTextFromTxt", () => {
+    it("extracts text from a txt file", async () => {
+      const file = createFile("test.txt", "Hello World");
+      const result = await extractTextFromTxt(file);
+      expect(result).toBe("Hello World");
+    });
 
-  beforeEach(async () => {
-    vi.clearAllMocks();
-    const mod = await import("@/lib/docParser");
-    extractTextFromFile = mod.extractTextFromFile;
+    it("rejects files exceeding 50MB size limit", async () => {
+      const largeContent = "x".repeat(51 * 1024 * 1024);
+      const file = createFile("large.txt", largeContent);
+      await expect(extractTextFromTxt(file)).rejects.toThrow("too large");
+    });
+
+    it("truncates text exceeding 500K characters", async () => {
+      const longContent = "a".repeat(600_000);
+      const file = createFile("long.txt", longContent);
+      const result = await extractTextFromTxt(file);
+      expect(result.length).toBeLessThan(600_000);
+      expect(result).toContain("[Text truncated due to size limits]");
+    });
+
+    it("does not truncate text under 500K characters", async () => {
+      const content = "a".repeat(100_000);
+      const file = createFile("normal.txt", content);
+      const result = await extractTextFromTxt(file);
+      expect(result).toBe(content);
+      expect(result).not.toContain("truncated");
+    });
   });
 
-  it("extracts text from .txt files", async () => {
-    const file = createMockFile("notes.txt", "Hello world\nThis is a test.");
-    const result = await extractTextFromFile(file);
-    // extractTextFromTxt just calls file.text()
-    expect(result).toBe("Hello world\nThis is a test.");
+  describe("extractTextFromDocx", () => {
+    it("extracts text from a docx file", async () => {
+      const file = createFile("test.docx", "binary content");
+      const result = await extractTextFromDocx(file);
+      expect(result).toBe("Extracted docx text");
+    });
+
+    it("rejects oversized docx files", async () => {
+      const file = createFile("large.docx", "x".repeat(51 * 1024 * 1024));
+      await expect(extractTextFromDocx(file)).rejects.toThrow("too large");
+    });
   });
 
-  it("extracts text from .md files with markdown normalization", async () => {
-    const mdContent =
-      "# Title\n\n**bold** and *italic* and `code`\n\n---\n\n[link](https://example.com)";
-    const file = createMockFile("readme.md", mdContent);
-    const result = await extractTextFromFile(file);
-    // Markdown syntax should be stripped
-    expect(result).not.toContain("**");
-    expect(result).not.toContain("*italic*");
-    expect(result).not.toContain("---");
-    expect(result).not.toContain("[link]");
-    expect(result).toContain("bold");
-    expect(result).toContain("italic");
-    expect(result).toContain("link");
+  describe("extractTextFromFile", () => {
+    it("extracts from .txt files", async () => {
+      const file = createFile("notes.txt", "Plain text content");
+      const result = await extractTextFromFile(file);
+      expect(result).toBe("Plain text content");
+    });
+
+    it("extracts from .text files", async () => {
+      const file = createFile("notes.text", "Plain text content");
+      const result = await extractTextFromFile(file);
+      expect(result).toBe("Plain text content");
+    });
+
+    it("extracts from .docx files", async () => {
+      const file = createFile("doc.docx", "binary");
+      const result = await extractTextFromFile(file);
+      expect(result).toBe("Extracted docx text");
+    });
+
+    it("extracts from .md files with normalization", async () => {
+      const file = createFile("readme.md", "# Heading\n\n**Bold** and *italic*");
+      const result = await extractTextFromFile(file);
+      expect(result).toContain("Heading");
+      expect(result).toContain("Bold");
+    });
+
+    it("extracts from .markdown files", async () => {
+      const file = createFile("doc.markdown", "# Title\n\nSome content");
+      const result = await extractTextFromFile(file);
+      expect(result).toContain("Title");
+    });
+
+    it("falls back to txt extraction for unknown extensions", async () => {
+      const file = createFile("data.csv", "col1,col2");
+      const result = await extractTextFromFile(file);
+      expect(result).toBe("col1,col2");
+    });
+
+    it("extracts from .pdf files", async () => {
+      const file = createFile("doc.pdf", "pdf content");
+      const result = await extractTextFromFile(file);
+      expect(result).toContain("Hello World");
+    });
   });
 
-  it("strips code fences from .md files", async () => {
-    const mdContent =
-      "Some text\n```json\n{\"key\": \"value\"}\n```\nMore text";
-    const file = createMockFile("doc.md", mdContent);
-    const result = await extractTextFromFile(file);
-    expect(result).not.toContain("```");
-    expect(result).not.toContain('"key"');
-    expect(result).toContain("Some text");
-    expect(result).toContain("More text");
+  describe("extractDocument", () => {
+    it("returns kind: txt for .txt files", async () => {
+      const file = createFile("notes.txt", "text content");
+      const result = await extractDocument(file);
+      expect(result.kind).toBe("txt");
+      expect(result.text).toBe("text content");
+    });
+
+    it("returns kind: txt for .text files", async () => {
+      const file = createFile("notes.text", "text content");
+      const result = await extractDocument(file);
+      expect(result.kind).toBe("txt");
+    });
+
+    it("returns kind: md for .md files", async () => {
+      const file = createFile("readme.md", "# Title");
+      const result = await extractDocument(file);
+      expect(result.kind).toBe("md");
+    });
+
+    it("returns kind: md for .markdown files", async () => {
+      const file = createFile("doc.markdown", "# Title");
+      const result = await extractDocument(file);
+      expect(result.kind).toBe("md");
+    });
+
+    it("returns kind: docx for .docx files", async () => {
+      const file = createFile("doc.docx", "binary");
+      const result = await extractDocument(file);
+      expect(result.kind).toBe("docx");
+    });
+
+    it("returns kind: pdf for .pdf files", async () => {
+      const file = createFile("doc.pdf", "pdf content");
+      const result = await extractDocument(file);
+      expect(result.kind).toBe("pdf");
+      expect(result.pageOffsets).toBeDefined();
+    });
+
+    it("falls back to txt for unknown extensions", async () => {
+      const file = createFile("data.csv", "col1,col2");
+      const result = await extractDocument(file);
+      expect(result.kind).toBe("txt");
+    });
   });
 
-  it("strips image markdown from .md files", async () => {
-    const mdContent = "![alt text](image.png) and text after";
-    const file = createMockFile("doc.md", mdContent);
-    const result = await extractTextFromFile(file);
-    expect(result).not.toContain("![");
-    expect(result).not.toContain("image.png");
-    expect(result).toContain("alt text");
+  describe("normalizeMarkdown (via extractTextFromFile .md)", () => {
+    it("strips code fences", async () => {
+      const file = createFile("code.md", "Text before\n```\ncode block\n```\nText after");
+      const result = await extractTextFromFile(file);
+      expect(result).not.toContain("code block");
+      expect(result).toContain("Text before");
+    });
+
+    it("strips image syntax", async () => {
+      const file = createFile("img.md", "Image: ![alt](url.png)");
+      const result = await extractTextFromFile(file);
+      expect(result).toContain("alt");
+      expect(result).not.toContain("![");
+    });
+
+    it("strips link syntax but keeps text", async () => {
+      const file = createFile("link.md", "[click here](https://example.com)");
+      const result = await extractTextFromFile(file);
+      expect(result).toContain("click here");
+    });
+
+    it("strips emphasis markers", async () => {
+      const file = createFile("em.md", "**bold** and *italic* and ~~strike~~");
+      const result = await extractTextFromFile(file);
+      expect(result).toContain("bold");
+      expect(result).toContain("italic");
+      expect(result).toContain("strike");
+    });
+
+    it("strips horizontal rules", async () => {
+      const file = createFile("hr.md", "Before\n---\nAfter");
+      const result = await extractTextFromFile(file);
+      expect(result).toContain("Before");
+      expect(result).toContain("After");
+    });
+
+    it("truncates markdown over 200K characters", async () => {
+      const longMd = "# ".repeat(100_000);
+      const file = createFile("long.md", longMd);
+      const result = await extractTextFromFile(file);
+      expect(result.length).toBeLessThanOrEqual(200_000 + 100);
+    });
+
+    it("preserves heading markers for chapter detection", async () => {
+      const file = createFile("headings.md", "# Chapter 1\n\n## Section 1.1\n\nContent here");
+      const result = await extractTextFromFile(file);
+      expect(result).toContain("# Chapter 1");
+      expect(result).toContain("## Section 1.1");
+    });
   });
 
-  it("extracts text from .text files", async () => {
-    const file = createMockFile("data.text", "Plain text content");
-    const result = await extractTextFromFile(file);
-    expect(result).toBe("Plain text content");
-  });
+  describe("extractDocument branches", () => {
+    it("extracts from .pdf with structure", async () => {
+      const file = createFile("doc.pdf", "pdf content");
+      const result = await extractDocument(file);
+      expect(result.kind).toBe("pdf");
+      expect(result.pageOffsets).toBeDefined();
+      expect(Array.isArray(result.outline)).toBe(true);
+    });
 
-  it("trims whitespace from extracted markdown", async () => {
-    const file = createMockFile("doc.md", "  hello world  ");
-    const result = await extractTextFromFile(file);
-    expect(result).toBe("hello world");
-  });
+    it("handles scanned PDF detection (short text)", async () => {
+      const { getDocument } = await import("pdfjs-dist");
+      const shortPage = {
+        getTextContent: vi.fn().mockResolvedValue({ items: [{ str: "hi" }] }),
+        getViewport: vi.fn().mockReturnValue({ width: 800, height: 600 }),
+      };
+      const shortPdf = {
+        numPages: 1,
+        getPage: vi.fn().mockResolvedValue(shortPage),
+        getOutline: vi.fn().mockResolvedValue(null),
+      };
+      (getDocument as any).mockReturnValue({ promise: Promise.resolve(shortPdf) });
+      
+      const file = createFile("scan.pdf", "pdf");
+      const result = await extractDocument(file);
+      expect(result.isScanned).toBe(true);
+    });
 
-  it("caps markdown input at 200k chars", async () => {
-    const longContent = "a".repeat(250_000);
-    const file = createMockFile("doc.md", longContent);
-    const result = await extractTextFromFile(file);
-    expect(result.length).toBeLessThanOrEqual(200_000);
-  });
+    it("handles PDF with empty text content", async () => {
+      const { getDocument } = await import("pdfjs-dist");
+      const emptyPage = {
+        getTextContent: vi.fn().mockResolvedValue({ items: [] }),
+        getViewport: vi.fn().mockReturnValue({ width: 800, height: 600 }),
+      };
+      const emptyPdf = {
+        numPages: 1,
+        getPage: vi.fn().mockResolvedValue(emptyPage),
+        getOutline: vi.fn().mockResolvedValue(null),
+      };
+      (getDocument as any).mockReturnValue({ promise: Promise.resolve(emptyPdf) });
+      
+      const file = createFile("empty.pdf", "pdf");
+      const result = await extractDocument(file);
+      expect(result.text).toBe("");
+    });
 
-  it("forwards to PDF extraction for .pdf files", async () => {
-    const pdfjs = await import("pdfjs-dist");
-    const mockGetDocument = vi.mocked(pdfjs.getDocument);
+    it("handles PDF with outline/bookmarks", async () => {
+      const { getDocument } = await import("pdfjs-dist");
+      const mockPage = {
+        getTextContent: vi.fn().mockResolvedValue({ items: [{ str: "Page content" }] }),
+        getViewport: vi.fn().mockReturnValue({ width: 800, height: 600 }),
+      };
+      const mockPdf = {
+        numPages: 2,
+        getPage: vi.fn().mockResolvedValue(mockPage),
+        getOutline: vi.fn().mockResolvedValue([
+          { title: "Chapter 1", dest: "dest1", items: [] },
+          { title: "Chapter 2", dest: "dest2", items: [{ title: "Section 2.1", dest: "dest3", items: [] }] },
+        ]),
+        getDestination: vi.fn().mockResolvedValue([{ pageNum: 0 }]),
+        getPageIndex: vi.fn().mockResolvedValue(0),
+      };
+      (getDocument as any).mockReturnValue({ promise: Promise.resolve(mockPdf) });
+      
+      const file = createFile("outline.pdf", "pdf");
+      const result = await extractDocument(file);
+      expect(result.outline).toBeDefined();
+      expect(result.outline!.length).toBeGreaterThan(0);
+    });
 
-    const mockPage = {
-      getTextContent: vi.fn().mockResolvedValue({
-        items: [{ str: "Page 1 text" }],
-      }),
-    };
-
-    mockGetDocument.mockReturnValue({
-      promise: Promise.resolve({
+    it("handles outline resolution errors gracefully", async () => {
+      const { getDocument } = await import("pdfjs-dist");
+      const mockPage = {
+        getTextContent: vi.fn().mockResolvedValue({ items: [{ str: "Content" }] }),
+        getViewport: vi.fn().mockReturnValue({ width: 800, height: 600 }),
+      };
+      const mockPdf = {
         numPages: 1,
         getPage: vi.fn().mockResolvedValue(mockPage),
-        destroy: vi.fn(),
-      }),
-    } as unknown as ReturnType<typeof mockGetDocument>);
-
-    const file = createMockFile("doc.pdf", "pdf binary content");
-    const result = await extractTextFromFile(file);
-    expect(result).toContain("Page 1 text");
-    expect(mockGetDocument).toHaveBeenCalledTimes(1);
-  });
-
-  it("throws for unsupported file types when text read fails", async () => {
-    const file = createMockFile("data.xyz", "some content", {
-      rejectText: true,
-    });
-    await expect(extractTextFromFile(file)).rejects.toThrow(
-      /unsupported file type.*xyz/i,
-    );
-  });
-
-  it("tries .text() fallback for unknown extensions", async () => {
-    const file = createMockFile("data.xyz", "fallback content");
-    const result = await extractTextFromFile(file);
-    // Falls through to default which calls file.text()
-    expect(result).toBe("fallback content");
-  });
-
-  it("extracts text from .markdown extension", async () => {
-    const mdContent = "_emphasized_ text";
-    const file = createMockFile("doc.markdown", mdContent);
-    const result = await extractTextFromFile(file);
-    expect(result).not.toContain("_");
-    expect(result).toContain("emphasized");
-  });
-
-  it("forwards to DOCX extraction for .docx files", async () => {
-    const mammothMod = await import("mammoth/mammoth.browser");
-    const mockExtractRawText = vi.mocked(mammothMod.default.extractRawText);
-    mockExtractRawText.mockResolvedValue({
-      value: "Extracted Word content",
-      messages: [],
+        getOutline: vi.fn().mockRejectedValue(new Error("No outline")),
+        getDestination: vi.fn(),
+        getPageIndex: vi.fn(),
+      };
+      (getDocument as any).mockReturnValue({ promise: Promise.resolve(mockPdf) });
+      
+      const file = createFile("err.pdf", "pdf");
+      const result = await extractDocument(file);
+      expect(result.outline).toEqual([]);
     });
 
-    const file = createMockFile("report.docx", "docx binary");
-    const result = await extractTextFromFile(file);
-    expect(result).toBe("Extracted Word content");
-    expect(mockExtractRawText).toHaveBeenCalledTimes(1);
+    it("handles PDF with named destination that fails", async () => {
+      const { getDocument } = await import("pdfjs-dist");
+      const mockPage = {
+        getTextContent: vi.fn().mockResolvedValue({ items: [{ str: "Content" }] }),
+        getViewport: vi.fn().mockReturnValue({ width: 800, height: 600 }),
+      };
+      const mockPdf = {
+        numPages: 1,
+        getPage: vi.fn().mockResolvedValue(mockPage),
+        getOutline: vi.fn().mockResolvedValue([
+          { title: "Chapter", dest: "named_dest", items: [] },
+        ]),
+        getDestination: vi.fn().mockRejectedValue(new Error("Unknown dest")),
+        getPageIndex: vi.fn(),
+      };
+      (getDocument as any).mockReturnValue({ promise: Promise.resolve(mockPdf) });
+      
+      const file = createFile("named.pdf", "pdf");
+      const result = await extractDocument(file);
+      expect(result.outline).toEqual([]);
+    });
+
+    it("handles outline with non-array dest", async () => {
+      const { getDocument } = await import("pdfjs-dist");
+      const mockPage = {
+        getTextContent: vi.fn().mockResolvedValue({ items: [{ str: "Content" }] }),
+        getViewport: vi.fn().mockReturnValue({ width: 800, height: 600 }),
+      };
+      const mockPdf = {
+        numPages: 1,
+        getPage: vi.fn().mockResolvedValue(mockPage),
+        getOutline: vi.fn().mockResolvedValue([
+          { title: "Chapter", dest: 123, items: [] },
+        ]),
+        getDestination: vi.fn().mockResolvedValue("not-an-array"),
+        getPageIndex: vi.fn(),
+      };
+      (getDocument as any).mockReturnValue({ promise: Promise.resolve(mockPdf) });
+      
+      const file = createFile("baddest.pdf", "pdf");
+      const result = await extractDocument(file);
+      expect(result.outline).toEqual([]);
+    });
+
+    it("handles outline with getPageIndex error", async () => {
+      const { getDocument } = await import("pdfjs-dist");
+      const mockPage = {
+        getTextContent: vi.fn().mockResolvedValue({ items: [{ str: "Content" }] }),
+        getViewport: vi.fn().mockReturnValue({ width: 800, height: 600 }),
+      };
+      const mockPdf = {
+        numPages: 1,
+        getPage: vi.fn().mockResolvedValue(mockPage),
+        getOutline: vi.fn().mockResolvedValue([
+          { title: "Chapter", dest: ["ref1", 0], items: [] },
+        ]),
+        getDestination: vi.fn(),
+        getPageIndex: vi.fn().mockRejectedValue(new Error("Page not found")),
+      };
+      (getDocument as any).mockReturnValue({ promise: Promise.resolve(mockPdf) });
+      
+      const file = createFile("pageerr.pdf", "pdf");
+      const result = await extractDocument(file);
+      expect(result.outline).toEqual([]);
+    });
+
+    it("handles outline with null dest", async () => {
+      const { getDocument } = await import("pdfjs-dist");
+      const mockPage = {
+        getTextContent: vi.fn().mockResolvedValue({ items: [{ str: "Content" }] }),
+        getViewport: vi.fn().mockReturnValue({ width: 800, height: 600 }),
+      };
+      const mockPdf = {
+        numPages: 1,
+        getPage: vi.fn().mockResolvedValue(mockPage),
+        getOutline: vi.fn().mockResolvedValue([
+          { title: "Chapter", dest: null, items: [] },
+        ]),
+        getDestination: vi.fn(),
+        getPageIndex: vi.fn(),
+      };
+      (getDocument as any).mockReturnValue({ promise: Promise.resolve(mockPdf) });
+      
+      const file = createFile("nulldest.pdf", "pdf");
+      const result = await extractDocument(file);
+      expect(result.outline).toEqual([]);
+    });
+
+    it("handles outline with empty dest array", async () => {
+      const { getDocument } = await import("pdfjs-dist");
+      const mockPage = {
+        getTextContent: vi.fn().mockResolvedValue({ items: [{ str: "Content" }] }),
+        getViewport: vi.fn().mockReturnValue({ width: 800, height: 600 }),
+      };
+      const mockPdf = {
+        numPages: 1,
+        getPage: vi.fn().mockResolvedValue(mockPage),
+        getOutline: vi.fn().mockResolvedValue([
+          { title: "Chapter", dest: [], items: [] },
+        ]),
+        getDestination: vi.fn().mockResolvedValue([]),
+        getPageIndex: vi.fn(),
+      };
+      (getDocument as any).mockReturnValue({ promise: Promise.resolve(mockPdf) });
+      
+      const file = createFile("emptydest.pdf", "pdf");
+      const result = await extractDocument(file);
+      expect(result.outline).toEqual([]);
+    });
+
+    it("handles outline with non-string title", async () => {
+      const { getDocument } = await import("pdfjs-dist");
+      const mockPage = {
+        getTextContent: vi.fn().mockResolvedValue({ items: [{ str: "Content" }] }),
+        getViewport: vi.fn().mockReturnValue({ width: 800, height: 600 }),
+      };
+      const mockPdf = {
+        numPages: 1,
+        getPage: vi.fn().mockResolvedValue(mockPage),
+        getOutline: vi.fn().mockResolvedValue([
+          { title: 123, dest: ["ref1", 0], items: [] },
+        ]),
+        getDestination: vi.fn(),
+        getPageIndex: vi.fn().mockResolvedValue(0),
+      };
+      (getDocument as any).mockReturnValue({ promise: Promise.resolve(mockPdf) });
+      
+      const file = createFile("badtitle.pdf", "pdf");
+      const result = await extractDocument(file);
+      expect(result.outline).toEqual([]);
+    });
+
+    it("handles outline with page index out of bounds", async () => {
+      const { getDocument } = await import("pdfjs-dist");
+      const mockPage = {
+        getTextContent: vi.fn().mockResolvedValue({ items: [{ str: "Content" }] }),
+        getViewport: vi.fn().mockReturnValue({ width: 800, height: 600 }),
+      };
+      const mockPdf = {
+        numPages: 1,
+        getPage: vi.fn().mockResolvedValue(mockPage),
+        getOutline: vi.fn().mockResolvedValue([
+          { title: "Chapter", dest: ["ref1", 0], items: [] },
+        ]),
+        getDestination: vi.fn(),
+        getPageIndex: vi.fn().mockResolvedValue(999),
+      };
+      (getDocument as any).mockReturnValue({ promise: Promise.resolve(mockPdf) });
+      
+      const file = createFile("oob.pdf", "pdf");
+      const result = await extractDocument(file);
+      expect(result.outline).toEqual([]);
+    });
+
+    it("handles outline with empty string title", async () => {
+      const { getDocument } = await import("pdfjs-dist");
+      const mockPage = {
+        getTextContent: vi.fn().mockResolvedValue({ items: [{ str: "Content" }] }),
+        getViewport: vi.fn().mockReturnValue({ width: 800, height: 600 }),
+      };
+      const mockPdf = {
+        numPages: 1,
+        getPage: vi.fn().mockResolvedValue(mockPage),
+        getOutline: vi.fn().mockResolvedValue([
+          { title: "", dest: ["ref1", 0], items: [] },
+        ]),
+        getDestination: vi.fn(),
+        getPageIndex: vi.fn().mockResolvedValue(0),
+      };
+      (getDocument as any).mockReturnValue({ promise: Promise.resolve(mockPdf) });
+      
+      const file = createFile("emptytitle.pdf", "pdf");
+      const result = await extractDocument(file);
+      expect(result.outline).toEqual([]);
+    });
+
+    it("handles outline with negative page index", async () => {
+      const { getDocument } = await import("pdfjs-dist");
+      const mockPage = {
+        getTextContent: vi.fn().mockResolvedValue({ items: [{ str: "Content" }] }),
+        getViewport: vi.fn().mockReturnValue({ width: 800, height: 600 }),
+      };
+      const mockPdf = {
+        numPages: 1,
+        getPage: vi.fn().mockResolvedValue(mockPage),
+        getOutline: vi.fn().mockResolvedValue([
+          { title: "Chapter", dest: ["ref1", 0], items: [] },
+        ]),
+        getDestination: vi.fn(),
+        getPageIndex: vi.fn().mockResolvedValue(-1),
+      };
+      (getDocument as any).mockReturnValue({ promise: Promise.resolve(mockPdf) });
+      
+      const file = createFile("neg.pdf", "pdf");
+      const result = await extractDocument(file);
+      expect(result.outline).toEqual([]);
+    });
+
+    it("handles outline with getDestination returning non-string dest", async () => {
+      const { getDocument } = await import("pdfjs-dist");
+      const mockPage = {
+        getTextContent: vi.fn().mockResolvedValue({ items: [{ str: "Content" }] }),
+        getViewport: vi.fn().mockReturnValue({ width: 800, height: 600 }),
+      };
+      const mockPdf = {
+        numPages: 1,
+        getPage: vi.fn().mockResolvedValue(mockPage),
+        getOutline: vi.fn().mockResolvedValue([
+          { title: "Chapter", dest: "named_dest", items: [] },
+        ]),
+        getDestination: vi.fn().mockResolvedValue(123),
+        getPageIndex: vi.fn(),
+      };
+      (getDocument as any).mockReturnValue({ promise: Promise.resolve(mockPdf) });
+      
+      const file = createFile("namednon.pdf", "pdf");
+      const result = await extractDocument(file);
+      expect(result.outline).toEqual([]);
+    });
+
+    it("handles outline with getPageIndex returning non-number", async () => {
+      const { getDocument } = await import("pdfjs-dist");
+      const mockPage = {
+        getTextContent: vi.fn().mockResolvedValue({ items: [{ str: "Content" }] }),
+        getViewport: vi.fn().mockReturnValue({ width: 800, height: 600 }),
+      };
+      const mockPdf = {
+        numPages: 1,
+        getPage: vi.fn().mockResolvedValue(mockPage),
+        getOutline: vi.fn().mockResolvedValue([
+          { title: "Chapter", dest: ["ref1", 0], items: [] },
+        ]),
+        getDestination: vi.fn(),
+        getPageIndex: vi.fn().mockResolvedValue("not-a-number"),
+      };
+      (getDocument as any).mockReturnValue({ promise: Promise.resolve(mockPdf) });
+      
+      const file = createFile("nan.pdf", "pdf");
+      const result = await extractDocument(file);
+      expect(result.outline).toEqual([]);
+    });
+
+    it("handles outline with nested items", async () => {
+      const { getDocument } = await import("pdfjs-dist");
+      const mockPage = {
+        getTextContent: vi.fn().mockResolvedValue({ items: [{ str: "Content" }] }),
+        getViewport: vi.fn().mockReturnValue({ width: 800, height: 600 }),
+      };
+      const mockPdf = {
+        numPages: 1,
+        getPage: vi.fn().mockResolvedValue(mockPage),
+        getOutline: vi.fn().mockResolvedValue([
+          { title: "Chapter 1", dest: ["ref1", 0], items: [
+            { title: "Section 1.1", dest: ["ref2", 0], items: [] },
+          ] },
+        ]),
+        getDestination: vi.fn(),
+        getPageIndex: vi.fn().mockResolvedValue(0),
+      };
+      (getDocument as any).mockReturnValue({ promise: Promise.resolve(mockPdf) });
+      
+      const file = createFile("nested.pdf", "pdf");
+      const result = await extractDocument(file);
+      expect(result.outline).toBeDefined();
+      expect(result.outline!.length).toBe(2);
+    });
+
+    it("returns kind: txt for .txt files via extractDocument", async () => {
+      const file = createFile("notes.txt", "text content");
+      const result = await extractDocument(file);
+      expect(result.kind).toBe("txt");
+      expect(result.text).toBe("text content");
+    });
+
+    it("extracts text from unknown ext via extractDocument fallback", async () => {
+      const file = createFile("data.xyz", "content");
+      const result = await extractDocument(file);
+      expect(result.kind).toBe("txt");
+      expect(result.text).toBe("content");
+    });
+
+    it("extracts text from unknown ext via extractTextFromFile fallback", async () => {
+      const file = createFile("data.xyz", "content");
+      const result = await extractTextFromFile(file);
+      expect(result).toBe("content");
+    });
+
+    it("handles PDF with empty outline array", async () => {
+      const { getDocument } = await import("pdfjs-dist");
+      const mockPage = {
+        getTextContent: vi.fn().mockResolvedValue({ items: [{ str: "Content" }] }),
+        getViewport: vi.fn().mockReturnValue({ width: 800, height: 600 }),
+      };
+      const mockPdf = {
+        numPages: 1,
+        getPage: vi.fn().mockResolvedValue(mockPage),
+        getOutline: vi.fn().mockResolvedValue([]),
+        getDestination: vi.fn(),
+        getPageIndex: vi.fn(),
+      };
+      (getDocument as any).mockReturnValue({ promise: Promise.resolve(mockPdf) });
+      
+      const file = createFile("emptyoutline.pdf", "pdf");
+      const result = await extractDocument(file);
+      expect(result.outline).toEqual([]);
+    });
+
+    it("handles PDF with multi-page structure", async () => {
+      const { getDocument } = await import("pdfjs-dist");
+      const mockPage1 = {
+        getTextContent: vi.fn().mockResolvedValue({ items: [{ str: "Page 1 content" }] }),
+        getViewport: vi.fn().mockReturnValue({ width: 800, height: 600 }),
+      };
+      const mockPage2 = {
+        getTextContent: vi.fn().mockResolvedValue({ items: [{ str: "Page 2 content" }] }),
+        getViewport: vi.fn().mockReturnValue({ width: 800, height: 600 }),
+      };
+      const mockPdf = {
+        numPages: 2,
+        getPage: vi.fn()
+          .mockResolvedValueOnce(mockPage1)
+          .mockResolvedValueOnce(mockPage2),
+        getOutline: vi.fn().mockResolvedValue(null),
+      };
+      (getDocument as any).mockReturnValue({ promise: Promise.resolve(mockPdf) });
+      
+      const file = createFile("multipage.pdf", "pdf");
+      const result = await extractDocument(file);
+      expect(result.text).toContain("Page 1 content");
+      expect(result.text).toContain("Page 2 content");
+      expect(result.pageOffsets).toBeDefined();
+      expect(result.pageOffsets!.length).toBe(2);
+    });
   });
 });

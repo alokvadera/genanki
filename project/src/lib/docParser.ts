@@ -1,8 +1,11 @@
 import * as pdfjsLib from "pdfjs-dist";
 import mammoth from "mammoth/mammoth.browser";
 
-// Set worker source to CDN for browser compatibility
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+// Set worker source to local bundle for offline compatibility
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  "../../public/pdf.worker.min.mjs",
+  import.meta.url
+).href;
 
 // Maximum file size limits (in bytes)
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB

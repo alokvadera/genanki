@@ -340,7 +340,7 @@ export function populateDb(db: Database, deckData: AnkiDeckData): number {
         const cid = randomAnkiId();
         const ord = Math.max(0, clozeIdx - 1);
         db.run(
-          `INSERT INTO cards (id, nid, did, ord, mod, usn, type, queue, due, ivl, factor, reps, lapses, left, ordue, odid, flags, data)
+          `INSERT INTO cards (id, nid, did, ord, mod, usn, type, queue, due, ivl, factor, reps, lapses, left, odue, odid, flags, data)
            VALUES ($1, $2, $3, $4, $5, -1, 0, 0, $6, 0, 0, 0, 0, 0, 0, 0, 0, '')`,
           [cid, nid, deckId, ord, NOW, i + 1]
         );

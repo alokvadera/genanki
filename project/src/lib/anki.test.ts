@@ -494,6 +494,184 @@ describe("generateAnkiPackage", () => {
     db.close();
   });
 
+  it("generates cloze cards when front contains {{c1::...}} syntax", async () => {
+    savedBlobs.length = 0;
+
+    await generateAnkiPackage({
+      name: "Cloze Deck",
+      cards: [
+        { front: "The {{c1::mitochondria}} is the powerhouse of the cell", back: "organelle" },
+        { front: "Water is {{c1::H2O}}", back: "chemical formula" },
+      ],
+    });
+
+    expect(savedBlobs).toHaveLength(1);
+
+    const { default: JSZip } = await import("jszip");
+    const buffer = Buffer.from(await savedBlobs[0].blob.arrayBuffer());
+    const zip = await JSZip.loadAsync(buffer);
+    const dbBuffer = await zip.file("collection.anki2")!.async("uint8array");
+
+    const initSqlJs = (await import("sql.js")).default;
+    const wasmPath = path.join(
+      process.cwd(),
+      "node_modules",
+      "sql.js",
+      "dist",
+      "sql-wasm-browser.wasm",
+    );
+    const wasmBinary = fs.readFileSync(wasmPath);
+    const SQL = await initSqlJs({ wasmBinary } as Parameters<typeof initSqlJs>[0]);
+    const db = new SQL.Database(dbBuffer);
+
+    // Verify notes were inserted
+    const notesResult = db.exec("SELECT COUNT(*) FROM notes");
+    expect(notesResult[0].values[0][0]).toBe(2);
+
+    // Verify cards were inserted (cloze cards have ord >= 0)
+    const cardsResult = db.exec("SELECT COUNT(*) FROM cards");
+    expect(cardsResult[0].values[0][0]).toBeGreaterThanOrEqual(2);
+
+    // Verify cards have ord column matching cloze indices
+    const ordResult = db.exec("SELECT ord FROM cards ORDER BY ord");
+    const ords = ordResult[0].values.map((row) => row[0] as number);
+    expect(ords).toContain(0);
+
+    db.close();
+  });
+
+  it("generates basic cards when no cloze syntax present", async () => {
+    savedBlobs.length = 0;
+
+    await generateAnkiPackage({
+      name: "Basic Deck",
+      cards: [
+        { front: "What is 2+2?", back: "4" },
+      ],
+    });
+
+    const { default: JSZip } = await import("jszip");
+    const buffer = Buffer.from(await savedBlobs[0].blob.arrayBuffer());
+    const zip = await JSZip.loadAsync(buffer);
+    const dbBuffer = await zip.file("collection.anki2")!.async("uint8array");
+
+    const initSqlJs = (await import("sql.js")).default;
+    const wasmPath = path.join(
+      process.cwd(),
+      "node_modules",
+      "sql.js",
+      "dist",
+      "sql-wasm-browser.wasm",
+    );
+    const wasmBinary = fs.readFileSync(wasmPath);
+    const SQL = await initSqlJs({ wasmBinary } as Parameters<typeof initSqlJs>[0]);
+    const db = new SQL.Database(dbBuffer);
+
+    // Verify notes were inserted
+    const notesResult = db.exec("SELECT COUNT(*) FROM notes");
+    expect(notesResult[0].values[0][0]).toBe(1);
+
+    // Verify basic card has ord=0
+    const cardsResult = db.exec("SELECT ord FROM cards");
+    expect(cardsResult[0].values[0][0]).toBe(0);
+
+    db.close();
+  });
+
+  it("handles cloze cards with multiple cloze indices", async () => {
+    savedBlobs.length = 0;
+
+    await generateAnkiPackage({
+      name: "Multi Cloze",
+      cards: [
+        { front: "The {{c1::mitochondria}} is the {{c2::powerhouse}} of the cell", back: "biology" },
+      ],
+    });
+
+    const { default: JSZip } = await import("jszip");
+    const buffer = Buffer.from(await savedBlobs[0].blob.arrayBuffer());
+    const zip = await JSZip.loadAsync(buffer);
+    const dbBuffer = await zip.file("collection.anki2")!.async("uint8array");
+
+    const initSqlJs = (await import("sql.js")).default;
+    const wasmPath = path.join(
+      process.cwd(),
+      "node_modules",
+      "sql.js",
+      "dist",
+      "sql-wasm-browser.wasm",
+    );
+    const wasmBinary = fs.readFileSync(wasmPath);
+    const SQL = await initSqlJs({ wasmBinary } as Parameters<typeof initSqlJs>[0]);
+    const db = new SQL.Database(dbBuffer);
+
+    // Multiple cloze indices should produce multiple cards
+    const cardsResult = db.exec("SELECT COUNT(*) FROM cards");
+    expect(cardsResult[0].values[0][0]).toBeGreaterThanOrEqual(2);
+
+    const notesResult = db.exec("SELECT COUNT(*) FROM notes");
+    expect(notesResult[0].values[0][0]).toBe(1);
+
+    // Verify ord values match cloze indices
+    const ordResult = db.exec("SELECT ord FROM cards ORDER BY ord");
+    const ords = ordResult[0].values.map((row) => row[0] as number);
+    expect(ords).toContain(0);
+    expect(ords).toContain(1);
+
+    db.close();
+  });
+
+  it("handles mixed cloze and non-cloze cards in same deck", async () => {
+    savedBlobs.length = 0;
+
+    await generateAnkiPackage({
+      name: "Mixed Deck",
+      cards: [
+        { front: "The {{c1::mitochondria}} is the powerhouse", back: "organelle" },
+        { front: "What is 2+2?", back: "4" },
+      ],
+    });
+
+    const { default: JSZip } = await import("jszip");
+    const buffer = Buffer.from(await savedBlobs[0].blob.arrayBuffer());
+    const zip = await JSZip.loadAsync(buffer);
+    const dbBuffer = await zip.file("collection.anki2")!.async("uint8array");
+
+    const initSqlJs = (await import("sql.js")).default;
+    const wasmPath = path.join(
+      process.cwd(),
+      "node_modules",
+      "sql.js",
+      "dist",
+      "sql-wasm-browser.wasm",
+    );
+    const wasmBinary = fs.readFileSync(wasmPath);
+    const SQL = await initSqlJs({ wasmBinary } as Parameters<typeof initSqlJs>[0]);
+    const db = new SQL.Database(dbBuffer);
+
+    const notesResult = db.exec("SELECT COUNT(*) FROM notes");
+    expect(notesResult[0].values[0][0]).toBe(2);
+
+    const cardsResult = db.exec("SELECT COUNT(*) FROM cards");
+    expect(cardsResult[0].values[0][0]).toBe(2);
+
+    db.close();
+  });
+
+  it("randomAnkiId returns 1 when crypto returns 0", () => {
+    const original = crypto.getRandomValues;
+    try {
+      crypto.getRandomValues = vi.fn((arr: Uint32Array) => {
+        arr[0] = 0;
+        return arr;
+      });
+      const id = randomAnkiId();
+      expect(id).toBe(1);
+    } finally {
+      crypto.getRandomValues = original;
+    }
+  });
+
   it("handles control characters in card content", async () => {
     savedBlobs.length = 0;
 

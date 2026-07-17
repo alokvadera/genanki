@@ -15,3 +15,6 @@ dist/
 # Temporary visual regression profiles & screenshots
 chrome-profile-debug/
 *.png
+
+# Test coverage
+coverage/

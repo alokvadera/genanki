@@ -153,4 +153,70 @@ describe("prioritizeCandidates (routing)", () => {
     const paidIdx = result.candidates.findIndex((c) => c.modelId === "paid-model");
     expect(freeIdx).toBeLessThan(paidIdx);
   });
+
+  it("handles candidate with provider not in PROVIDER_ORDER", () => {
+    const candidates = [
+      makeCandidate("groq", "groq-1"),
+      makeCandidate("unknown-provider", "unknown-model"),
+    ];
+    const result = prioritizeCandidates(candidates, []);
+    // Unknown provider should still appear but not in PROVIDER_ORDER grouping
+    const groqModels = result.candidates.filter((c) => c.provider === "groq");
+    expect(groqModels.length).toBe(1);
+    // Unknown provider candidate is ignored since it's not in PROVIDER_ORDER
+    expect(result.candidates.length).toBe(1);
+  });
+
+  it("preferredProvider with no matching candidates falls back to default order", () => {
+    const candidates = [
+      makeCandidate("groq", "groq-1"),
+    ];
+    const result = prioritizeCandidates(candidates, [], "kilo");
+    // kilo has no candidates, so hasPreferred is false, default order used
+    expect(result.candidates[0].provider).toBe("groq");
+  });
+
+  it("circuit breaker: exactly at threshold does not trigger", () => {
+    const candidates = [
+      makeCandidate("groq", "groq-edge"),
+    ];
+    const performance: PerformanceRow[] = [
+      { provider: "groq", model: "groq-edge", calls: 10, successes: 5, failures: 5, timeouts: 0, averageLatencyMs: 500, averageTokens: 500 },
+    ];
+    const result = prioritizeCandidates(candidates, performance);
+    expect(result.candidates).toHaveLength(1);
+  });
+
+  it("circuit breaker: fewer than 3 calls does not trigger penalty", () => {
+    const candidates = [
+      makeCandidate("groq", "groq-few"),
+    ];
+    const performance: PerformanceRow[] = [
+      { provider: "groq", model: "groq-few", calls: 2, successes: 0, failures: 2, timeouts: 0, averageLatencyMs: 500, averageTokens: 500 },
+    ];
+    const result = prioritizeCandidates(candidates, performance);
+    expect(result.candidates).toHaveLength(1);
+  });
+
+  it("cloudflare provider also gets limit of 2", () => {
+    const candidates = [
+      makeCandidate("cloudflare", "cf-1"),
+      makeCandidate("cloudflare", "cf-2"),
+      makeCandidate("cloudflare", "cf-3"),
+    ];
+    const result = prioritizeCandidates(candidates, []);
+    expect(result.candidates.filter((c) => c.provider === "cloudflare").length).toBe(2);
+  });
+
+  it("models with calls >= 3 are scored using performance data", () => {
+    const candidates = [
+      makeCandidate("groq", "groq-proven"),
+      makeCandidate("groq", "groq-new"),
+    ];
+    const performance: PerformanceRow[] = [
+      { provider: "groq", model: "groq-proven", calls: 5, successes: 5, failures: 0, timeouts: 0, averageLatencyMs: 200, averageTokens: 100 },
+    ];
+    const result = prioritizeCandidates(candidates, performance);
+    expect(result.candidates[0].modelId).toBe("groq-proven");
+  });
 });
