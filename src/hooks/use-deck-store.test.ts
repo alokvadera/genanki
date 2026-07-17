@@ -327,7 +327,7 @@ describe("useDeckStore — store management", () => {
     expect(result.current.openedDeckId).toBe(deckId);
 
     act(() => {
-      result.current.removeDeck(deckId);
+      result.current.removeDeck(deckId, () => {});
     });
     expect(result.current.openedDeckId).toBeNull();
   });
@@ -341,7 +341,7 @@ describe("useDeckStore — store management", () => {
     });
 
     act(() => {
-      result.current.removeDeck(firstId);
+      result.current.removeDeck(firstId, () => {});
     });
     expect(result.current.activeDeckId).not.toBe(firstId);
   });

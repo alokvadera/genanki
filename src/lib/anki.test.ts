@@ -661,10 +661,10 @@ describe("generateAnkiPackage", () => {
   it("randomAnkiId returns 1 when crypto returns 0", () => {
     const original = crypto.getRandomValues;
     try {
-      crypto.getRandomValues = vi.fn((arr: Uint32Array) => {
+      crypto.getRandomValues = vi.fn((arr: any) => {
         arr[0] = 0;
         return arr;
-      });
+      }) as any;
       const id = randomAnkiId();
       expect(id).toBe(1);
     } finally {
