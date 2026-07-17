@@ -150,11 +150,31 @@ export default function AnkiCreator() {
   // Real-time provider catalog subscription from Convex
   const providerCatalog = useQuery(api.providerCatalog.catalog);
   const catalogUpdatedAt = useQuery(api.providerCatalog.latestUpdatedAt);
-  const availableProviders = providerCatalog ?? [];
-  const loadingProviders = providerCatalog === undefined;
 
-  // Only refresh the catalog when it's empty or stale (older than 5 minutes)
-  const STALE_MS = 5 * 60 * 1000;
+  // Local state initialized from local cache to prevent loading data delays
+  const [availableProviders, setAvailableProviders] = useState<any[]>(() => {
+    try {
+      const cached = localStorage.getItem("genanki-providers-cache");
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Sync Convex updates into local state and localStorage
+  useEffect(() => {
+    if (providerCatalog) {
+      setAvailableProviders(providerCatalog);
+      try {
+        localStorage.setItem("genanki-providers-cache", JSON.stringify(providerCatalog));
+      } catch {}
+    }
+  }, [providerCatalog]);
+
+  const loadingProviders = providerCatalog === undefined && availableProviders.length === 0;
+
+  // Only refresh the catalog when it's empty or stale (older than 24 hours)
+  const STALE_MS = 24 * 60 * 60 * 1000;
   const refreshProviders = useAction(api.availableProviders.refresh);
   const [refreshingProviders, setRefreshingProviders] = useState(false);
   const handleRefreshProviders = useCallback(() => {
@@ -736,7 +756,7 @@ export default function AnkiCreator() {
                 docFileInputRef={docFileInputRef}
                 preferredProvider={preferredProvider}
                 availableProviders={availableProviders}
-                loadingProviders={loadingProviders || refreshingProviders}
+                loadingProviders={loadingProviders}
                 isScanned={isScanned}
                 ocrProgress={ocrProgress}
                 onRunOcr={runOcr}
@@ -781,7 +801,7 @@ export default function AnkiCreator() {
                 activeDeckName={activeDeck?.name}
                 preferredProvider={preferredProvider}
                 availableProviders={availableProviders}
-                loadingProviders={loadingProviders || refreshingProviders}
+                loadingProviders={loadingProviders}
                 onToggle={() => setShowAiBuilder((v) => !v)}
                 onPromptChange={setAiPrompt}
                 onDeckNameChange={setAiDeckName}
