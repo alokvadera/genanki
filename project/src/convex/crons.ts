@@ -53,6 +53,23 @@ export const cleanupUsage = internalMutation({
   },
 });
 
+export const cleanupIpState = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
+    const cutoff = Date.now() - NINETY_DAYS_MS;
+
+    const oldStates = await ctx.db
+      .query("ipRateState")
+      .withIndex("by_lastSeenAt", (q) => q.lt("lastSeenAt", cutoff))
+      .take(100);
+
+    for (const row of oldStates) {
+      await ctx.db.delete(row._id);
+    }
+  },
+});
+
 const crons = cronJobs();
 
 crons.daily(
@@ -71,6 +88,12 @@ crons.daily(
   "cleanup old insights",
   { hourUTC: 2, minuteUTC: 30 },
   internal.crons.cleanupInsights,
+);
+
+crons.daily(
+  "cleanup old ip rate state",
+  { hourUTC: 2, minuteUTC: 45 },
+  internal.crons.cleanupIpState,
 );
 
 crons.interval(

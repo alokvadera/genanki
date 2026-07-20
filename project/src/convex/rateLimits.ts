@@ -40,32 +40,6 @@ export const reserveProviderCapacity = mutation({
   handler: async (ctx, args) => {
     const now = Date.now();
     
-    if (args.provider === "cloudflare") {
-      const budgetEnvStr = process.env.CLOUDFLARE_DAILY_NEURON_BUDGET;
-      const dailyBudget = budgetEnvStr ? Math.max(1, parseInt(budgetEnvStr, 10) || CLOUDFLARE_DAILY_BUDGET) : CLOUDFLARE_DAILY_BUDGET;
-      
-      const utcDay = getUtcDayString(now);
-      const budgetRecord = await ctx.db
-        .query("cloudflareNeuronBudget")
-        .withIndex("by_utcDay", (q) => q.eq("utcDay", utcDay))
-        .unique();
-        
-      const currentUsed = budgetRecord?.neuronsUsed ?? 0;
-      // We assume prompt/completion tokens are roughly equal to estimated for the reservation
-      const projectedNeurons = estimateNeurons(args.model, args.estimatedTokens, args.estimatedTokens);
-      
-      if (currentUsed + projectedNeurons > dailyBudget) {
-        return { allowed: false, waitSeconds: getWaitSecondsUntilUtcMidnight(now) };
-      }
-      
-      // Atomically reserve the projected neurons (will be reconciled in reportProviderResult)
-      if (budgetRecord) {
-        await ctx.db.patch(budgetRecord._id, { neuronsUsed: currentUsed + projectedNeurons, updatedAt: now });
-      } else {
-        await ctx.db.insert("cloudflareNeuronBudget", { utcDay, neuronsUsed: projectedNeurons, updatedAt: now });
-      }
-    }
-
     const policy = getProviderPolicy(args.provider, args.model);
     const existing = await ctx.db
       .query("providerRateState")
@@ -91,6 +65,28 @@ export const reserveProviderCapacity = mutation({
 
     if (waitUntil > now) {
       return { allowed: false, waitSeconds: Math.ceil((waitUntil - now) / 1000) };
+    }
+
+    if (args.provider === "cloudflare") {
+      const budgetEnvStr = process.env.CLOUDFLARE_DAILY_NEURON_BUDGET;
+      const dailyBudget = budgetEnvStr ? Math.max(1, parseInt(budgetEnvStr, 10) || CLOUDFLARE_DAILY_BUDGET) : CLOUDFLARE_DAILY_BUDGET;
+      const utcDay = getUtcDayString(now);
+      const budgetRecord = await ctx.db
+        .query("cloudflareNeuronBudget")
+        .withIndex("by_utcDay", (q) => q.eq("utcDay", utcDay))
+        .unique();
+      const currentUsed = budgetRecord?.neuronsUsed ?? 0;
+      const projectedNeurons = estimateNeurons(args.model, args.estimatedTokens, args.estimatedTokens);
+
+      if (currentUsed + projectedNeurons > dailyBudget) {
+        return { allowed: false, waitSeconds: getWaitSecondsUntilUtcMidnight(now) };
+      }
+
+      if (budgetRecord) {
+        await ctx.db.patch(budgetRecord._id, { neuronsUsed: currentUsed + projectedNeurons, updatedAt: now });
+      } else {
+        await ctx.db.insert("cloudflareNeuronBudget", { utcDay, neuronsUsed: projectedNeurons, updatedAt: now });
+      }
     }
 
     const nextState = {
@@ -300,4 +296,3 @@ export const cloudflareBudget = query({
       .unique();
   },
 });
-

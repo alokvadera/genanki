@@ -45,7 +45,7 @@ export const getNetworkHealth = query({
         const state = stateByKey.get(key);
         
         let status: ProviderStatus = "healthy";
-        let reason = undefined;
+        let reason: string | undefined = undefined;
         let cooldownRemaining = 0;
 
         if (state) {

@@ -3,6 +3,7 @@ import { ConvexProvider, ConvexReactClient } from "convex/react";
 import React, { StrictMode, useEffect, lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router";
+import { DeckStoreProvider } from "@/hooks/use-deck-store";
 import "./index.css";
 import "katex/dist/katex.min.css";
 
@@ -14,6 +15,7 @@ const VlyToolbar = lazy(() => import("../vly-toolbar-readonly.tsx"));
 const AnkiCreator = lazy(() => import("./pages/AnkiCreator.tsx"));
 const History = lazy(() => import("./pages/History.tsx"));
 const ProviderUsage = lazy(() => import("./pages/ProviderUsage.tsx"));
+const IpAdmin = lazy(() => import("./pages/IpAdmin.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 
 // Simple loading fallback for route transitions
@@ -127,6 +129,7 @@ createRoot(document.getElementById("root")!).render(
         </Suspense>
       )}
       <ConvexProvider client={convex}>
+        <DeckStoreProvider>
         <BrowserRouter>
           <RouteSyncer />
           <Suspense fallback={<RouteLoading />}>
@@ -138,10 +141,12 @@ createRoot(document.getElementById("root")!).render(
               <Route path="/history" element={<History />} />
               <Route path="/history/:jobId" element={<History />} />
               <Route path="/usage" element={<ProviderUsage />} />
+              <Route path="/admin" element={<IpAdmin />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
         </BrowserRouter>
+        </DeckStoreProvider>
       </ConvexProvider>
       <Toaster />
     </RootErrorBoundary>

@@ -131,7 +131,17 @@ const schema = defineSchema(
       createdAt: v.number(),
       updatedAt: v.number(),
       error: v.optional(v.string()),
-    }).index("by_createdAt", ["createdAt"]),
+
+      // Encrypted fields for Zero-Knowledge IP-based privacy
+      creatorIpHash: v.optional(v.string()),
+      encDeckName: v.optional(v.string()),
+      encSummary: v.optional(v.string()),
+      encCards: v.optional(v.string()),
+      encMessage: v.optional(v.string()),
+      encError: v.optional(v.string()),
+    })
+      .index("by_createdAt", ["createdAt"])
+      .index("by_creatorIpHash_createdAt", ["creatorIpHash", "createdAt"]),
 
     providerUsage: defineTable({
       provider: v.string(),
@@ -142,11 +152,13 @@ const schema = defineSchema(
       promptTokens: v.number(),
       completionTokens: v.number(),
       totalTokens: v.number(),
+      ip: v.optional(v.string()), // track client IP for admin usage statistics
       createdAt: v.number(),
     })
       .index("by_createdAt", ["createdAt"])
       .index("by_provider_createdAt", ["provider", "createdAt"])
-      .index("by_jobId_createdAt", ["jobId", "createdAt"]),
+      .index("by_jobId_createdAt", ["jobId", "createdAt"])
+      .index("by_ip_createdAt", ["ip", "createdAt"]),
 
     generationTelemetry: defineTable({
       event: v.string(), // "summary" | "attempt"
@@ -187,10 +199,27 @@ const schema = defineSchema(
       updatedAt: v.number(),
     }).index("by_provider", ["provider"]),
 
-    // tableName: defineTable({
-    //   ...
-    //   // table fields
-    // }).index("by_field", ["field"])
+    ipRateState: defineTable({
+      ip: v.string(),
+      dayWindowStart: v.number(),
+      dayTokensUsed: v.number(),
+      totalTokensAllTime: v.number(),
+      totalRequests: v.number(),
+      lastSeenAt: v.number(),
+      firstSeenAt: v.number(),
+      updatedAt: v.number(),
+    })
+      .index("by_ip", ["ip"])
+      .index("by_lastSeenAt", ["lastSeenAt"]),
+
+    ipRules: defineTable({
+      ip: v.string(),
+      isBlocked: v.boolean(),
+      customDailyLimit: v.optional(v.number()),
+      note: v.optional(v.string()),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    }).index("by_ip", ["ip"]),
   },
   {
     schemaValidation: false,

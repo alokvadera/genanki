@@ -102,11 +102,11 @@ describe("ocr", () => {
       expect(mockTerminate).toHaveBeenCalled();
     });
 
-    it("terminates worker even on error", async () => {
+    it("continues after a page OCR error and terminates the worker", async () => {
       mockRecognize.mockRejectedValueOnce(new Error("OCR failed"));
       const file = createFile("scan.pdf", "pdf content");
 
-      await expect(runOcrOnPdf(file)).rejects.toThrow();
+      await expect(runOcrOnPdf(file)).resolves.toContain("[OCR failed on page 1]");
       expect(mockTerminate).toHaveBeenCalled();
     });
 

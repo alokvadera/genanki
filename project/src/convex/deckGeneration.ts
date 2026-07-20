@@ -3,7 +3,7 @@
 import { action, type ActionCtx } from "./_generated/server";
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import { buildModelCandidates } from "./aiProviders";
 import { parseAiDeckGeneration } from "../lib/deckGeneration";
 import {
@@ -16,6 +16,7 @@ import { prioritizeCandidates } from "../lib/routing";
 import { buildDocumentSystemPrompt, buildSystemPrompt } from "./promptBuilder";
 import { attemptWithProviderFallback, assertWithinDeadline, type OrchestrationPatch } from "./providerOrchestrator";
 import { GenError, isGenerationCanceledError } from "./errors";
+import { encrypt, hashIp } from "./encryption";
 
 // (P5) Import and re-export for backward compatibility — primary definition moved to generationTiming.ts
 import { formatSeconds } from "../lib/generationTiming";
@@ -91,9 +92,41 @@ async function getCandidateChain(
 async function updateJob(
   ctx: ActionCtx,
   jobId: Id<"generationJobs"> | undefined,
-  patch: OrchestrationPatch,
+  patch: any,
+  ip?: string,
 ): Promise<void> {
   if (!jobId) return;
+
+  if (ip) {
+    if (patch.resultDeckName !== undefined) {
+      patch.encDeckName = encrypt(patch.resultDeckName, ip);
+      patch.resultDeckName = undefined; // clear plaintext
+    }
+    if (patch.resultSummary !== undefined) {
+      patch.encSummary = encrypt(patch.resultSummary, ip);
+      patch.resultSummary = undefined; // clear plaintext
+    }
+    if (patch.resultCards !== undefined) {
+      patch.encCards = encrypt(JSON.stringify(patch.resultCards), ip);
+      patch.resultCards = undefined; // clear plaintext
+    }
+    if (patch.message !== undefined) {
+      patch.encMessage = encrypt(patch.message, ip);
+      // Keep a generic non-sensitive status message for public reactivity
+      if (patch.message.includes("complete")) {
+        patch.message = "Section complete";
+      } else if (patch.message.includes("Preparing")) {
+        patch.message = "Preparing generation";
+      } else {
+        patch.message = "Generating cards...";
+      }
+    }
+    if (patch.error !== undefined) {
+      patch.encError = encrypt(patch.error, ip);
+      patch.error = "Generation failed. Review details in your history.";
+    }
+  }
+
   await ctx.runMutation(api.generationJobs.update, {
     jobId,
     ...patch,
@@ -109,9 +142,13 @@ async function recordUsage(
   userContent: string,
   content: string,
   usage?: { promptTokens: number; completionTokens: number; totalTokens: number } | null,
+  ip?: string,
 ): Promise<void> {
   const promptTokens = usage?.promptTokens ?? Math.max(1, Math.ceil((systemPrompt.length + userContent.length) / 4));
   const completionTokens = usage?.completionTokens ?? Math.max(1, Math.ceil(content.length / 4));
+  const totalTokens = usage?.totalTokens ?? promptTokens + completionTokens;
+
+  // 1. Record provider usage metrics with IP
   await ctx.runMutation(api.providerUsage.record, {
     provider: candidate.provider,
     providerLabel: candidate.providerLabel,
@@ -120,8 +157,18 @@ async function recordUsage(
     jobId,
     promptTokens,
     completionTokens,
-    totalTokens: usage?.totalTokens ?? promptTokens + completionTokens,
+    totalTokens,
+    ip,
+    createdAt: Date.now(),
   });
+
+  // 2. Deduct tokens from user's daily budget
+  if (ip) {
+    await ctx.runMutation(api.ipRateLimiter.deductIpTokens, {
+      ip,
+      tokens: totalTokens,
+    });
+  }
 }
 
 async function recordGenerationTelemetry(
@@ -174,6 +221,10 @@ export const generateDeckFromDocument = action({
       throw new Error("No text was extracted from the document");
     }
 
+    const metadata = await ctx.meta.getRequestMetadata();
+    const ip = metadata?.ip || "127.0.0.1";
+    const creatorIpHash = hashIp(ip);
+
     const requestedCount = clampCardCount(args.cardCount ?? 12);
     const difficulty = args.difficulty ?? "intermediate";
     const deckName = args.deckName?.trim() ?? "";
@@ -186,8 +237,6 @@ export const generateDeckFromDocument = action({
 
     const adaptiveSettings = await ctx.runQuery(api.rateLimits.adaptiveSettings, {});
     const completionPasses = adaptiveSettings?.completionPasses ?? 3;
-    // Compute natural section count first, then cap: never drop sections below
-    // the natural count (fixes advisor silent section dropping — P3)
     const naturalChunks = chunkText(text);
     const maxChunks = Math.min(
       adaptiveSettings?.documentMaxChunks ?? MAX_CHUNKS,
@@ -195,11 +244,22 @@ export const generateDeckFromDocument = action({
     );
     const chunks = naturalChunks.length > maxChunks ? chunkText(text, maxChunks) : naturalChunks;
     const totalSections = chunks.length;
+
+    // Estimate tokens
+    const estimatedTokens = totalSections * Math.ceil(requestedCount / totalSections) * 120 + totalSections * 400;
+
+    // Enforce IP Rate Limiting
+    const check = await ctx.runMutation(api.ipRateLimiter.checkAndLogIp, { ip, estimatedTokens });
+    if (!check.allowed) {
+      throw new Error(check.reason);
+    }
+
     const timeoutSeconds = estimateDocumentTimeoutSeconds(requestedCount, totalSections);
     const deadlineAt = Date.now() + timeoutSeconds * 1000;
     const estimatedSeconds = estimateDocumentEtaSeconds(requestedCount, totalSections, candidates.length, providerCount);
 
     await updateJob(ctx, args.jobId, {
+      creatorIpHash,
       status: "running",
       progress: 0,
       etaSeconds: estimatedSeconds,
@@ -212,7 +272,7 @@ export const generateDeckFromDocument = action({
       totalModels: candidates.length,
       sectionIndex: 0,
       totalSections,
-    });
+    }, ip);
 
     const allCards: Array<{ front: string; back: string }> = [];
     let parsedCardCount = 0;
@@ -225,6 +285,7 @@ export const generateDeckFromDocument = action({
     // Dedupe cleaner function (strip punctuation, lowercase, collapse whitespace)
     const normalizeCardText = (s: string) => s.toLowerCase().replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim();
 
+    try {
     for (let i = 0; i < chunks.length; i++) {
       const remainingTarget = Math.max(1, requestedCount - allCards.length);
       const cardsForSection = Math.max(1, Math.ceil(remainingTarget / (chunks.length - i)));
@@ -247,7 +308,7 @@ export const generateDeckFromDocument = action({
         maxTokens,
         parser: parseAiDeckGeneration,
         onSuccess: async (parsed, candidate, content, usage) => {
-          await recordUsage(ctx, args.jobId, "document", candidate, systemPrompt, userContent, content, usage);
+          await recordUsage(ctx, args.jobId, "document", candidate, systemPrompt, userContent, content, usage, ip);
           parsedCardCount += parsed.cards.length;
           if (!resultDeckName) resultDeckName = parsed.deckName;
           if (!resultSummary) resultSummary = parsed.summary;
@@ -268,9 +329,9 @@ export const generateDeckFromDocument = action({
             resultCards: allCards.slice(0, requestedCount),
             resultPartial: true,
             message: `Section ${i + 1}/${chunks.length} complete · ${allCards.length} card(s) available live`,
-          });
+          }, ip);
         },
-        updateJob: (patch) => updateJob(ctx, args.jobId, patch),
+        updateJob: (patch) => updateJob(ctx, args.jobId, patch, ip),
         assertJobActive: () => assertJobActive(ctx, args.jobId),
         context: { ctx, jobId: args.jobId, deadlineAt, estimatedSeconds, sectionIndex: i, totalSections, kind: "document" }
       });
@@ -280,18 +341,19 @@ export const generateDeckFromDocument = action({
       }
       // Log fallback trail per attempt if desired
       if (res.fallbackTrail.length > 0) {
-        // We could aggregate this into a job field later, but for now we'll just push to DB if supported
-        const job = await ctx.runQuery(api.generationJobs.get, { jobId: args.jobId! });
-        if (job) {
-           const newTrail = [...(job.fallbackTrail || []), ...res.fallbackTrail];
-           await updateJob(ctx, args.jobId, { fallbackTrail: newTrail });
+        if (args.jobId) {
+          const job = await ctx.runQuery(api.generationJobs.get, { jobId: args.jobId });
+          if (job) {
+             const newTrail = [...(job.fallbackTrail || []), ...res.fallbackTrail];
+             await updateJob(ctx, args.jobId, { fallbackTrail: newTrail }, ip);
+          }
         }
       }
 
       await updateJob(ctx, args.jobId, {
         progress: Math.min(0.95, (i + 1) / totalSections),
         sectionIndex: i + 1,
-      });
+      }, ip);
     }
 
     // Completion passes
@@ -320,6 +382,7 @@ export const generateDeckFromDocument = action({
         maxTokens,
         parser: parseAiDeckGeneration,
         onSuccess: async (parsed, candidate, content, usage) => {
+          await recordUsage(ctx, args.jobId, "document", candidate, completionSystemPrompt, completionUserContent, content, usage, ip);
           parsedCardCount += parsed.cards.length;
           // Accumulate tokens for telemetry (P5)
           if (usage?.totalTokens) totalTokensUsed += usage.totalTokens;
@@ -334,9 +397,9 @@ export const generateDeckFromDocument = action({
             resultCards: allCards.slice(0, requestedCount),
             resultPartial: allCards.length < requestedCount,
             message: `Completion pass ${pass + 1}: ${allCards.length}/${requestedCount} cards available live`,
-          });
+          }, ip);
         },
-        updateJob: (patch) => updateJob(ctx, args.jobId, patch),
+        updateJob: (patch) => updateJob(ctx, args.jobId, patch, ip),
         assertJobActive: () => assertJobActive(ctx, args.jobId),
         context: { ctx, jobId: args.jobId, deadlineAt, estimatedSeconds, sectionIndex: chunks.length, totalSections, kind: "document" }
       });
@@ -346,12 +409,22 @@ export const generateDeckFromDocument = action({
       }
       
       if (res.fallbackTrail.length > 0) {
-        const job = await ctx.runQuery(api.generationJobs.get, { jobId: args.jobId! });
-        if (job) {
-           const newTrail = [...(job.fallbackTrail || []), ...res.fallbackTrail];
-           await updateJob(ctx, args.jobId, { fallbackTrail: newTrail });
+        if (args.jobId) {
+          const job = await ctx.runQuery(api.generationJobs.get, { jobId: args.jobId });
+          if (job) {
+             const newTrail = [...(job.fallbackTrail || []), ...res.fallbackTrail];
+             await updateJob(ctx, args.jobId, { fallbackTrail: newTrail }, ip);
+          }
         }
       }
+    }
+    } catch (err) {
+      if (isGenerationCanceledError(err)) {
+        await updateJob(ctx, args.jobId, {
+          status: "canceled", progress: 0, etaSeconds: 0, message: "Generation canceled",
+        }, ip);
+      }
+      throw err;
     }
 
     if (allCards.length < requestedCount) {
@@ -372,7 +445,7 @@ export const generateDeckFromDocument = action({
         status: "failed",
         error: `AI could not generate any cards from this document${detail}. Try again or use Quick Extract mode.`,
         message: "Generation failed",
-      });
+      }, ip);
       throw new GenError("empty_output", `AI could not generate any cards from this document${detail}. Try again or use Quick Extract mode.`);
     }
 
@@ -386,7 +459,7 @@ export const generateDeckFromDocument = action({
       resultPartial: warnings.length > 0,
       resultWarnings: warnings,
       message: `Generated ${allCards.slice(0, requestedCount).length} cards`,
-    });
+    }, ip);
     await recordGenerationTelemetry(ctx, "generation_completed", {
       jobId: args.jobId,
       kind: "document",
@@ -427,6 +500,10 @@ export const generateDeckFromPrompt = action({
       throw new Error("Provide a topic or source text for deck generation");
     }
 
+    const metadata = await ctx.meta.getRequestMetadata();
+    const ip = metadata?.ip || "127.0.0.1";
+    const creatorIpHash = hashIp(ip);
+
     const requestedCount = clampCardCount(args.cardCount ?? 12);
     const difficulty = args.difficulty ?? "intermediate";
     const deckName = args.deckName?.trim() ?? "";
@@ -436,11 +513,21 @@ export const generateDeckFromPrompt = action({
       throw new GenError("no_providers", "No AI providers are configured.");
     }
 
+    // Estimate tokens
+    const estimatedTokens = Math.min(2000, requestedCount * 90 + 300);
+
+    // Enforce IP Rate Limiting
+    const check = await ctx.runMutation(api.ipRateLimiter.checkAndLogIp, { ip, estimatedTokens });
+    if (!check.allowed) {
+      throw new Error(check.reason);
+    }
+
     const timeoutSeconds = estimatePromptTimeoutSeconds(requestedCount);
     const deadlineAt = Date.now() + timeoutSeconds * 1000;
     const etaSeconds = estimatePromptEtaSeconds(requestedCount, candidates.length, providerCount);
 
     await updateJob(ctx, args.jobId, {
+      creatorIpHash,
       status: "running",
       progress: 0,
       etaSeconds,
@@ -453,7 +540,7 @@ export const generateDeckFromPrompt = action({
       totalModels: candidates.length,
       sectionIndex: 0,
       totalSections: 1,
-    });
+    }, ip);
 
     const systemPrompt = buildSystemPrompt(requestedCount, difficulty, deckName, args.cardType);
     const userContent = [
@@ -479,7 +566,7 @@ export const generateDeckFromPrompt = action({
       maxTokens,
       parser: parseAiDeckGeneration,
       onSuccess: async (parsed, candidate, content, usage) => {
-        await recordUsage(ctx, args.jobId, "prompt", candidate, systemPrompt, userContent, content, usage);
+        await recordUsage(ctx, args.jobId, "prompt", candidate, systemPrompt, userContent, content, usage, ip);
         resultCards = parsed.cards.slice(0, requestedCount);
         resultDeckName = parsed.deckName;
         resultSummary = parsed.summary;
@@ -501,18 +588,20 @@ export const generateDeckFromPrompt = action({
           resultPartial: false,
           resultWarnings: [],
           message: `Generated ${resultCards.length} cards with ${candidate.providerLabel} / ${candidate.modelName}`,
-        });
+        }, ip);
       },
-      updateJob: (patch) => updateJob(ctx, args.jobId, patch),
+      updateJob: (patch) => updateJob(ctx, args.jobId, patch, ip),
       assertJobActive: () => assertJobActive(ctx, args.jobId),
       context: { ctx, jobId: args.jobId, deadlineAt, estimatedSeconds: etaSeconds, kind: "prompt" }
     });
 
     if (res.fallbackTrail.length > 0) {
-      const job = await ctx.runQuery(api.generationJobs.get, { jobId: args.jobId! });
-      if (job) {
-         const newTrail = [...(job.fallbackTrail || []), ...res.fallbackTrail];
-         await updateJob(ctx, args.jobId, { fallbackTrail: newTrail });
+      if (args.jobId) {
+        const job = await ctx.runQuery(api.generationJobs.get, { jobId: args.jobId });
+        if (job) {
+           const newTrail = [...(job.fallbackTrail || []), ...res.fallbackTrail];
+           await updateJob(ctx, args.jobId, { fallbackTrail: newTrail }, ip);
+        }
       }
     }
 
@@ -529,7 +618,7 @@ export const generateDeckFromPrompt = action({
           progress: 0,
           etaSeconds: 0,
           message: "Generation canceled",
-        });
+        }, ip);
         throw res.lastErr;
       }
 
@@ -545,7 +634,7 @@ export const generateDeckFromPrompt = action({
         status: "failed",
         error: message,
         message: `Generation failed: ${message}`,
-      });
+      }, ip);
       throw res.lastErr instanceof Error ? res.lastErr : new Error(message);
     }
 

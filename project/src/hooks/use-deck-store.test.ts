@@ -1,13 +1,17 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, act } from "@testing-library/react";
+import { renderHook as baseRenderHook, act } from "@testing-library/react";
 import type { AnkiCard } from "@/lib/anki";
 import type { Deck } from "@/hooks/use-deck-store";
 
 // Persistent mock storage shared across resets
 const mockStore: Record<string, string> = {};
 
-import { useDeckStore } from "@/hooks/use-deck-store";
+import { DeckStoreProvider, useDeckStore } from "@/hooks/use-deck-store";
+
+function renderHook<Result>(callback: () => Result) {
+  return baseRenderHook(callback, { wrapper: DeckStoreProvider });
+}
 
 beforeEach(() => {
   // Clear storage between tests

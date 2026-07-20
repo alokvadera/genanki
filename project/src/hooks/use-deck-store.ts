@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { createContext, createElement, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { AnkiCard } from "@/lib/anki";
 
 export interface Deck {
@@ -8,6 +8,9 @@ export interface Deck {
 }
 
 const STORAGE_KEY = "genanki-decks";
+const ACTIVE_ID_KEY = "genanki-active-deck-id";
+const SCHEMA_VERSION = 1;
+const VERSION_KEY = "genanki-decks-version";
 
 function uid(): string {
   const buf = new Uint32Array(2);
@@ -53,7 +56,7 @@ function loadFromStorage(): { decks: Deck[]; activeId: string } {
       if (Array.isArray(parsed) && parsed.length > 0) {
         const validDecks = parsed.map(sanitizeDeck).filter((d): d is Deck => d !== null);
         if (validDecks.length > 0) {
-          const savedActiveId = localStorage.getItem("genanki-active-deck-id");
+          const savedActiveId = localStorage.getItem(ACTIVE_ID_KEY);
           const activeId = savedActiveId && validDecks.some((d) => d.id === savedActiveId)
             ? savedActiveId
             : validDecks[0].id;
@@ -70,31 +73,46 @@ function loadFromStorage(): { decks: Deck[]; activeId: string } {
 function saveToStorage(decks: Deck[]) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(decks));
+    localStorage.setItem(VERSION_KEY, String(SCHEMA_VERSION));
   } catch {
     // Ignore quota errors
   }
 }
 
-export function useDeckStore() {
+function useDeckStoreState() {
   const initial = loadFromStorage();
   const [decks, setDecks] = useState<Deck[]>(initial.decks);
   const [activeDeckId, setActiveDeckId] = useState<string>(initial.activeId);
   const [openedDeckId, setOpenedDeckId] = useState<string | null>(null);
+  const hasMounted = useRef(false);
 
-  // Helper to update decks and save synchronously
+  // State updates stay pure so React can safely replay them in StrictMode.
   const setDecksAndSave = useCallback((updater: Deck[] | ((prev: Deck[]) => Deck[])) => {
     setDecks((prev) => {
-      const next = typeof updater === "function" ? updater(prev) : updater;
-      saveToStorage(next);
-      return next;
+      return typeof updater === "function" ? updater(prev) : updater;
     });
   }, []);
 
-  // Helper to update active deck ID and save synchronously
+  // Kept as the public synchronous update path; persistence belongs to effects.
   const setActiveDeckIdAndSave = useCallback((id: string) => {
     setActiveDeckId(id);
-    localStorage.setItem("genanki-active-deck-id", id);
   }, []);
+
+  useEffect(() => {
+    if (!hasMounted.current) {
+      hasMounted.current = true;
+      return;
+    }
+    saveToStorage(decks);
+  }, [decks]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(ACTIVE_ID_KEY, activeDeckId);
+    } catch {
+      // Ignore unavailable storage.
+    }
+  }, [activeDeckId]);
 
   const activeDeck = decks.find((d) => d.id === activeDeckId);
   const openedDeck = decks.find((d) => d.id === openedDeckId);
@@ -112,11 +130,9 @@ export function useDeckStore() {
         showToast("You need at least one deck");
         return;
       }
+      const remaining = decks.filter((deck) => deck.id !== id);
+      if (activeDeckId === id) setActiveDeckIdAndSave(remaining[0].id);
       setDecksAndSave((prev) => prev.filter((d) => d.id !== id));
-      if (activeDeckId === id) {
-        const remaining = decks.filter((d) => d.id !== id);
-        setActiveDeckIdAndSave(remaining[0].id);
-      }
       if (openedDeckId === id) {
         setOpenedDeckId(null);
       }
@@ -194,4 +210,17 @@ export function useDeckStore() {
   };
 }
 
-export type DeckStore = ReturnType<typeof useDeckStore>;
+export type DeckStore = ReturnType<typeof useDeckStoreState>;
+
+const DeckStoreContext = createContext<DeckStore | null>(null);
+
+export function DeckStoreProvider({ children }: { children: ReactNode }) {
+  const store = useDeckStoreState();
+  return createElement(DeckStoreContext.Provider, { value: store }, children);
+}
+
+export function useDeckStore() {
+  const store = useContext(DeckStoreContext);
+  if (!store) throw new Error("useDeckStore must be used within DeckStoreProvider");
+  return store;
+}

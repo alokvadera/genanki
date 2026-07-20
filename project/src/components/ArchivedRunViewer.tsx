@@ -202,6 +202,8 @@ export function ArchivedRunViewer({
           <p className="text-xs text-muted-foreground font-medium mt-1">
             {formatTime(job.createdAt)}
             {" · "}
+            {Math.round((job.status === "succeeded" ? 1 : job.progress ?? 0) * 100)}% complete
+            {" · "}
             {job.resultCards?.length ?? 0} archived card(s)
             {job.resultPartial ? " · partial result" : ""}
           </p>

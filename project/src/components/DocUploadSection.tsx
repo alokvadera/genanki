@@ -371,7 +371,7 @@ export default function DocUploadSection({
                 {processing ? (
                   <div className="flex flex-col items-center gap-3">
                     <Loader className="w-8 h-8 animate-spin text-primary" />
-                    <p className="text-sm font-bold">{ocrProgress || "Processing document..."}</p>
+                    <p className="text-sm font-bold" data-testid="ocr-progress-status">{ocrProgress || "Processing document..."}</p>
                     <p className="text-xs text-muted-foreground font-medium">
                       {ocrProgress 
                         ? "Extracting text from images client-side" 
@@ -528,16 +528,16 @@ export default function DocUploadSection({
                 </div>
               )}
 
-              {docPreviewText && (
-                <div className="nb-border-2 bg-muted/30 p-3 mb-4">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">
-                    Extracted Text Preview
-                  </p>
-                  <p className="text-xs text-muted-foreground font-medium leading-relaxed">
-                    {docPreviewText}
-                  </p>
-                </div>
-              )}
+               {docPreviewText && (
+                 <div className="nb-border-2 bg-muted/30 p-3 mb-4" data-testid="extracted-text-preview">
+                   <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">
+                     Extracted Text Preview
+                   </p>
+                   <p className="text-xs text-muted-foreground font-medium leading-relaxed">
+                     {docPreviewText}
+                   </p>
+                 </div>
+               )}
 
               <div className="space-y-2 max-h-[400px] overflow-y-auto">
                 {docPreviewCards.map((card, idx) => (

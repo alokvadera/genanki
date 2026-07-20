@@ -20,6 +20,7 @@ export const record = mutation({
     promptTokens: v.number(),
     completionTokens: v.number(),
     totalTokens: v.number(),
+    ip: v.optional(v.string()),
     createdAt: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
@@ -32,6 +33,7 @@ export const record = mutation({
       promptTokens: Math.max(0, Math.round(args.promptTokens)),
       completionTokens: Math.max(0, Math.round(args.completionTokens)),
       totalTokens: Math.max(0, Math.round(args.totalTokens)),
+      ip: args.ip,
       createdAt: args.createdAt ?? Date.now(),
     });
   },
