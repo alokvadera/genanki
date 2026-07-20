@@ -3,9 +3,71 @@ import { mutation, query } from "./_generated/server";
 
 const DEFAULT_DAILY_LIMIT = 50_000;
 
-function getDayWindowStart(now: number): number {
+export function getDayWindowStart(now: number): number {
   const d = new Date(now);
   return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+}
+
+export async function checkAndLogIpHandler(ctx: any, args: { ip: string; estimatedTokens: number }) {
+  const now = Date.now();
+  const dayWindowStart = getDayWindowStart(now);
+
+  // 1. Check IP blocklist
+  const rule = await ctx.db
+    .query("ipRules")
+    .withIndex("by_ip", (q: any) => q.eq("ip", args.ip))
+    .unique();
+
+  if (rule?.isBlocked) {
+    return {
+      allowed: false,
+      reason: "This IP has been blocked by the administrator.",
+      retryAfterSeconds: 86400,
+    };
+  }
+
+  const dailyLimit = rule?.customDailyLimit ?? DEFAULT_DAILY_LIMIT;
+
+  // 2. Check token budget state
+  const state = await ctx.db
+    .query("ipRateState")
+    .withIndex("by_ip", (q: any) => q.eq("ip", args.ip))
+    .unique();
+
+  const isNewDay = !state || dayWindowStart > state.dayWindowStart;
+  const dayTokensUsed = isNewDay ? 0 : state.dayTokensUsed;
+
+  if (dayTokensUsed + args.estimatedTokens > dailyLimit) {
+    const secondsUntilMidnight = Math.max(
+      0,
+      Math.ceil((dayWindowStart + 86400000 - now) / 1000)
+    );
+    return {
+      allowed: false,
+      reason: `Daily token limit of ${dailyLimit.toLocaleString()} tokens reached.`,
+      retryAfterSeconds: secondsUntilMidnight,
+    };
+  }
+
+  // 3. Log/update request state
+  const nextState = {
+    ip: args.ip,
+    dayWindowStart: isNewDay ? dayWindowStart : state.dayWindowStart,
+    dayTokensUsed: dayTokensUsed, // do not deduct yet, only checked/allowed
+    totalTokensAllTime: state?.totalTokensAllTime ?? 0,
+    totalRequests: (state?.totalRequests ?? 0) + 1,
+    lastSeenAt: now,
+    firstSeenAt: state?.firstSeenAt ?? now,
+    updatedAt: now,
+  };
+
+  if (state) {
+    await ctx.db.patch(state._id, nextState);
+  } else {
+    await ctx.db.insert("ipRateState", nextState);
+  }
+
+  return { allowed: true, ip: args.ip };
 }
 
 /**
@@ -17,68 +79,23 @@ export const checkAndLogIp = mutation({
     ip: v.string(),
     estimatedTokens: v.number(),
   },
-  handler: async (ctx, args) => {
-    const now = Date.now();
-    const dayWindowStart = getDayWindowStart(now);
-
-    // 1. Check IP blocklist
-    const rule = await ctx.db
-      .query("ipRules")
-      .withIndex("by_ip", (q) => q.eq("ip", args.ip))
-      .unique();
-
-    if (rule?.isBlocked) {
-      return {
-        allowed: false,
-        reason: "This IP has been blocked by the administrator.",
-        retryAfterSeconds: 86400,
-      };
-    }
-
-    const dailyLimit = rule?.customDailyLimit ?? DEFAULT_DAILY_LIMIT;
-
-    // 2. Check token budget state
-    const state = await ctx.db
-      .query("ipRateState")
-      .withIndex("by_ip", (q) => q.eq("ip", args.ip))
-      .unique();
-
-    const isNewDay = !state || dayWindowStart > state.dayWindowStart;
-    const dayTokensUsed = isNewDay ? 0 : state.dayTokensUsed;
-
-    if (dayTokensUsed + args.estimatedTokens > dailyLimit) {
-      const secondsUntilMidnight = Math.max(
-        0,
-        Math.ceil((dayWindowStart + 86400000 - now) / 1000)
-      );
-      return {
-        allowed: false,
-        reason: `Daily token limit of ${dailyLimit.toLocaleString()} tokens reached.`,
-        retryAfterSeconds: secondsUntilMidnight,
-      };
-    }
-
-    // 3. Log/update request state
-    const nextState = {
-      ip: args.ip,
-      dayWindowStart: isNewDay ? dayWindowStart : state.dayWindowStart,
-      dayTokensUsed: dayTokensUsed, // do not deduct yet, only checked/allowed
-      totalTokensAllTime: state?.totalTokensAllTime ?? 0,
-      totalRequests: (state?.totalRequests ?? 0) + 1,
-      lastSeenAt: now,
-      firstSeenAt: state?.firstSeenAt ?? now,
-      updatedAt: now,
-    };
-
-    if (state) {
-      await ctx.db.patch(state._id, nextState);
-    } else {
-      await ctx.db.insert("ipRateState", nextState);
-    }
-
-    return { allowed: true, ip: args.ip };
-  },
+  handler: checkAndLogIpHandler,
 });
+
+export async function deductIpTokensHandler(ctx: any, args: { ip: string; tokens: number }) {
+  const state = await ctx.db
+    .query("ipRateState")
+    .withIndex("by_ip", (q: any) => q.eq("ip", args.ip))
+    .unique();
+
+  if (!state) return;
+
+  await ctx.db.patch(state._id, {
+    dayTokensUsed: state.dayTokensUsed + Math.max(0, Math.round(args.tokens)),
+    totalTokensAllTime: state.totalTokensAllTime + Math.max(0, Math.round(args.tokens)),
+    updatedAt: Date.now(),
+  });
+}
 
 /**
  * Deducts consumed tokens from the client IP's daily budget.
@@ -88,20 +105,7 @@ export const deductIpTokens = mutation({
     ip: v.string(),
     tokens: v.number(),
   },
-  handler: async (ctx, args) => {
-    const state = await ctx.db
-      .query("ipRateState")
-      .withIndex("by_ip", (q) => q.eq("ip", args.ip))
-      .unique();
-
-    if (!state) return;
-
-    await ctx.db.patch(state._id, {
-      dayTokensUsed: state.dayTokensUsed + Math.max(0, Math.round(args.tokens)),
-      totalTokensAllTime: state.totalTokensAllTime + Math.max(0, Math.round(args.tokens)),
-      updatedAt: Date.now(),
-    });
-  },
+  handler: deductIpTokensHandler,
 });
 
 /**
