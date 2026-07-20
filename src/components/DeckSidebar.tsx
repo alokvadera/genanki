@@ -60,6 +60,7 @@ export default function DeckSidebar({
               {editingDeckName === deck.id ? (
                 <div className="flex gap-1">
                   <Input
+                    aria-label={`Rename ${deck.name}`}
                     value={editNameValue}
                     onChange={(e) => onSetEditNameValue(e.target.value)}
                     onKeyDown={(e) => {
@@ -84,7 +85,11 @@ export default function DeckSidebar({
                         <BookOpen className="w-3.5 h-3.5 shrink-0 opacity-60" />
                         {deck.name}
                       </p>
-                      <p className="text-xs text-muted-foreground font-normal ml-5">
+                      <p
+                        className="text-xs text-muted-foreground font-normal ml-5"
+                        data-testid="deck-card-count"
+                        data-deck-id={deck.id}
+                      >
                         {deck.cards.length} card{deck.cards.length !== 1 ? "s" : ""}
                       </p>
                     </div>

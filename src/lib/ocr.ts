@@ -64,9 +64,12 @@ export async function runOcrOnPdf(
         });
       }
 
-      const { data } = await worker.recognize(canvas);
-      if (data && data.text) {
-        textParts.push(data.text.trim());
+      try {
+        const { data } = await worker.recognize(canvas);
+        if (data?.text) textParts.push(data.text.trim());
+      } catch (error) {
+        console.error(`OCR failed on page ${i}`, error);
+        textParts.push(`[OCR failed on page ${i}]`);
       }
     }
   } finally {

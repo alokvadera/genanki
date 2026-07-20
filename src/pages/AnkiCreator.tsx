@@ -251,15 +251,15 @@ export default function AnkiCreator() {
     if (lines.length === 0) { showToast("No cards to import"); return; }
     const newCards: AnkiCard[] = [];
     for (const line of lines) {
-      // Split on the FIRST delimiter only, so back fields with commas/semicolons are preserved
-      // Use a positive lookahead so the delimiter is NOT consumed in the match
-      const delim = line.match(/^\s*[^;\t|]+\s*(?=[;\t|])/);
-      const i = delim ? delim[0].length : -1;
-      if (i > 0) {
-        newCards.push({ front: line.slice(0, i).trim(), back: line.slice(i).replace(/^[;\t|]\s*/, "").trim() });
+      const parts = splitCsvLine(line);
+      if (parts.length >= 2) {
+        newCards.push({
+          front: parts[0].replace(/^["']|["']$/g, ""),
+          back: parts.slice(1).join(", ").replace(/^["']|["']$/g, ""),
+        });
       }
     }
-    if (newCards.length === 0) { showToast("Use semicolon, tab, or pipe to separate front/back"); return; }
+    if (newCards.length === 0) { showToast("Use comma, semicolon, tab, or pipe to separate front/back"); return; }
     addCards(activeDeckId, newCards);
     recordAppEvent("cards_imported", newCards.length);
     setImportText("");
@@ -308,7 +308,6 @@ export default function AnkiCreator() {
     setDocPreviewWarnings([]);
 
     const updatedFiles = [...docFiles, ...newFiles];
-    setDocFiles(updatedFiles);
 
     try {
       const parsedDocs = await Promise.all(
@@ -321,6 +320,7 @@ export default function AnkiCreator() {
 
       const scannedPdf = parsedDocs.find((d) => d.doc.isScanned);
       if (scannedPdf) {
+        setDocFiles(updatedFiles);
         setIsScanned(true);
         setScannedFile(scannedPdf.file);
         setProcessing(false);
@@ -334,7 +334,6 @@ export default function AnkiCreator() {
 
       if (!text.trim() || text.trim().length < 30) {
         showToast("Could not extract enough text from the document(s)");
-        setDocFiles([]);
         return;
       }
 
@@ -355,6 +354,7 @@ export default function AnkiCreator() {
         setSelectedChapterIds(new Set());
         showToast("Documents parsed successfully. Ready to generate cards.");
       }
+      setDocFiles(updatedFiles);
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Failed to process document(s)");
     } finally {
@@ -364,7 +364,6 @@ export default function AnkiCreator() {
 
   const handleRemoveFile = useCallback(async (idx: number) => {
     const updated = docFiles.filter((_, i) => i !== idx);
-    setDocFiles(updated);
     if (updated.length === 0) {
       clearDocState();
       return;
@@ -395,6 +394,7 @@ export default function AnkiCreator() {
         setChaptersDetected(false);
         setSelectedChapterIds(new Set());
       }
+      setDocFiles(updated);
     } catch {
       showToast("Error updating document list");
     } finally {

@@ -147,7 +147,7 @@ export async function attemptWithProviderFallback<T>(
     await assertJobActive();
     assertWithinDeadline(deadlineAt);
 
-    const candidate = attemptCandidates[attempt % attemptCandidates.length];
+    const candidate = attemptCandidates[attempt];
     const attemptStartedAt = Date.now();
     let attemptErrorMsg = "";
 
@@ -166,7 +166,7 @@ export async function attemptWithProviderFallback<T>(
           provider: candidate.providerLabel,
           providerIndex: candidate.providerIndex,
           model: candidate.modelName,
-          modelIndex: attempt,
+          modelIndex: candidate.providerIndex,
           message: `${candidate.providerLabel} / ${candidate.modelName} is rate-limited; switching provider`,
         });
         continue;
@@ -176,7 +176,7 @@ export async function attemptWithProviderFallback<T>(
         provider: candidate.providerLabel,
         providerIndex: candidate.providerIndex,
         model: candidate.modelName,
-        modelIndex: attempt,
+        modelIndex: candidate.providerIndex,
         etaSeconds: estimatedSeconds + attempt * FALLBACK_PENALTY_SECONDS,
         totalProviders: providerCount,
         totalModels: attemptCandidates.length,

@@ -1,32 +1,34 @@
 import { marked } from "marked";
 import katex from "katex";
+import DOMPurify from "dompurify";
 
 /**
  * Sanitize HTML to remove potentially dangerous elements and attributes.
  * This prevents XSS attacks while allowing safe HTML formatting.
  */
+const ALLOWED_TAGS = [
+  "p", "br", "strong", "em", "code", "pre", "ul", "ol", "li", "blockquote",
+  "h1", "h2", "h3", "h4", "h5", "h6", "a", "span", "div", "table", "thead",
+  "tbody", "tr", "td", "th", "sup", "sub", "hr",
+  // KaTeX emits these MathML tags alongside its HTML output.
+  "math", "semantics", "mrow", "mi", "mo", "mn", "annotation",
+];
+const ALLOWED_ATTR = ["href", "src", "class", "style", "target", "rel", "aria-hidden", "xmlns", "encoding"];
+
+DOMPurify.addHook("uponSanitizeAttribute", (_node, data) => {
+  if (data.attrName.startsWith("on")) data.keepAttr = false;
+  if (data.attrName === "style" && /expression\s*\(|url\s*\(\s*javascript:/i.test(data.attrValue)) {
+    data.keepAttr = false;
+  }
+});
+
 function sanitizeHtml(html: string): string {
-  // Remove script tags and their content
-  let sanitized = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "");
-  
-  // Remove event handler attributes (onclick, onerror, onload, etc.)
-  sanitized = sanitized.replace(/\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "");
-  
-  // Remove javascript: URLs
-  sanitized = sanitized.replace(/href\s*=\s*(?:"javascript:[^"]*"|'javascript:[^']*')/gi, "");
-  sanitized = sanitized.replace(/src\s*=\s*(?:"javascript:[^"]*"|'javascript:[^']*')/gi, "");
-  
-  // Remove data: URLs except for images (optional, can be restrictive)
-  // sanitized = sanitized.replace(/(?:href|src)\s*=\s*(?:"data:[^"]*"|'data:[^']*')/gi, "");
-  
-  // Remove <iframe>, <object>, <embed>, <form> tags
-  sanitized = sanitized.replace(/<(iframe|object|embed|form)\b[^<]*(?:(?!<\/\1>)<[^<]*)*<\/\1>/gi, "");
-  sanitized = sanitized.replace(/<(iframe|object|embed|form)\b[^>]*\/?>/gi, "");
-  
-  // Remove style attributes that could contain expressions
-  sanitized = sanitized.replace(/style\s*=\s*(?:"[^"]*expression\([^"]*"|'[^']*expression\([^']*')/gi, "");
-  
-  return sanitized;
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS,
+    ALLOWED_ATTR,
+    ALLOW_DATA_ATTR: false,
+    FORBID_TAGS: ["script", "iframe", "object", "embed", "form", "input", "button", "textarea", "select", "style", "link", "meta", "base"],
+  });
 }
 
 /**
@@ -94,7 +96,7 @@ export function formatCardText(text: string): string {
   // 4. Compile markdown to HTML
   let html = "";
   try {
-    html = marked.parse(processed, { breaks: true, gfm: true }) as string;
+    html = marked.parse(processed, { breaks: true, gfm: true, async: false });
   } catch {
     html = processed;
   }

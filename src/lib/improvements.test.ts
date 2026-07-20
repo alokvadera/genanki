@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
 import { formatCardText, formatMathForAnki } from "./formatter";
 import { buildSystemPrompt } from "../convex/promptBuilder";
@@ -12,11 +13,12 @@ describe("New Improvements Test Suite", () => {
       expect(html).toContain("katex-html"); // KaTeX rendered output
     });
 
-    it("escapes literal HTML tags in markdown but keeps math placeholders", () => {
+    it("removes unsupported HTML tags while keeping math placeholders", () => {
       const text = "Literal tag: <html> and math: $a < b$";
       const html = formatCardText(text);
 
-      expect(html).toContain("Literal tag: <html>");
+      expect(html).toContain("Literal tag:");
+      expect(html).not.toContain("<html>");
       expect(html).toContain("katex-html"); // math rendered successfully
     });
 

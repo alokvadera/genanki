@@ -75,7 +75,7 @@ export default function CardsList({
             const isExpanded = expandedCards.has(cardKey);
             const isLast = idx === activeDeck!.cards.length - 1;
             return (
-              <div key={cardKey}>
+              <div key={cardKey} data-testid={`card-row-${idx + 1}`}>
                 {editingIdx === idx ? (
                   <div
                     className={`p-4 space-y-2 bg-muted/30 ${
@@ -135,6 +135,8 @@ export default function CardsList({
                     <div className="flex gap-1 shrink-0">
                       <button
                         type="button"
+                        data-testid="card-preview-button"
+                        aria-label={`Preview card ${idx + 1}`}
                         onClick={(e) => { e.stopPropagation(); onPreview(card); }}
                         className="p-1.5 nb-border-2 hover:bg-muted transition-colors"
                         title="Preview"
@@ -143,6 +145,8 @@ export default function CardsList({
                       </button>
                       <button
                         type="button"
+                        data-testid="card-edit-button"
+                        aria-label={`Edit card ${idx + 1}: ${card.front}`}
                         onClick={(e) => { e.stopPropagation(); startEditing(idx, card); }}
                         className="p-1.5 nb-border-2 hover:bg-muted transition-colors"
                         title="Edit"
@@ -151,6 +155,9 @@ export default function CardsList({
                       </button>
                       <button
                         type="button"
+                        data-testid="card-expand-button"
+                        aria-label={`${isExpanded ? "Collapse" : "Expand"} card ${idx + 1}`}
+                        aria-expanded={isExpanded}
                         onClick={(e) => { e.stopPropagation(); handleExpandToggle(cardKey); }}
                         className="p-1.5 nb-border-2 hover:bg-muted transition-colors"
                       >
@@ -162,6 +169,8 @@ export default function CardsList({
                       </button>
                       <button
                         type="button"
+                        data-testid="card-delete-button"
+                        aria-label={`Delete card ${idx + 1}: ${card.front}`}
                         onClick={(e) => { e.stopPropagation(); onRemoveCard(activeDeckId, idx); }}
                         className="p-1.5 nb-border-2 hover:bg-destructive/10 text-destructive transition-colors"
                       >

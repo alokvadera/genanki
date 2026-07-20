@@ -9,7 +9,10 @@ export const CLOUDFLARE_NEURON_COST: Record<
   { inputNeuronsPer1M: number; outputNeuronsPer1M: number }
 > = {
   "@cf/meta/llama-3.1-8b-instruct": { inputNeuronsPer1M: 700, outputNeuronsPer1M: 700 },
-  "@cf/meta/llama-3.1-8b-instruct-fp8": { inputNeuronsPer1M: 700, outputNeuronsPer1M: 700 },
+  "@cf/meta/llama-3.1-8b-instruct-fp8": { inputNeuronsPer1M: 13778, outputNeuronsPer1M: 26128 },
+  "@cf/meta/llama-3.1-8b-instruct-fp8-fast": { inputNeuronsPer1M: 4119, outputNeuronsPer1M: 34868 },
+  "@cf/meta/llama-3.2-3b-instruct": { inputNeuronsPer1M: 4625, outputNeuronsPer1M: 30475 },
+  "@cf/qwen/qwen3-30b-a3b-fp8": { inputNeuronsPer1M: 4625, outputNeuronsPer1M: 30475 },
   "@cf/qwen/qwen1.5-14b-chat-awq": { inputNeuronsPer1M: 1000, outputNeuronsPer1M: 1000 },
   "@cf/qwen/qwen1.5-7b-chat-awq": { inputNeuronsPer1M: 500, outputNeuronsPer1M: 500 },
 };

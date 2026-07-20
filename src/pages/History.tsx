@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Activity, ArrowLeft, BarChart3, Clock3, Layers, Search, X } from "lucide-react";
 import { useNavigate, useParams, Link } from "react-router";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { ArchivedRunViewer } from "@/components/ArchivedRunViewer";
@@ -32,15 +32,43 @@ export default function History() {
   const [now, setNow] = useState(() => Date.now());
   const [selectedLiveJobId, setSelectedLiveJobId] = useState<string | null>(null);
   const cancelGenerationJob = useMutation(api.generationJobs.cancel);
-  const activeJobs = useQuery(api.generationJobs.listActive, { limit: 50 }) ?? [];
-  const jobs = useQuery(api.generationJobs.listArchived, { limit: 100 }) ?? [];
-  const firstJobId = jobs[0]?._id;
+  const listActiveRuns = useAction(api.decryptActions.listActiveRunsAction);
+  const listArchivedRuns = useAction(api.decryptActions.listArchivedRunsAction);
+
+  const [activeJobs, setActiveJobs] = useState<any[]>([]);
+  const [jobs, setJobs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchRuns = async () => {
+    try {
+      const [active, archived] = await Promise.all([
+        listActiveRuns(),
+        listArchivedRuns({ limit: 100 }),
+      ]);
+      setActiveJobs(active);
+      setJobs(archived);
+    } catch (err) {
+      console.error("Failed to load decrypted runs", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    if (activeJobs.length === 0) return;
-    const timer = setInterval(() => setNow(Date.now()), 1000);
+    fetchRuns();
+  }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(Date.now());
+      if (activeJobs.length > 0) {
+        fetchRuns();
+      }
+    }, 3000);
     return () => clearInterval(timer);
   }, [activeJobs.length]);
+
+  const firstJobId = jobs[0]?._id;
 
   useEffect(() => {
     if (!jobId && firstJobId) {
@@ -243,7 +271,7 @@ export default function History() {
                   Archived runs will appear here after generation completes.
                 </p>
               ) : (
-                jobs.map((job, index) => {
+                 jobs.map((job, index) => {
                   const isSelected = selectedJob?._id === job._id;
                   const tone =
                     job.status === "succeeded"
@@ -251,10 +279,16 @@ export default function History() {
                       : job.status === "failed"
                         ? "bg-red-100 text-red-800"
                         : "bg-slate-100 text-slate-800";
+                  const runLabel = `${job.status} ${job.kind} run${
+                    job.resultDeckName ? `: ${job.resultDeckName}` : ""
+                  }${job.resultCards?.length ? `, ${job.resultCards.length} cards` : ""}`;
                   return (
                     <motion.button
                       key={job._id}
                       type="button"
+                      data-testid="run-list-item"
+                      data-job-id={job._id}
+                      aria-label={runLabel}
                       onClick={() => navigate(`/runs/${job._id}`)}
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
