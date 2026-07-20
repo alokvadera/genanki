@@ -298,7 +298,7 @@ export const generateDeckFromDocument = action({
         `Difficulty: ${difficulty}`,
         instructions ? `User instructions: ${instructions}` : "",
       ].join("\n");
-      const maxTokens = Math.min(2000, cardsForSection * 120 + 400);
+      const maxTokens = Math.min(4096, cardsForSection * 120 + 400);
 
       const res = await attemptWithProviderFallback({
         candidates,
@@ -372,7 +372,7 @@ export const generateDeckFromDocument = action({
         "Existing card fronts to avoid:",
         allCards.slice(-40).map((card) => `- ${card.front}`).join("\n"),
       ].join("\n");
-      const maxTokens = Math.min(2000, missing * 120 + 400);
+      const maxTokens = Math.min(4096, missing * 120 + 400);
 
       const res = await attemptWithProviderFallback({
         candidates,
@@ -514,7 +514,7 @@ export const generateDeckFromPrompt = action({
     }
 
     // Estimate tokens
-    const estimatedTokens = Math.min(2000, requestedCount * 90 + 300);
+    const estimatedTokens = Math.min(4096, requestedCount * 90 + 300);
 
     // Enforce IP Rate Limiting
     const check = await ctx.runMutation(api.ipRateLimiter.checkAndLogIp, { ip, estimatedTokens });
@@ -550,7 +550,7 @@ export const generateDeckFromPrompt = action({
       `Difficulty: ${difficulty}`,
     ].join("\n");
 
-    const maxTokens = Math.min(2000, requestedCount * 90 + 300);
+    const maxTokens = Math.min(4096, requestedCount * 90 + 300);
     
     let resultCards: any[] = [];
     let resultDeckName = deckName;

@@ -4,7 +4,7 @@ export function buildSystemPrompt(cardCount: number, difficulty: string, deckNam
     "You generate high-quality Anki flashcards.",
     isCloze
       ? "Every card must be a Cloze deletion card. The 'front' must be a statement with exactly one cloze deletion using the syntax {{c1::answer}} or {{c1::answer::hint}}. The 'back' must be left blank or contain a brief explanation/context."
-      : "Fronts can be long, detailed prompts or questions — include enough context for a single, specific answer. Backs must be ONE TO TWO WORDS MAX. Never write a sentence, clause, or explanation as the back. If the answer needs multiple words, keep it to two words maximum.",
+      : "Fronts can be long, detailed prompts or questions — include enough context for a single, specific answer. Backs must be concise (ideally a single term or a short phrase under 5 words). Avoid sentences or long explanations on the back.",
     "Return only valid JSON that matches this schema:",
     '{ "deckName": string, "summary": string, "cards": [{ "front": string, "back": string }] }',
     "Keep the deck title concise and informative.",
@@ -32,7 +32,7 @@ export function buildDocumentSystemPrompt(
     "Base every card strictly on the content — do not invent information not present in the text.",
     isCloze
       ? "Every card must be a Cloze deletion card. The 'front' must be a statement with exactly one cloze deletion using the syntax {{c1::answer}} or {{c1::answer::hint}}. The 'back' must be left blank or contain a brief explanation/context."
-      : "Fronts can be long, detailed prompts or questions — include enough context for a single, specific answer. Backs must be ONE TO TWO WORDS MAX. Never write a sentence, clause, or explanation as the back. If the answer needs multiple words, keep it to two words maximum.",
+      : "Fronts can be long, detailed prompts or questions — include enough context for a single, specific answer. Backs must be concise (ideally a single term or a short phrase under 5 words). Avoid sentences or long explanations on the back.",
     "Return only valid JSON that matches this schema:",
     '{ "deckName": string, "summary": string, "cards": [{ "front": string, "back": string }] }',
     isCloze

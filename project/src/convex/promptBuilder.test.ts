@@ -31,9 +31,9 @@ describe("buildSystemPrompt", () => {
     expect(prompt).toContain('"back"');
   });
 
-  it("includes back-card constraint (one to two words)", () => {
+  it("includes back-card constraint (under 5 words)", () => {
     const prompt = buildSystemPrompt(1, "intermediate", "");
-    expect(prompt).toContain("ONE TO TWO WORDS MAX");
+    expect(prompt).toContain("under 5 words");
   });
 
   it("includes front-card guidance (longer prompts allowed)", () => {
@@ -97,7 +97,7 @@ describe("buildDocumentSystemPrompt", () => {
 
   it("includes back-card constraint", () => {
     const prompt = buildDocumentSystemPrompt(5, "intermediate", "", "");
-    expect(prompt).toContain("ONE TO TWO WORDS MAX");
+    expect(prompt).toContain("under 5 words");
   });
 
   it("handles empty deck name and empty instructions", () => {
