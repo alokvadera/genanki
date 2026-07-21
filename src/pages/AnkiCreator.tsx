@@ -194,6 +194,17 @@ export default function AnkiCreator() {
   }, [catalogUpdatedAt, handleRefreshProviders, STALE_MS]);
 
   // Convex actions
+  const deviceToken = useState(() => {
+    let token = localStorage.getItem("device_token");
+    if (!token) {
+      token = typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : Math.random().toString(36).substring(2) + Date.now().toString(36);
+      localStorage.setItem("device_token", token);
+    }
+    return token;
+  })[0];
+
   const createGenerationJob = useMutation(api.generationJobs.create);
   const recordTelemetry = useMutation(api.generationTelemetry.record);
   const generateDeckFromPrompt = useAction(api.deckGeneration.generateDeckFromPrompt);
@@ -500,6 +511,7 @@ export default function AnkiCreator() {
         cardCount: docCardCount, difficulty: docDifficulty, jobId,
         preferredProvider: preferredProvider === "auto" ? undefined : preferredProvider,
         cardType,
+        deviceToken,
       });
       const cards = result.cards.map((card: { front: string; back: string }) => ({
         front: card.front.trim(), back: card.back.trim(),
@@ -573,6 +585,7 @@ export default function AnkiCreator() {
         cardCount: aiCardCount, difficulty: aiDifficulty, jobId,
         preferredProvider: preferredProvider === "auto" ? undefined : preferredProvider,
         cardType,
+        deviceToken,
       });
       const cards = result.cards.map((card: { front: string; back: string }) => ({
         front: card.front.trim(), back: card.back.trim(),

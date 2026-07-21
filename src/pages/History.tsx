@@ -35,6 +35,18 @@ export default function History() {
   const listActiveRuns = useAction(api.decryptActions.listActiveRunsAction);
   const listArchivedRuns = useAction(api.decryptActions.listArchivedRunsAction);
 
+  // Stable browser device token
+  const deviceToken = useState(() => {
+    let token = localStorage.getItem("device_token");
+    if (!token) {
+      token = typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : Math.random().toString(36).substring(2) + Date.now().toString(36);
+      localStorage.setItem("device_token", token);
+    }
+    return token;
+  })[0];
+
   const [activeJobs, setActiveJobs] = useState<any[]>([]);
   const [jobs, setJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,8 +54,8 @@ export default function History() {
   const fetchRuns = async () => {
     try {
       const [active, archived] = await Promise.all([
-        listActiveRuns(),
-        listArchivedRuns({ limit: 100 }),
+        listActiveRuns({ deviceToken }),
+        listArchivedRuns({ limit: 100, deviceToken }),
       ]);
       setActiveJobs(active);
       setJobs(archived);

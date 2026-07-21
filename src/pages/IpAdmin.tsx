@@ -85,70 +85,77 @@ export default function IpAdmin() {
   const setRule = useMutation(api.ipRateLimiter.adminSetRule);
   const resetIpTokens = useMutation(api.ipRateLimiter.adminResetIpTokens);
 
-  const toggleBlock = async (ip: string, currentBlocked: boolean) => {
+  const toggleBlock = async (ip: string, deviceIdHash: string | undefined, currentBlocked: boolean) => {
     try {
-      const state = ips?.find((x: any) => x.ip === ip);
+      const state = ips?.find((x: any) => x.ip === ip || (deviceIdHash && x.deviceIdHash === deviceIdHash));
       await setRule({
         adminSecret: secretKey,
         ip,
+        deviceIdHash,
         isBlocked: !currentBlocked,
         customDailyLimit: state?.customDailyLimit,
         note: state?.note,
       });
-      toast.success(`${currentBlocked ? "Unblocked" : "Blocked"} IP address ${ip}`);
+      toast.success(`${currentBlocked ? "Unblocked" : "Blocked"} visitor`);
     } catch (e: any) {
       toast.error(e.message || "Failed to update IP block rule");
     }
   };
 
-  const handleSaveLimit = async (ip: string) => {
+  const handleSaveLimit = async (ip: string, deviceIdHash: string | undefined) => {
     try {
       const limit = customLimitVal.trim() ? parseInt(customLimitVal, 10) : undefined;
-      const state = ips?.find((x: any) => x.ip === ip);
+      const state = ips?.find((x: any) => x.ip === ip || (deviceIdHash && x.deviceIdHash === deviceIdHash));
       await setRule({
         adminSecret: secretKey,
         ip,
+        deviceIdHash,
         isBlocked: state?.isBlocked ?? false,
         customDailyLimit: limit,
         note: state?.note,
       });
       setEditingLimitIp(null);
-      toast.success(`Custom limit updated for ${ip}`);
+      toast.success(`Custom limit updated`);
     } catch (e: any) {
       toast.error(e.message || "Failed to update custom limit");
     }
   };
 
-  const handleSaveNote = async (ip: string) => {
+  const handleSaveNote = async (ip: string, deviceIdHash: string | undefined) => {
     try {
-      const state = ips?.find((x: any) => x.ip === ip);
+      const state = ips?.find((x: any) => x.ip === ip || (deviceIdHash && x.deviceIdHash === deviceIdHash));
       await setRule({
         adminSecret: secretKey,
         ip,
+        deviceIdHash,
         isBlocked: state?.isBlocked ?? false,
         customDailyLimit: state?.customDailyLimit,
         note: customNoteVal.trim() || undefined,
       });
       setEditingNoteIp(null);
-      toast.success(`Internal note updated for ${ip}`);
+      toast.success(`Internal note updated`);
     } catch (e: any) {
       toast.error(e.message || "Failed to update note");
     }
   };
 
-  const handleResetTokens = async (ip: string) => {
-    if (!window.confirm(`Are you sure you want to reset today's token usage for IP ${ip}?`)) return;
+  const handleResetTokens = async (ip: string, deviceIdHash: string | undefined) => {
+    if (!window.confirm(`Are you sure you want to reset today's token usage for this visitor?`)) return;
     try {
-      await resetIpTokens({ adminSecret: secretKey, ip });
-      toast.success(`Today's token usage reset to 0 for ${ip}`);
+      await resetIpTokens({ adminSecret: secretKey, ip, deviceIdHash });
+      toast.success(`Today's token usage reset to 0`);
     } catch (e: any) {
       toast.error(e.message || "Failed to reset tokens");
     }
   };
 
-  const filteredIps = (ips ?? []).filter((item: any) =>
-    item.ip.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredIps = (ips ?? []).filter((item: any) => {
+    const matchPrimary = item.ip.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchAssociated = item.associatedIps?.some((a: string) => 
+      a.toLowerCase().includes(searchQuery.toLowerCase())
+    ) ?? false;
+    return matchPrimary || matchAssociated;
+  });
 
   const totalTokens = summary?.totalTokens ?? 0;
   const promptTokens = summary?.totalPromptTokens ?? 0;
@@ -332,7 +339,14 @@ export default function IpAdmin() {
                               className="inline-flex items-center gap-2 hover:underline text-left text-primary"
                             >
                               {isExpanded ? <ChevronUp className="w-4 h-4 shrink-0" /> : <ChevronDown className="w-4 h-4 shrink-0" />}
-                              {item.ip}
+                              <div className="flex flex-col">
+                                <span>{item.ip}</span>
+                                {item.associatedIps && item.associatedIps.length > 1 && (
+                                  <span className="text-[10px] font-semibold text-indigo-600 bg-indigo-50 border border-indigo-200 px-1 py-0.5 mt-1 rounded self-start font-sans">
+                                    Groups {item.associatedIps.length} rotating IPs
+                                  </span>
+                                )}
+                              </div>
                             </button>
                             {item.note && (
                               <p className="text-[10px] text-muted-foreground font-sans font-medium mt-1 max-w-[200px] truncate">
@@ -377,7 +391,7 @@ export default function IpAdmin() {
                                     placeholder="Add notes..."
                                     className="h-8 py-1 text-xs w-[140px] nb-border-2"
                                   />
-                                  <Button size="sm" onClick={() => handleSaveNote(item.ip)} className="h-8 px-2">
+                                  <Button size="sm" onClick={() => handleSaveNote(item.ip, item.deviceIdHash)} className="h-8 px-2">
                                     Save
                                   </Button>
                                   <Button size="sm" variant="ghost" onClick={() => setEditingNoteIp(null)} className="h-8 px-2">
@@ -409,7 +423,7 @@ export default function IpAdmin() {
                                     placeholder="Daily limit..."
                                     className="h-8 py-1 text-xs w-[100px] nb-border-2"
                                   />
-                                  <Button size="sm" onClick={() => handleSaveLimit(item.ip)} className="h-8 px-2">
+                                  <Button size="sm" onClick={() => handleSaveLimit(item.ip, item.deviceIdHash)} className="h-8 px-2">
                                     Save
                                   </Button>
                                   <Button size="sm" variant="ghost" onClick={() => setEditingLimitIp(null)} className="h-8 px-2">
@@ -435,7 +449,7 @@ export default function IpAdmin() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleResetTokens(item.ip)}
+                                onClick={() => handleResetTokens(item.ip, item.deviceIdHash)}
                                 className="h-8 px-2 nb-border nb-shadow-sm text-amber-700 hover:text-amber-800"
                                 title="Reset daily usage to 0"
                               >
@@ -444,7 +458,7 @@ export default function IpAdmin() {
 
                               {/* Block/Unblock toggle */}
                               <button
-                                onClick={() => toggleBlock(item.ip, item.isBlocked)}
+                                onClick={() => toggleBlock(item.ip, item.deviceIdHash, item.isBlocked)}
                                 className={`nb-border font-bold text-xs px-2.5 py-1.5 transition-all nb-hover-shadow ${
                                   item.isBlocked
                                     ? "bg-emerald-50 text-emerald-800 border-emerald-950"
@@ -491,7 +505,34 @@ export default function IpAdmin() {
               if (!item) return <p className="text-sm font-medium">Record not loaded.</p>;
 
               return (
-                <div className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-4">
+                  {/* IP Addresses History */}
+                  {item.associatedIps && item.associatedIps.length > 0 && (
+                    <div className="nb-border-2 bg-indigo-50/30 p-4 space-y-2">
+                      <h4 className="text-sm font-bold flex items-center gap-1.5 text-indigo-900">
+                        <Globe className="w-4 h-4 text-indigo-500" />
+                        Associated IP Addresses History ({item.associatedIps.length})
+                      </h4>
+                      <p className="text-[10px] text-indigo-700/80 font-medium">
+                        These dynamic IPs were identified as belonging to the same browser visitor. They share the same rate-limit quota and encrypted deck history.
+                      </p>
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        {item.associatedIps.map((ipAddr: string) => (
+                          <span 
+                            key={ipAddr} 
+                            className={`font-mono text-xs font-bold px-2 py-1 nb-border bg-white ${
+                              ipAddr === item.ip ? "border-indigo-600 text-indigo-600 bg-indigo-50" : ""
+                            }`}
+                            title={ipAddr === item.ip ? "Last active IP" : "Historical dynamic IP"}
+                          >
+                            {ipAddr} {ipAddr === item.ip ? "• active" : ""}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid gap-6 md:grid-cols-2">
                   {/* Providers Used */}
                   <div className="space-y-3">
                     <h4 className="text-sm font-bold flex items-center gap-1.5">
@@ -544,8 +585,9 @@ export default function IpAdmin() {
                     </div>
                   </div>
                 </div>
-              );
-            })()}
+              </div>
+            );
+          })()}
           </motion.section>
         )}
       </main>

@@ -8,20 +8,32 @@ export function getDayWindowStart(now: number): number {
   return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
 }
 
-export async function checkAndLogIpHandler(ctx: any, args: { ip: string; estimatedTokens: number }) {
+export async function checkAndLogIpHandler(
+  ctx: any,
+  args: { ip: string; estimatedTokens: number; deviceIdHash?: string }
+) {
   const now = Date.now();
   const dayWindowStart = getDayWindowStart(now);
 
   // 1. Check IP blocklist
-  const rule = await ctx.db
-    .query("ipRules")
-    .withIndex("by_ip", (q: any) => q.eq("ip", args.ip))
-    .unique();
+  let rule: any = null;
+  if (args.deviceIdHash) {
+    rule = await ctx.db
+      .query("ipRules")
+      .withIndex("by_deviceIdHash", (q: any) => q.eq("deviceIdHash", args.deviceIdHash))
+      .unique();
+  }
+  if (!rule) {
+    rule = await ctx.db
+      .query("ipRules")
+      .withIndex("by_ip", (q: any) => q.eq("ip", args.ip))
+      .unique();
+  }
 
   if (rule?.isBlocked) {
     return {
       allowed: false,
-      reason: "This IP has been blocked by the administrator.",
+      reason: "This visitor has been blocked by the administrator.",
       retryAfterSeconds: 86400,
     };
   }
@@ -29,10 +41,19 @@ export async function checkAndLogIpHandler(ctx: any, args: { ip: string; estimat
   const dailyLimit = rule?.customDailyLimit ?? DEFAULT_DAILY_LIMIT;
 
   // 2. Check token budget state
-  const state = await ctx.db
-    .query("ipRateState")
-    .withIndex("by_ip", (q: any) => q.eq("ip", args.ip))
-    .unique();
+  let state: any = null;
+  if (args.deviceIdHash) {
+    state = await ctx.db
+      .query("ipRateState")
+      .withIndex("by_deviceIdHash", (q: any) => q.eq("deviceIdHash", args.deviceIdHash))
+      .unique();
+  }
+  if (!state) {
+    state = await ctx.db
+      .query("ipRateState")
+      .withIndex("by_ip", (q: any) => q.eq("ip", args.ip))
+      .unique();
+  }
 
   const isNewDay = !state || dayWindowStart > state.dayWindowStart;
   const dayTokensUsed = isNewDay ? 0 : state.dayTokensUsed;
@@ -50,10 +71,17 @@ export async function checkAndLogIpHandler(ctx: any, args: { ip: string; estimat
   }
 
   // 3. Log/update request state
+  const currentIps = state?.associatedIps ?? [args.ip];
+  if (!currentIps.includes(args.ip)) {
+    currentIps.push(args.ip);
+  }
+
   const nextState = {
+    deviceIdHash: args.deviceIdHash || state?.deviceIdHash,
+    associatedIps: currentIps,
     ip: args.ip,
     dayWindowStart: isNewDay ? dayWindowStart : state.dayWindowStart,
-    dayTokensUsed: dayTokensUsed, // do not deduct yet, only checked/allowed
+    dayTokensUsed: dayTokensUsed,
     totalTokensAllTime: state?.totalTokensAllTime ?? 0,
     totalRequests: (state?.totalRequests ?? 0) + 1,
     lastSeenAt: now,
@@ -78,15 +106,28 @@ export const checkAndLogIp = mutation({
   args: {
     ip: v.string(),
     estimatedTokens: v.number(),
+    deviceIdHash: v.optional(v.string()),
   },
   handler: checkAndLogIpHandler,
 });
 
-export async function deductIpTokensHandler(ctx: any, args: { ip: string; tokens: number }) {
-  const state = await ctx.db
-    .query("ipRateState")
-    .withIndex("by_ip", (q: any) => q.eq("ip", args.ip))
-    .unique();
+export async function deductIpTokensHandler(
+  ctx: any,
+  args: { ip: string; tokens: number; deviceIdHash?: string }
+) {
+  let state: any = null;
+  if (args.deviceIdHash) {
+    state = await ctx.db
+      .query("ipRateState")
+      .withIndex("by_deviceIdHash", (q: any) => q.eq("deviceIdHash", args.deviceIdHash))
+      .unique();
+  }
+  if (!state) {
+    state = await ctx.db
+      .query("ipRateState")
+      .withIndex("by_ip", (q: any) => q.eq("ip", args.ip))
+      .unique();
+  }
 
   if (!state) return;
 
@@ -104,6 +145,7 @@ export const deductIpTokens = mutation({
   args: {
     ip: v.string(),
     tokens: v.number(),
+    deviceIdHash: v.optional(v.string()),
   },
   handler: deductIpTokensHandler,
 });
@@ -122,15 +164,24 @@ export const adminListIps = query({
     const rules = await ctx.db.query("ipRules").collect();
     const usageRecords = await ctx.db.query("providerUsage").collect();
 
-    const rulesMap = new Map(rules.map((r) => [r.ip, r]));
+    // Group rules by deviceIdHash (fallback to raw ip)
+    const deviceRulesMap = new Map(
+      rules.filter((r) => r.deviceIdHash).map((r) => [r.deviceIdHash!, r])
+    );
+    const ipRulesMap = new Map(
+      rules.filter((r) => !r.deviceIdHash).map((r) => [r.ip, r])
+    );
 
     // Join and build IP detail list
     return await Promise.all(
       states.map(async (state) => {
-        const rule = rulesMap.get(state.ip);
+        // Find rule by deviceIdHash first, then by IP
+        const rule = (state.deviceIdHash && deviceRulesMap.get(state.deviceIdHash))
+          || ipRulesMap.get(state.ip);
         
-        // Filter usage records for this IP
-        const ipUsages = usageRecords.filter((u) => u.ip === state.ip);
+        // Filter usage records matching any of the associated IPs
+        const ipList = state.associatedIps ?? [state.ip];
+        const ipUsages = usageRecords.filter((u) => u.ip && ipList.includes(u.ip));
 
         // Aggregate by provider
         const providerMap = new Map<string, { label: string; tokens: number; requests: number }>();
@@ -154,6 +205,8 @@ export const adminListIps = query({
 
         return {
           ip: state.ip,
+          deviceIdHash: state.deviceIdHash,
+          associatedIps: ipList,
           dayWindowStart: state.dayWindowStart,
           dayTokensUsed: state.dayTokensUsed,
           totalTokensAllTime: state.totalTokensAllTime,
@@ -172,12 +225,13 @@ export const adminListIps = query({
 });
 
 /**
- * Admin: Configure block rules and limits for an IP.
+ * Admin: Configure block rules and limits for an IP or device.
  */
 export const adminSetRule = mutation({
   args: {
     adminSecret: v.string(),
     ip: v.string(),
+    deviceIdHash: v.optional(v.string()),
     isBlocked: v.boolean(),
     customDailyLimit: v.optional(v.number()),
     note: v.optional(v.string()),
@@ -187,14 +241,20 @@ export const adminSetRule = mutation({
       throw new Error("Unauthorized: Invalid admin secret");
     }
 
-    const existing = await ctx.db
-      .query("ipRules")
-      .withIndex("by_ip", (q) => q.eq("ip", args.ip))
-      .unique();
+    const existing = args.deviceIdHash
+      ? await ctx.db
+          .query("ipRules")
+          .withIndex("by_deviceIdHash", (q) => q.eq("deviceIdHash", args.deviceIdHash!))
+          .unique()
+      : await ctx.db
+          .query("ipRules")
+          .withIndex("by_ip", (q) => q.eq("ip", args.ip))
+          .unique();
 
     const now = Date.now();
     const payload = {
       ip: args.ip,
+      deviceIdHash: args.deviceIdHash,
       isBlocked: args.isBlocked,
       customDailyLimit: args.customDailyLimit,
       note: args.note,
@@ -213,22 +273,28 @@ export const adminSetRule = mutation({
 });
 
 /**
- * Admin: Reset today's token counter for an IP.
+ * Admin: Reset today's token counter for an IP or device.
  */
 export const adminResetIpTokens = mutation({
   args: {
     adminSecret: v.string(),
     ip: v.string(),
+    deviceIdHash: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     if (args.adminSecret !== process.env.ADMIN_SECRET) {
       throw new Error("Unauthorized: Invalid admin secret");
     }
 
-    const state = await ctx.db
-      .query("ipRateState")
-      .withIndex("by_ip", (q) => q.eq("ip", args.ip))
-      .unique();
+    const state = args.deviceIdHash
+      ? await ctx.db
+          .query("ipRateState")
+          .withIndex("by_deviceIdHash", (q) => q.eq("deviceIdHash", args.deviceIdHash!))
+          .unique()
+      : await ctx.db
+          .query("ipRateState")
+          .withIndex("by_ip", (q) => q.eq("ip", args.ip))
+          .unique();
 
     if (state) {
       await ctx.db.patch(state._id, {
@@ -243,29 +309,68 @@ export const adminResetIpTokens = mutation({
  * Internal Queries used by Actions
  */
 export const listActiveJobsByHash = query({
-  args: { creatorIpHash: v.string() },
+  args: { 
+    creatorIpHash: v.string(),
+    creatorDeviceIdHash: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
-    const rows = await ctx.db
+    const ipRows = await ctx.db
       .query("generationJobs")
       .withIndex("by_creatorIpHash_createdAt", (q) => q.eq("creatorIpHash", args.creatorIpHash))
       .order("desc")
       .take(100);
 
-    return rows.filter((job) => job.status === "queued" || job.status === "running");
+    let deviceRows: any[] = [];
+    if (args.creatorDeviceIdHash) {
+      deviceRows = await ctx.db
+        .query("generationJobs")
+        .withIndex("by_creatorDeviceIdHash_createdAt", (q) => q.eq("creatorDeviceIdHash", args.creatorDeviceIdHash!))
+        .order("desc")
+        .take(100);
+    }
+
+    const mergedMap = new Map<string, any>();
+    for (const r of [...ipRows, ...deviceRows]) {
+      mergedMap.set(r._id, r);
+    }
+    const merged = Array.from(mergedMap.values());
+    merged.sort((a, b) => b.createdAt - a.createdAt);
+
+    return merged.filter((job) => job.status === "queued" || job.status === "running");
   },
 });
 
 export const listArchivedJobsByHash = query({
-  args: { creatorIpHash: v.string(), limit: v.optional(v.number()) },
+  args: { 
+    creatorIpHash: v.string(), 
+    creatorDeviceIdHash: v.optional(v.string()),
+    limit: v.optional(v.number()) 
+  },
   handler: async (ctx, args) => {
     const limit = Math.min(100, Math.max(1, Math.round(args.limit ?? 50)));
-    const rows = await ctx.db
+    const ipRows = await ctx.db
       .query("generationJobs")
       .withIndex("by_creatorIpHash_createdAt", (q) => q.eq("creatorIpHash", args.creatorIpHash))
       .order("desc")
       .take(limit * 3);
 
-    return rows
+    let deviceRows: any[] = [];
+    if (args.creatorDeviceIdHash) {
+      deviceRows = await ctx.db
+        .query("generationJobs")
+        .withIndex("by_creatorDeviceIdHash_createdAt", (q) => q.eq("creatorDeviceIdHash", args.creatorDeviceIdHash!))
+        .order("desc")
+        .take(limit * 3);
+    }
+
+    const mergedMap = new Map<string, any>();
+    for (const r of [...ipRows, ...deviceRows]) {
+      mergedMap.set(r._id, r);
+    }
+    const merged = Array.from(mergedMap.values());
+    merged.sort((a, b) => b.createdAt - a.createdAt);
+
+    return merged
       .filter((job) => job.status !== "queued" && job.status !== "running")
       .slice(0, limit);
   },

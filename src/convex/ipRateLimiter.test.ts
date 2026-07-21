@@ -104,6 +104,49 @@ describe("IP Rate Limiter & Budgeting", () => {
       expect(result.allowed).toBe(false);
       expect(result.reason).toContain("Daily token limit");
     });
+
+    it("groups limits and logs dynamic IPs under deviceIdHash if provided", async () => {
+      const mockQueryUnique = vi.fn()
+        .mockResolvedValueOnce(null) // check rules by deviceIdHash (clean)
+        .mockResolvedValueOnce(null) // check rules by ip (clean)
+        .mockResolvedValueOnce({
+          _id: "state-id",
+          ip: "1.2.3.4",
+          deviceIdHash: "dev-id-hash",
+          associatedIps: ["1.2.3.4"],
+          dayWindowStart: getDayWindowStart(Date.now()),
+          dayTokensUsed: 1000,
+          totalTokensAllTime: 5000,
+          totalRequests: 5,
+        });
+
+      const mockPatch = vi.fn().mockResolvedValue(undefined);
+
+      const mockCtx = {
+        db: {
+          query: vi.fn().mockReturnValue({
+            withIndex: vi.fn().mockReturnValue({
+              unique: mockQueryUnique,
+            }),
+          }),
+          patch: mockPatch,
+        },
+      };
+
+      const result = await checkAndLogIpHandler(mockCtx, { 
+        ip: "1.2.3.5", // new dynamic IP
+        estimatedTokens: 500, 
+        deviceIdHash: "dev-id-hash" 
+      });
+
+      expect(result.allowed).toBe(true);
+      expect(mockPatch).toHaveBeenCalledWith("state-id", expect.objectContaining({
+        deviceIdHash: "dev-id-hash",
+        associatedIps: ["1.2.3.4", "1.2.3.5"], // groups both IPs!
+        ip: "1.2.3.5", // last seen raw IP
+        totalRequests: 6,
+      }));
+    });
   });
 
   describe("deductIpTokensHandler", () => {
