@@ -134,6 +134,7 @@ const schema = defineSchema(
 
       // Encrypted fields for Zero-Knowledge IP-based privacy
       creatorIpHash: v.optional(v.string()),
+      creatorDeviceIdHash: v.optional(v.string()),
       encDeckName: v.optional(v.string()),
       encSummary: v.optional(v.string()),
       encCards: v.optional(v.string()),
@@ -141,7 +142,8 @@ const schema = defineSchema(
       encError: v.optional(v.string()),
     })
       .index("by_createdAt", ["createdAt"])
-      .index("by_creatorIpHash_createdAt", ["creatorIpHash", "createdAt"]),
+      .index("by_creatorIpHash_createdAt", ["creatorIpHash", "createdAt"])
+      .index("by_creatorDeviceIdHash_createdAt", ["creatorDeviceIdHash", "createdAt"]),
 
     providerUsage: defineTable({
       provider: v.string(),
@@ -200,6 +202,8 @@ const schema = defineSchema(
     }).index("by_provider", ["provider"]),
 
     ipRateState: defineTable({
+      deviceIdHash: v.optional(v.string()),
+      associatedIps: v.optional(v.array(v.string())),
       ip: v.string(),
       dayWindowStart: v.number(),
       dayTokensUsed: v.number(),
@@ -210,16 +214,20 @@ const schema = defineSchema(
       updatedAt: v.number(),
     })
       .index("by_ip", ["ip"])
+      .index("by_deviceIdHash", ["deviceIdHash"])
       .index("by_lastSeenAt", ["lastSeenAt"]),
 
     ipRules: defineTable({
       ip: v.string(),
+      deviceIdHash: v.optional(v.string()),
       isBlocked: v.boolean(),
       customDailyLimit: v.optional(v.number()),
       note: v.optional(v.string()),
       createdAt: v.number(),
       updatedAt: v.number(),
-    }).index("by_ip", ["ip"]),
+    })
+      .index("by_ip", ["ip"])
+      .index("by_deviceIdHash", ["deviceIdHash"]),
   },
   {
     schemaValidation: false,
