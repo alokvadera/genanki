@@ -170,10 +170,10 @@ export default function History() {
                           <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300">
                             <Activity className="w-3 h-3" /> {statusLabel}
                           </span>
-                          <span className="text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 bg-white nb-border">
+                          <span className="text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 bg-card dark:bg-card nb-border">
                             {job.kind}
                           </span>
-                          <span className="text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 bg-white nb-border">
+                          <span className="text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 bg-card dark:bg-card nb-border">
                             {job.requestedCount} cards
                           </span>
                         </div>
@@ -308,7 +308,7 @@ export default function History() {
                             <span className={`text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 ${tone}`}>
                               {job.status}
                             </span>
-                            <span className="text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 bg-white nb-border">
+                            <span className="text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 bg-card dark:bg-card nb-border">
                               {job.kind}
                             </span>
                           </div>

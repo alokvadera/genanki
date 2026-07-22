@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { estimateNeurons, getUtcDayString, getWaitSecondsUntilUtcMidnight, CLOUDFLARE_NEURON_COST } from "./budget";
+import { estimateNeurons, getUtcDayString, getWaitSecondsUntilUtcMidnight, formatTimeUntilMidnight, CLOUDFLARE_NEURON_COST } from "./budget";
 
 // ---------------------------------------------------------------------------
 // estimateNeurons
@@ -105,5 +105,56 @@ describe("getWaitSecondsUntilUtcMidnight", () => {
     // Math.max(0, ...) ensures this
     const ts = Date.UTC(2024, 2, 10, 0, 0, 0);
     expect(getWaitSecondsUntilUtcMidnight(ts)).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// formatTimeUntilMidnight
+// ---------------------------------------------------------------------------
+describe("formatTimeUntilMidnight", () => {
+  it("returns 'now' at exactly midnight", () => {
+    const ts = Date.UTC(2024, 2, 10, 0, 0, 0);
+    expect(formatTimeUntilMidnight(ts)).toBe("now");
+  });
+
+  it("returns '<1m' for less than 60 seconds", () => {
+    const ts = Date.UTC(2024, 2, 10, 23, 59, 30);
+    expect(formatTimeUntilMidnight(ts)).toBe("<1m");
+  });
+
+  it("returns minutes only when under 1 hour", () => {
+    const ts = Date.UTC(2024, 2, 10, 23, 30, 0);
+    expect(formatTimeUntilMidnight(ts)).toBe("30m");
+  });
+
+  it("returns hours and minutes", () => {
+    const ts = Date.UTC(2024, 2, 10, 11, 30, 0);
+    expect(formatTimeUntilMidnight(ts)).toBe("12h 30m");
+  });
+
+  it("omits minutes when zero", () => {
+    const ts = Date.UTC(2024, 2, 10, 18, 0, 0);
+    expect(formatTimeUntilMidnight(ts)).toBe("6h");
+  });
+
+  it("returns hours only for even-hour values", () => {
+    const ts = Date.UTC(2024, 2, 10, 1, 0, 0);
+    expect(formatTimeUntilMidnight(ts)).toBe("23h");
+  });
+
+  it("returns hours and minutes for partial hours", () => {
+    // 1h 30m until midnight
+    const ts = Date.UTC(2024, 2, 10, 22, 30, 0);
+    expect(formatTimeUntilMidnight(ts)).toBe("1h 30m");
+  });
+
+  it("handles 23h 59m case", () => {
+    const ts = Date.UTC(2024, 2, 10, 0, 1, 0);
+    expect(formatTimeUntilMidnight(ts)).toBe("23h 59m");
+  });
+
+  it("handles 1 minute case", () => {
+    const ts = Date.UTC(2024, 2, 10, 23, 59, 0);
+    expect(formatTimeUntilMidnight(ts)).toBe("1m");
   });
 });

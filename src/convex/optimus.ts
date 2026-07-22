@@ -3,6 +3,7 @@ import { v } from "convex/values";
 
 import { PROVIDER_NAMES } from "./aiProviders";
 import { getUtcDayString, CLOUDFLARE_DAILY_BUDGET, NEAR_EXHAUSTION_RATIO } from "./budget";
+import { scoreCandidate, type PerformanceRow } from "../lib/routing";
 
 // A status type to indicate provider health
 export type ProviderStatus = "healthy" | "near-exhaustion" | "exhausted";
@@ -122,49 +123,44 @@ export const rankCandidates = internalQuery({
       .withIndex("by_utcDay", (q) => q.eq("utcDay", utcDay))
       .unique();
 
-    // Map each candidate to a score
+    // Map each candidate to a score using the unified routing score function
     const scored = args.candidates.map((candidate) => {
-      // Skip malformed candidates (missing provider or modelId)
       if (!candidate.provider || !candidate.modelId) {
-        return { candidate, score: 0 };
+        return { candidate, score: Number.NEGATIVE_INFINITY };
       }
 
       const key = keyFor(candidate.provider, candidate.modelId);
       const state = stateByKey.get(key);
-      const perf = perfByKey.get(key);
-      
-      let score = 100; // Base healthy score
-      
+      const perfRow = perfByKey.get(key);
+
+      // Convex doc shape matches PerformanceRow — safe to spread
+      const perf: PerformanceRow | undefined = perfRow ? { ...perfRow } : undefined;
+
+      // Start with the unified routing score
+      let score = scoreCandidate(perf, { provider: candidate.provider, modelId: candidate.modelId });
+
+      // Layer real-time rate-limit state on top (not captured by performance alone)
       if (state) {
         if (state.cooldownUntil && state.cooldownUntil > now) {
-          score = 0; // Exhausted
+          score = Number.NEGATIVE_INFINITY; // Cooldown = exhausted
         } else if (
           (state.remainingRequests !== undefined && state.remainingRequests <= 2 && state.resetAt && state.resetAt > now) ||
           (state.remainingTokens !== undefined && state.remainingTokens <= 15000 && state.resetAt && state.resetAt > now)
         ) {
-          score = 50; // Near exhaustion
+          // Near exhaustion — penalize but keep in rotation with a floor of 5
+          score = Math.max(5, score - 60);
         }
       }
 
+      // Cloudflare budget gate: fully exhausted = remove from rotation
       if (candidate.provider === "cloudflare") {
         const used = cfBudget?.neuronsUsed ?? 0;
-        if (used >= CLOUDFLARE_DAILY_BUDGET) score = 0;
-        else if (used >= Math.round(CLOUDFLARE_DAILY_BUDGET * NEAR_EXHAUSTION_RATIO)) score = 50;
+        if (used >= CLOUDFLARE_DAILY_BUDGET) {
+          score = Number.NEGATIVE_INFINITY;
+        } else if (used >= Math.round(CLOUDFLARE_DAILY_BUDGET * NEAR_EXHAUSTION_RATIO)) {
+          score -= 50;
+        }
       }
-
-      // Adjust score by performance
-      if (perf && score > 0) {
-        const successRate = perf.calls > 0 ? perf.successes / perf.calls : 1;
-        // Boost reliable models
-        score += successRate * 20;
-        
-        // Penalize extremely slow models
-        if (perf.averageLatencyMs > 20000) score -= 10;
-        else if (perf.averageLatencyMs < 5000) score += 10;
-      }
-
-      // Provider tier adjustments
-      if (candidate.provider === "groq" && score > 0) score += 15; // Groq preferred
 
       return { candidate, score };
     });

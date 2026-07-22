@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   prioritizeCandidates,
+  scoreCandidate,
   COST_TABLE,
   type Candidate,
   type PerformanceRow,
@@ -9,13 +10,19 @@ import {
 describe("COST_TABLE", () => {
   it("has known model costs", () => {
     expect(COST_TABLE["llama-3.1-8b-instant"]).toBe(0.05);
-    expect(COST_TABLE["llama-3.3-70b-versatile"]).toBe(0.40);
+    expect(COST_TABLE["llama-3.3-70b-versatile"]).toBe(0.59);
     expect(COST_TABLE["qwen/qwen3-32b"]).toBe(0.35);
     expect(COST_TABLE["qwen/qwen1.5-14b-chat-awq"]).toBe(0);
   });
 
   it("free tier has cost 0", () => {
     expect(COST_TABLE["qwen/qwen1.5-14b-chat-awq"]).toBe(0);
+    expect(COST_TABLE["@cf/meta/llama-3.2-3b-instruct"]).toBe(0);
+  });
+
+  it("cloudflare models are free", () => {
+    expect(COST_TABLE["@cf/qwen/qwen3-30b-a3b-fp8"]).toBe(0);
+    expect(COST_TABLE["@cf/meta/llama-3.1-8b-instruct-fp8-fast"]).toBe(0);
   });
 });
 
@@ -446,5 +453,87 @@ describe("prioritizeCandidates — targeted branch coverage", () => {
     // Falls back to default PROVIDER_ORDER
     expect(result.candidates[0]!.provider).toBe("groq");
     expect(result.candidates[1]!.provider).toBe("cerebras");
+  });
+});
+
+describe("scoreCandidate — adaptive routing scoring", () => {
+  const makeCandidate = (provider: string, modelId: string): Candidate => ({
+    provider,
+    modelId,
+  });
+
+  it("returns exploration score for unproven models (<3 calls)", () => {
+    const score = scoreCandidate(undefined, makeCandidate("groq", "new-model"));
+    // Base 55 minus normalized cost penalty (DEFAULT_COST=0.50 / BASELINE_COST=0.20 * 8 = 20) = 35
+    expect(score).toBeGreaterThan(30);
+    expect(score).toBeLessThan(55);
+  });
+
+  it("free tier unproven model gets exploration boost", () => {
+    const paidScore = scoreCandidate(undefined, makeCandidate("groq", "paid-model"));
+    const freeScore = scoreCandidate(undefined, makeCandidate("groq", "qwen/qwen1.5-14b-chat-awq"));
+    expect(freeScore).toBeGreaterThan(paidScore);
+  });
+
+  it("proven model with high success rate scores higher than unproven", () => {
+    const unprovenScore = scoreCandidate(undefined, makeCandidate("groq", "new-model"));
+    const provenScore = scoreCandidate(
+      { provider: "groq", model: "good-model", calls: 10, successes: 10, failures: 0, timeouts: 0, averageLatencyMs: 200, averageTokens: 100 },
+      makeCandidate("groq", "good-model"),
+    );
+    expect(provenScore).toBeGreaterThan(unprovenScore);
+  });
+
+  it("circuit breaker: recent high failure rate gets heavy penalty", () => {
+    const recentFailScore = scoreCandidate(
+      { provider: "groq", model: "flaky", calls: 10, successes: 2, failures: 8, timeouts: 0, averageLatencyMs: 500, averageTokens: 100, updatedAt: Date.now() },
+      makeCandidate("groq", "flaky"),
+    );
+    const goodScore = scoreCandidate(
+      { provider: "groq", model: "good", calls: 10, successes: 8, failures: 2, timeouts: 0, averageLatencyMs: 500, averageTokens: 100, updatedAt: Date.now() },
+      makeCandidate("groq", "good"),
+    );
+    expect(recentFailScore).toBeLessThan(goodScore);
+    expect(recentFailScore).toBeLessThan(0); // should be heavily penalized
+  });
+
+  it("circuit breaker: stale failure data gets lighter penalty", () => {
+    const staleFailScore = scoreCandidate(
+      { provider: "groq", model: "old-flaky", calls: 10, successes: 2, failures: 8, timeouts: 0, averageLatencyMs: 500, averageTokens: 100, updatedAt: Date.now() - 2 * 60 * 60 * 1000 },
+      makeCandidate("groq", "old-flaky"),
+    );
+    const recentFailScore = scoreCandidate(
+      { provider: "groq", model: "flaky", calls: 10, successes: 2, failures: 8, timeouts: 0, averageLatencyMs: 500, averageTokens: 100, updatedAt: Date.now() },
+      makeCandidate("groq", "flaky"),
+    );
+    // Stale penalty should be less severe than recent penalty
+    expect(staleFailScore).toBeGreaterThan(recentFailScore);
+  });
+
+  it("lower latency produces higher score", () => {
+    const fastScore = scoreCandidate(
+      { provider: "groq", model: "fast", calls: 10, successes: 8, failures: 2, timeouts: 0, averageLatencyMs: 500, averageTokens: 100 },
+      makeCandidate("groq", "fast"),
+    );
+    const slowScore = scoreCandidate(
+      { provider: "groq", model: "slow", calls: 10, successes: 8, failures: 2, timeouts: 0, averageLatencyMs: 8000, averageTokens: 100 },
+      makeCandidate("groq", "slow"),
+    );
+    expect(fastScore).toBeGreaterThan(slowScore);
+  });
+
+  it("free tier models get bonus over paid models with same performance", () => {
+    const perf: PerformanceRow = { provider: "groq", model: "m", calls: 10, successes: 8, failures: 2, timeouts: 0, averageLatencyMs: 500, averageTokens: 100 };
+    const paidScore = scoreCandidate(perf, makeCandidate("groq", "llama-3.1-8b-instant"));
+    const freeScore = scoreCandidate(
+      { ...perf, model: "cf-free" },
+      makeCandidate("cloudflare", "@cf/meta/llama-3.2-3b-instruct"),
+    );
+    expect(freeScore).toBeGreaterThan(paidScore);
+  });
+
+  it("unknown-cost model uses DEFAULT_COST fallback", () => {
+    const score = scoreCandidate(undefined, makeCandidate("groq", "totally-unknown-model-id"));
+    expect(score).toBeLessThan(55); // penalized by DEFAULT_COST
   });
 });
