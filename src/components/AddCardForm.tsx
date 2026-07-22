@@ -24,7 +24,7 @@ export default function AddCardForm({
   fileInputRef,
 }: AddCardFormProps) {
   return (
-    <div className="nb-border bg-white nb-shadow-amber p-5 mb-6">
+    <div className="nb-border bg-card text-card-foreground nb-shadow-amber p-5 mb-6">
       <h2 className="font-bold text-xs uppercase tracking-[0.2em] mb-4 flex items-center gap-2 text-amber-600 dark:text-amber-400">
         <Plus className="w-4 h-4" />
         ADD NEW CARD

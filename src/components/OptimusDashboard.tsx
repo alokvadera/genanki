@@ -27,21 +27,21 @@ export function OptimusDashboard() {
   
   let overallStatus = "Healthy";
   let StatusIcon = ShieldCheck;
-  let statusColor = "text-green-600";
-  let bgStatusColor = "bg-green-50";
+  let statusColor = "text-emerald-600 dark:text-emerald-400";
+  let bgStatusColor = "bg-emerald-50 dark:bg-emerald-950/30";
   let shadowColor = "nb-shadow-teal";
 
   if (exhausted > 0) {
     overallStatus = "Active Rerouting";
     StatusIcon = ShieldAlert;
-    statusColor = "text-red-600";
-    bgStatusColor = "bg-red-50";
+    statusColor = "text-red-600 dark:text-red-400";
+    bgStatusColor = "bg-red-50 dark:bg-red-950/30";
     shadowColor = "nb-shadow-rose";
   } else if (nearExhaustion > 0) {
     overallStatus = "Monitoring Load";
     StatusIcon = Activity;
-    statusColor = "text-amber-600";
-    bgStatusColor = "bg-amber-50";
+    statusColor = "text-amber-600 dark:text-amber-400";
+    bgStatusColor = "bg-amber-50 dark:bg-amber-950/30";
     shadowColor = "nb-shadow-amber";
   }
 
@@ -51,9 +51,9 @@ export function OptimusDashboard() {
       onOpenChange={setIsOpen}
       className={`nb-border ${shadowColor} transition-colors duration-300 ${bgStatusColor}`}
     >
-      <CollapsibleTrigger className="w-full flex items-center justify-between p-3 hover:bg-black/5 transition-colors group">
+      <CollapsibleTrigger className="w-full flex items-center justify-between p-3 hover:bg-black/5 dark:hover:bg-white/5 transition-colors group">
         <div className="flex items-center gap-3">
-          <div className="nb-border bg-white p-1.5">
+          <div className="nb-border bg-card p-1.5">
             <StatusIcon className={`h-4 w-4 ${statusColor}`} />
           </div>
           <div className="text-left">
@@ -64,16 +64,16 @@ export function OptimusDashboard() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <div className={`nb-border bg-white px-2 py-0.5 font-bold text-[10px] uppercase tracking-widest ${statusColor}`}>
+          <div className={`nb-border bg-card px-2 py-0.5 font-bold text-[10px] uppercase tracking-widest ${statusColor}`}>
             {overallStatus}
           </div>
-          <div className="nb-border bg-white p-1 group-hover:bg-black group-hover:text-white transition-colors">
+          <div className="nb-border bg-card p-1 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
             {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </div>
         </div>
       </CollapsibleTrigger>
 
-      <CollapsibleContent className="border-t-2 border-black bg-white p-3 space-y-4">
+      <CollapsibleContent className="border-t-2 border-border bg-card text-card-foreground p-3 space-y-4">
         {/* Network Health Minimal View */}
         <div>
           <div className="flex items-center justify-between mb-2">
