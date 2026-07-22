@@ -81,11 +81,11 @@
 
 .dark {
   --background: #09090b; /* deep midnight obsidian */
-  --foreground: #f4f4f5; /* crisp zinc 100 text */
-  --card: #141417; /* rich zinc 900 card surface */
-  --card-foreground: #f4f4f5;
-  --popover: #141417;
-  --popover-foreground: #f4f4f5;
+  --foreground: #e4e4e7; /* zinc 200 — softer body text, less eye fatigue */
+  --card: #1a1a1f; /* lifted card surface — 10%+ luminance delta from bg */
+  --card-foreground: #e4e4e7;
+  --popover: #1a1a1f;
+  --popover-foreground: #e4e4e7;
   --primary: #6366f1; /* electric indigo */
   --primary-foreground: #ffffff;
   --secondary: #fbbf24; /* cyber amber yellow */
@@ -121,6 +121,16 @@
     transform: translate(-1px, -1px);
     transition: transform 0.1s ease, box-shadow 0.1s ease;
   }
+  /* Dark mode: brighter headings, controlled placeholders, card depth cue */
+  .dark h1, .dark h2, .dark h3, .dark h4 {
+    color: #f4f4f5; /* zinc 100 — headings stay crisp white */
+  }
+  .dark input::placeholder, .dark textarea::placeholder {
+    color: #71717a; /* zinc 500 — visible but dim */
+  }
+  .dark .nb-border {
+    border-top-color: rgba(255, 255, 255, 0.06); /* subtle top highlight for card depth */
+  }
 }
 
 /* Neobrutalism utility classes with variables to look correct in dark mode */
@@ -147,13 +157,13 @@
 }
 
 .dark .nb-shadow {
-  box-shadow: 4px 4px 0px #000000;
+  box-shadow: 4px 4px 0px #27272a; /* visible on dark bg, not invisible black */
 }
 .dark .nb-shadow-sm {
-  box-shadow: 2px 2px 0px #000000;
+  box-shadow: 2px 2px 0px #27272a;
 }
 .dark .nb-shadow-lg {
-  box-shadow: 6px 6px 0px #000000;
+  box-shadow: 6px 6px 0px #27272a;
 }
 .dark .nb-shadow-indigo {
   box-shadow: 4px 4px 0px #6366f1;
@@ -176,14 +186,14 @@
   transform: translate(-1.5px, -1.5px);
 }
 .dark .nb-hover-shadow:hover:not(:disabled) {
-  box-shadow: 6px 6px 0px #000000;
+  box-shadow: 6px 6px 0px #27272a;
 }
 .nb-active-shadow {
   box-shadow: 2px 2px 0px var(--border);
   transform: translate(1px, 1px);
 }
 .dark .nb-active-shadow {
-  box-shadow: 2px 2px 0px #000000;
+  box-shadow: 2px 2px 0px #27272a;
 }
 .nb-border {
   border: 3px solid var(--border);
