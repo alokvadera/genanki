@@ -98,7 +98,7 @@ describe("handleImport first-delimiter logic", () => {
    */
   function splitOnFirstDelimiter(line: string): { front: string; back?: string } | null {
     const delim = line.match(/^\s*[^;\t|]+\s*(?=[;\t|])/);
-    const i = delim ? delim[0].length : -1;
+    const i = delim ? delim[0]!.length : -1;
     if (i > 0) {
       return {
         front: line.slice(0, i).trim(),

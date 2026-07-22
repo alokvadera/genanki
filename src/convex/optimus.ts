@@ -1,5 +1,7 @@
 import { query, internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
+
+import { PROVIDER_NAMES } from "./aiProviders";
 import { getUtcDayString, CLOUDFLARE_DAILY_BUDGET, NEAR_EXHAUSTION_RATIO } from "./budget";
 
 // A status type to indicate provider health
@@ -77,13 +79,14 @@ export const getNetworkHealth = query({
           }
         }
 
-        healthStatuses[key] = {
+        const entry: { provider: string; model: string; status: ProviderStatus; reason?: string; cooldownRemaining?: number } = {
           provider: providerId,
           model: modelId,
           status,
-          reason,
-          cooldownRemaining
         };
+        if (reason !== undefined) entry.reason = reason;
+        if (cooldownRemaining > 0) entry.cooldownRemaining = cooldownRemaining;
+        healthStatuses[key] = entry;
       }
     }
 
@@ -94,14 +97,14 @@ export const getNetworkHealth = query({
 export const rankCandidates = internalQuery({
   args: {
     candidates: v.array(v.object({
-      provider: v.string(),
+      provider: v.union(...PROVIDER_NAMES.map((p) => v.literal(p))),
       providerLabel: v.string(),
       providerIndex: v.number(),
       modelId: v.string(),
       modelName: v.string(),
       supportsJsonMode: v.boolean(),
       baseUrl: v.string(),
-      headers: v.any(),
+      headers: v.record(v.string(), v.string()),
     })),
   },
   handler: async (ctx, args) => {
@@ -120,7 +123,7 @@ export const rankCandidates = internalQuery({
       .unique();
 
     // Map each candidate to a score
-    const scored = args.candidates.map((candidate: any) => {
+    const scored = args.candidates.map((candidate) => {
       // Skip malformed candidates (missing provider or modelId)
       if (!candidate.provider || !candidate.modelId) {
         return { candidate, score: 0 };

@@ -45,8 +45,8 @@ describe("findStaleProviders", () => {
   it("returns empty array when all providers are current", () => {
     const current = new Set(["groq", "cerebras"]);
     const rows = [
-      { provider: "groq", _id: "id_1" as any },
-      { provider: "cerebras", _id: "id_2" as any },
+      { provider: "groq", _id: "id_1" },
+      { provider: "cerebras", _id: "id_2" },
     ];
     expect(findStaleProviders(current, rows)).toEqual([]);
   });
@@ -54,9 +54,9 @@ describe("findStaleProviders", () => {
   it("returns stale provider IDs when providers are removed", () => {
     const current = new Set(["groq"]);
     const rows = [
-      { provider: "groq", _id: "id_1" as any },
-      { provider: "cerebras", _id: "id_2" as any },
-      { provider: "kilo", _id: "id_3" as any },
+      { provider: "groq", _id: "id_1" },
+      { provider: "cerebras", _id: "id_2" },
+      { provider: "kilo", _id: "id_3" },
     ];
     const stale = findStaleProviders(current, rows);
     expect(stale).toHaveLength(2);
@@ -67,8 +67,8 @@ describe("findStaleProviders", () => {
   it("returns all IDs when current set is empty", () => {
     const current = new Set<string>();
     const rows = [
-      { provider: "groq", _id: "id_1" as any },
-      { provider: "cerebras", _id: "id_2" as any },
+      { provider: "groq", _id: "id_1" },
+      { provider: "cerebras", _id: "id_2" },
     ];
     const stale = findStaleProviders(current, rows);
     expect(stale).toHaveLength(2);
@@ -77,9 +77,9 @@ describe("findStaleProviders", () => {
   it("preserves order of stale IDs from input", () => {
     const current = new Set(["groq"]);
     const rows = [
-      { provider: "old_a", _id: "id_a" as any },
-      { provider: "groq", _id: "id_keep" as any },
-      { provider: "old_b", _id: "id_b" as any },
+      { provider: "old_a", _id: "id_a" },
+      { provider: "groq", _id: "id_keep" },
+      { provider: "old_b", _id: "id_b" },
     ];
     const stale = findStaleProviders(current, rows);
     expect(stale).toEqual(["id_a", "id_b"]);
@@ -87,7 +87,7 @@ describe("findStaleProviders", () => {
 
   it("handles single stale provider", () => {
     const current = new Set(["groq"]);
-    const rows = [{ provider: "retired", _id: "id_retired" as any }];
+    const rows = [{ provider: "retired", _id: "id_retired" }];
     expect(findStaleProviders(current, rows)).toEqual(["id_retired"]);
   });
 });
@@ -103,8 +103,8 @@ describe("groupCandidatesByProvider (providerCatalog focus)", () => {
     ];
     const result = groupCandidatesByProvider(candidates);
     expect(result.length).toBe(2);
-    expect(result[0].models[0].id).toBe("shared-model");
-    expect(result[1].models[0].id).toBe("shared-model");
+    expect(result[0]!.models[0]!.id).toBe("shared-model");
+    expect(result[1]!.models[0]!.id).toBe("shared-model");
   });
 
   it("preserves insertion order of providers", () => {
@@ -124,6 +124,6 @@ describe("groupCandidatesByProvider (providerCatalog focus)", () => {
       { provider: "groq", providerLabel: "Groq", modelId: "m3", modelName: "M3" },
     ];
     const result = groupCandidatesByProvider(candidates);
-    expect(result[0].modelCount).toBe(result[0].models.length);
+    expect(result[0]!.modelCount).toBe(result[0]!.models.length);
   });
 });

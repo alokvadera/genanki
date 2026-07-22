@@ -111,7 +111,7 @@ describe("parseAiDeckGeneration", () => {
     expect(result.deckName).toBe("Biology 101");
     expect(result.summary).toBe("Cell biology basics");
     expect(result.cards).toHaveLength(2);
-    expect(result.cards[0].front).toBe("What is a cell?");
+    expect(result.cards[0]!.front).toBe("What is a cell?");
   });
 
   it("parses JSON wrapped in markdown fences", () => {
@@ -172,7 +172,156 @@ describe("parseAiDeckGeneration", () => {
       cards: [{ front: "  Q  ", back: "  A  " }],
     });
     const result = parseAiDeckGeneration(input);
-    expect(result.cards[0].front).toBe("Q");
-    expect(result.cards[0].back).toBe("A");
+    expect(result.cards[0]!.front).toBe("Q");
+    expect(result.cards[0]!.back).toBe("A");
+  });
+});
+
+describe("extractJsonObject (extra branches)", () => {
+  it("returns null when input has no {", () => {
+    expect(extractJsonObject("just plain text no braces")).toBeNull();
+  });
+
+  it("extracts from fenced ```json block", () => {
+    const out = extractJsonObject('```json\n{"a":1}\n```');
+    expect(out).toBe('{"a":1}');
+  });
+
+  it("rejects fenced block not starting with {", () => {
+    // When the fenced contents do not start with `{`, fallback to brace scan.
+    const out = extractJsonObject('```\nNOT_JSON\n``` then {"a":1}');
+    expect(out).toBe('{"a":1}');
+  });
+
+  it("uses fenced block with valid JSON start", () => {
+    const out = extractJsonObject('```\n  {"x":2}  \n```');
+    expect(out).toBe('{"x":2}');
+  });
+
+  it("handles strings containing escaped quotes during depth tracking", () => {
+    const out = extractJsonObject('prefix {"a":"x\\"y","b":2} suffix');
+    expect(JSON.parse(out!)).toEqual({ a: 'x"y', b: 2 });
+  });
+
+  it("handles unterminated string and unclosed object -> returns null", () => {
+    expect(extractJsonObject('prefix {"a":"broken')).toBeNull();
+  });
+
+  it("handles nested objects with quote-aware depth scan", () => {
+    const out = extractJsonObject('ignored {"k":"v","n":{"x":1}} tail');
+    expect(JSON.parse(out!)).toEqual({ k: "v", n: { x: 1 } });
+  });
+
+  it("ultra-fallback: extracts from text with only outer braces", () => {
+    // Triggers the second loop; first loop never finishes (depth never reaches 0).
+    // Actually since "{" -> depth=1, "}" -> depth=0 finishes in first loop.
+    // To force second loop we need a fenced-block reject with valid outer:
+    const out = extractJsonObject('```\nnot-json\n``` {"k":"v"}');
+    expect(JSON.parse(out!)).toEqual({ k: "v" });
+  });
+
+  it("honors isValidJsonStart: text starting with [ is rejected", () => {
+    // Fenced content beginning with [ is treated as invalid start, falls through.
+    expect(extractJsonObject('```[1,2,3]``` {"a":1}')).toBe('{"a":1}');
+  });
+
+  it("returns null when entire input is whitespace-padded no brace", () => {
+    expect(extractJsonObject("   nothing here   ")).toBeNull();
+  });
+});
+
+describe("parseAiDeckGeneration (extra)", () => {
+  it("throws on no JSON candidate", () => {
+    expect(() => parseAiDeckGeneration("no json here")).toThrow(/did not include JSON/);
+  });
+
+  it("throws on invalid JSON in candidate", () => {
+    // enumerateDepth returns null for unterminated braces, so this would fall
+    // through to "did not include JSON" — confirm the error wording.
+    expect(() => parseAiDeckGeneration("prefix { not json")).toThrow(/did not include JSON/);
+  });
+
+  it("validates schema and rejects empty cards array", () => {
+    expect(() =>
+      parseAiDeckGeneration('{"deckName":"X","summary":"","cards":[]}')
+    ).toThrow();
+  });
+
+  it("deduplicates cards with same front+back", () => {
+    const text = JSON.stringify({
+      deckName: "n",
+      summary: "",
+      cards: [
+        { front: "Q1", back: "A1" },
+        { front: "q1", back: "a1" },
+        { front: "Q2", back: "A2" },
+      ],
+    });
+    const result = parseAiDeckGeneration(text);
+    expect(result.cards).toHaveLength(2);
+  });
+});
+describe("extractJsonObject — targeted branch coverage", () => {
+  it("handles escaped backslash inside string during depth scan", () => {
+    // Valid JSON escape (\n) embeds a literal backslash+n in the source string.
+    // The depth-scan code interprets the trailing char of the escape as the
+    // in-string state, exercising the ch === "\\" branch.
+    const out = extractJsonObject('prefix {"a":"x\\ny","b":1} suffix');
+    expect(JSON.parse(out!)).toEqual({ a: "x\ny", b: 1 });
+  });
+
+  it("escaped quote inside string does not close it", () => {
+    const out = extractJsonObject('{"v":"a\\"b"}');
+    expect(JSON.parse(out!)).toEqual({ v: 'a"b' });
+  });
+
+  it("depth never reaches zero returns null", () => {
+    expect(extractJsonObject('prefix {"a":"unterminated')).toBeNull();
+  });
+
+  it("fenced block followed by prose; extracts inside fence if valid", () => {
+    const out = extractJsonObject('```\n{"a":1}\n``` and {"b":2}');
+    // The fenced block wins (first parse path). The first object is {a:1}.
+    expect(JSON.parse(out!)).toEqual({ a: 1 });
+  });
+
+  it("first loop balanced; second loop iteration not exercised", () => {
+    // Standard balanced JSON: first loop finds balance, returns without
+    // entering second loop. Verifies first-loop path explicitly.
+    const out = extractJsonObject('{"a":1,"b":{"c":2}}');
+    expect(JSON.parse(out!)).toEqual({ a: 1, b: { c: 2 } });
+  });
+});
+
+describe("extractJsonObject — cascade-free branch coverage", () => {
+  it("exercise brace-scan path with PLAIN JSON (no fences) so L54 inString=true fires", () => {
+    const out = extractJsonObject('Some leading prose {"a":"b","c":1} trailing text');
+    expect(out).toBe('{"a":"b","c":1}');
+  });
+
+  it("exercise L43 if (escaped) true arm via backslash-escaped quote inside JSON string", () => {
+    // The JSON contains \" inside a string literal. The brace-scan must
+    // treat the escaped quote as part of the string (not close it).
+    const out = extractJsonObject(
+      'prefix {"a":"He said \\"hi\\" today","b":2} suffix',
+    );
+    expect(JSON.parse(out!)).toEqual({ a: 'He said "hi" today', b: 2 });
+  });
+
+  it("exercise escaped backslash inside JSON string (ch === '\\\\')", () => {
+    // "\\\\n" is JSON escape sequence for newline (literal backslash+n in source string)
+    const out = extractJsonObject('prefix {"a":"x\\\\ny","b":1} suffix');
+    expect(JSON.parse(out!)).toEqual({ a: "x\\ny", b: 1 });
+  });
+
+  it("brace-scan handles consecutive escaped backslash followed by quote", () => {
+    // "\\\\\\"" sequence: literal backslash, then escaped quote
+    const out = extractJsonObject('{"v":"a\\\\\\"b"}');
+    expect(JSON.parse(out!)).toEqual({ v: 'a\\"b' });
+  });
+
+  it("brace-scan handles nested objects with escaped chars in outer string", () => {
+    const out = extractJsonObject('prefix {"a":"x\\"y","n":{"k":1}} tail');
+    expect(JSON.parse(out!)).toEqual({ a: 'x"y', n: { k: 1 } });
   });
 });

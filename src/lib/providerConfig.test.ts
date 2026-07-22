@@ -4,8 +4,7 @@ import {
   PROVIDER_MAP,
   LABEL_TO_KEY,
   getKeyFromLabel,
-  type ProviderConfig,
-  type ProviderRole,
+
 } from "./providerConfig";
 
 describe("providerConfig", () => {

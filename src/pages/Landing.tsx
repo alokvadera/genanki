@@ -1,9 +1,8 @@
 import { motion } from "framer-motion";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   Layers,
-  Zap,
   Download,
-  FileText,
   ArrowRight,
   Sparkles,
   BookOpen,
@@ -60,23 +59,26 @@ const features = [
 
 export default function Landing() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Nav */}
-      <nav className="border-b-[3px] border-black bg-white">
+      <nav className="border-b-[3px] border-border bg-card text-card-foreground">
         <div className="w-full px-6 lg:px-10 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="nb-border nb-shadow-sm bg-secondary p-2">
+            <div className="nb-border nb-shadow-sm bg-secondary text-secondary-foreground p-2">
               <Layers className="w-5 h-5" />
             </div>
             <span className="font-bold text-lg tracking-tight">genanki</span>
           </div>
-          <a
-            href="/app"
-            className="nb-border nb-shadow-sm nb-hover-shadow bg-primary text-primary-foreground px-5 py-2 font-bold text-sm inline-flex items-center gap-2"
-          >
-            Open App
-            <ArrowRight className="w-4 h-4" />
-          </a>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <a
+              href="/app"
+              className="nb-border nb-shadow-sm nb-hover-shadow bg-primary text-primary-foreground px-5 py-2 font-bold text-sm inline-flex items-center gap-2"
+            >
+              Open App
+              <ArrowRight className="w-4 h-4" />
+            </a>
+          </div>
         </div>
       </nav>
 

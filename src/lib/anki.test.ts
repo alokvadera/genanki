@@ -41,6 +41,7 @@ const {
   generateGuid,
   ANKI_SCHEMA_VERSION,
   generateAnkiPackage,
+  populateDb,
 } = await import("@/lib/anki");
 
 describe("crc32", () => {
@@ -256,20 +257,20 @@ describe("generateAnkiPackage", () => {
     // Verify the collection table exists and has the correct schema version
     const colResult = db.exec("SELECT ver FROM col LIMIT 1");
     expect(colResult).toHaveLength(1);
-    expect(colResult[0].values[0][0]).toBe(ANKI_SCHEMA_VERSION);
+    expect(colResult[0]!.values[0][0]).toBe(ANKI_SCHEMA_VERSION);
 
     // Verify notes were inserted
     const notesResult = db.exec("SELECT COUNT(*) FROM notes");
-    expect(notesResult[0].values[0][0]).toBe(3);
+    expect(notesResult[0]!.values[0][0]).toBe(3);
 
     // Verify cards were inserted
     const cardsResult = db.exec("SELECT COUNT(*) FROM cards");
-    expect(cardsResult[0].values[0][0]).toBe(3);
+    expect(cardsResult[0]!.values[0][0]).toBe(3);
 
     // Verify checksums are non-zero (proper CRC32, not the old char-sum)
     const csumResult = db.exec("SELECT csum FROM notes WHERE sfld = 'What is 2+2?'");
     expect(csumResult).toHaveLength(1);
-    const csum = csumResult[0].values[0][0] as number;
+    const csum = csumResult[0]!.values[0][0] as number;
     expect(csum).toBeGreaterThan(0);
     expect(csum).toBe(crc32("What is 2+2?") % 0x7fffffff);
 
@@ -290,7 +291,7 @@ describe("generateAnkiPackage", () => {
 
     // Open and verify the field delimiter was stripped
     const { default: JSZip } = await import("jszip");
-    const buffer = Buffer.from(await savedBlobs[0].blob.arrayBuffer());
+    const buffer = Buffer.from(await savedBlobs[0]!.blob.arrayBuffer());
     const zip = await JSZip.loadAsync(buffer);
     const dbBuffer = await zip.file("collection.anki2")!.async("uint8array");
 
@@ -307,7 +308,7 @@ describe("generateAnkiPackage", () => {
     const db = new SQL.Database(dbBuffer);
 
     const fldsResult = db.exec("SELECT flds FROM notes LIMIT 1");
-    const flds = fldsResult[0].values[0][0] as string;
+    const flds = fldsResult[0]!.values[0][0] as string;
     // The \x1f in the front should have been replaced with space;
     // only the field separator \x1f added by populateDb should remain
     const parts = flds.split("\x1f");
@@ -333,7 +334,7 @@ describe("generateAnkiPackage", () => {
     expect(savedBlobs).toHaveLength(1);
 
     const { default: JSZip } = await import("jszip");
-    const buffer = Buffer.from(await savedBlobs[0].blob.arrayBuffer());
+    const buffer = Buffer.from(await savedBlobs[0]!.blob.arrayBuffer());
     const zip = await JSZip.loadAsync(buffer);
     const dbBuffer = await zip.file("collection.anki2")!.async("uint8array");
 
@@ -350,10 +351,10 @@ describe("generateAnkiPackage", () => {
     const db = new SQL.Database(dbBuffer);
 
     const notesResult = db.exec("SELECT COUNT(*) FROM notes");
-    expect(notesResult[0].values[0][0]).toBe(2);
+    expect(notesResult[0]!.values[0][0]).toBe(2);
 
     const fldsResult = db.exec("SELECT sfld FROM notes ORDER BY id");
-    const fronts = fldsResult[0].values.map((row) => row[0] as string);
+    const fronts = fldsResult[0]!.values.map((row) => row[0] as string);
     const frontSet = new Set(fronts);
     expect(frontSet.size).toBe(2);
     expect([...frontSet].some((f) => f.includes("光合作用"))).toBe(true);
@@ -376,7 +377,7 @@ describe("generateAnkiPackage", () => {
     expect(savedBlobs).toHaveLength(1);
 
     const { default: JSZip } = await import("jszip");
-    const buffer = Buffer.from(await savedBlobs[0].blob.arrayBuffer());
+    const buffer = Buffer.from(await savedBlobs[0]!.blob.arrayBuffer());
     const zip = await JSZip.loadAsync(buffer);
     const dbBuffer = await zip.file("collection.anki2")!.async("uint8array");
 
@@ -393,7 +394,7 @@ describe("generateAnkiPackage", () => {
     const db = new SQL.Database(dbBuffer);
 
     const fldsResult = db.exec("SELECT flds FROM notes ORDER BY id");
-    const allFlds = fldsResult[0].values.map((row) => row[0] as string).join("");
+    const allFlds = fldsResult[0]!.values.map((row) => row[0] as string).join("");
     expect(allFlds).toContain("🔬");
     expect(allFlds).toContain("💻");
     expect(allFlds).toContain("📝");
@@ -416,7 +417,7 @@ describe("generateAnkiPackage", () => {
     expect(savedBlobs).toHaveLength(1);
 
     const { default: JSZip } = await import("jszip");
-    const buffer = Buffer.from(await savedBlobs[0].blob.arrayBuffer());
+    const buffer = Buffer.from(await savedBlobs[0]!.blob.arrayBuffer());
     const zip = await JSZip.loadAsync(buffer);
     const dbBuffer = await zip.file("collection.anki2")!.async("uint8array");
 
@@ -433,10 +434,10 @@ describe("generateAnkiPackage", () => {
     const db = new SQL.Database(dbBuffer);
 
     const notesResult = db.exec("SELECT COUNT(*) FROM notes");
-    expect(notesResult[0].values[0][0]).toBe(3);
+    expect(notesResult[0]!.values[0][0]).toBe(3);
 
     const fldsResult = db.exec("SELECT sfld FROM notes ORDER BY id");
-    const fronts = fldsResult[0].values.map((row) => row[0] as string);
+    const fronts = fldsResult[0]!.values.map((row) => row[0] as string);
     const frontSet = new Set(fronts);
     expect(frontSet.size).toBe(3);
     expect([...frontSet].some((f) => f.includes("アキ族"))).toBe(true);
@@ -462,7 +463,7 @@ describe("generateAnkiPackage", () => {
     expect(savedBlobs).toHaveLength(1);
 
     const { default: JSZip } = await import("jszip");
-    const buffer = Buffer.from(await savedBlobs[0].blob.arrayBuffer());
+    const buffer = Buffer.from(await savedBlobs[0]!.blob.arrayBuffer());
     const zip = await JSZip.loadAsync(buffer);
     const dbBuffer = await zip.file("collection.anki2")!.async("uint8array");
 
@@ -479,10 +480,10 @@ describe("generateAnkiPackage", () => {
     const db = new SQL.Database(dbBuffer);
 
     const notesResult = db.exec("SELECT COUNT(*) FROM notes");
-    expect(notesResult[0].values[0][0]).toBe(4);
+    expect(notesResult[0]!.values[0][0]).toBe(4);
 
     const fldsResult = db.exec("SELECT sfld FROM notes ORDER BY id");
-    const fronts = fldsResult[0].values.map((row) => row[0] as string);
+    const fronts = fldsResult[0]!.values.map((row) => row[0] as string);
     // Use Set membership instead of index-based to avoid ordering issues
     const frontSet = new Set(fronts);
     expect(frontSet.size).toBe(4);
@@ -508,7 +509,7 @@ describe("generateAnkiPackage", () => {
     expect(savedBlobs).toHaveLength(1);
 
     const { default: JSZip } = await import("jszip");
-    const buffer = Buffer.from(await savedBlobs[0].blob.arrayBuffer());
+    const buffer = Buffer.from(await savedBlobs[0]!.blob.arrayBuffer());
     const zip = await JSZip.loadAsync(buffer);
     const dbBuffer = await zip.file("collection.anki2")!.async("uint8array");
 
@@ -526,15 +527,15 @@ describe("generateAnkiPackage", () => {
 
     // Verify notes were inserted
     const notesResult = db.exec("SELECT COUNT(*) FROM notes");
-    expect(notesResult[0].values[0][0]).toBe(2);
+    expect(notesResult[0]!.values[0][0]).toBe(2);
 
     // Verify cards were inserted (cloze cards have ord >= 0)
     const cardsResult = db.exec("SELECT COUNT(*) FROM cards");
-    expect(cardsResult[0].values[0][0]).toBeGreaterThanOrEqual(2);
+    expect(cardsResult[0]!.values[0][0]).toBeGreaterThanOrEqual(2);
 
     // Verify cards have ord column matching cloze indices
     const ordResult = db.exec("SELECT ord FROM cards ORDER BY ord");
-    const ords = ordResult[0].values.map((row) => row[0] as number);
+    const ords = ordResult[0]!.values.map((row) => row[0] as number);
     expect(ords).toContain(0);
 
     db.close();
@@ -551,7 +552,7 @@ describe("generateAnkiPackage", () => {
     });
 
     const { default: JSZip } = await import("jszip");
-    const buffer = Buffer.from(await savedBlobs[0].blob.arrayBuffer());
+    const buffer = Buffer.from(await savedBlobs[0]!.blob.arrayBuffer());
     const zip = await JSZip.loadAsync(buffer);
     const dbBuffer = await zip.file("collection.anki2")!.async("uint8array");
 
@@ -569,11 +570,11 @@ describe("generateAnkiPackage", () => {
 
     // Verify notes were inserted
     const notesResult = db.exec("SELECT COUNT(*) FROM notes");
-    expect(notesResult[0].values[0][0]).toBe(1);
+    expect(notesResult[0]!.values[0][0]).toBe(1);
 
     // Verify basic card has ord=0
     const cardsResult = db.exec("SELECT ord FROM cards");
-    expect(cardsResult[0].values[0][0]).toBe(0);
+    expect(cardsResult[0]!.values[0][0]).toBe(0);
 
     db.close();
   });
@@ -589,7 +590,7 @@ describe("generateAnkiPackage", () => {
     });
 
     const { default: JSZip } = await import("jszip");
-    const buffer = Buffer.from(await savedBlobs[0].blob.arrayBuffer());
+    const buffer = Buffer.from(await savedBlobs[0]!.blob.arrayBuffer());
     const zip = await JSZip.loadAsync(buffer);
     const dbBuffer = await zip.file("collection.anki2")!.async("uint8array");
 
@@ -607,14 +608,14 @@ describe("generateAnkiPackage", () => {
 
     // Multiple cloze indices should produce multiple cards
     const cardsResult = db.exec("SELECT COUNT(*) FROM cards");
-    expect(cardsResult[0].values[0][0]).toBeGreaterThanOrEqual(2);
+    expect(cardsResult[0]!.values[0][0]).toBeGreaterThanOrEqual(2);
 
     const notesResult = db.exec("SELECT COUNT(*) FROM notes");
-    expect(notesResult[0].values[0][0]).toBe(1);
+    expect(notesResult[0]!.values[0][0]).toBe(1);
 
     // Verify ord values match cloze indices
     const ordResult = db.exec("SELECT ord FROM cards ORDER BY ord");
-    const ords = ordResult[0].values.map((row) => row[0] as number);
+    const ords = ordResult[0]!.values.map((row) => row[0] as number);
     expect(ords).toContain(0);
     expect(ords).toContain(1);
 
@@ -633,7 +634,7 @@ describe("generateAnkiPackage", () => {
     });
 
     const { default: JSZip } = await import("jszip");
-    const buffer = Buffer.from(await savedBlobs[0].blob.arrayBuffer());
+    const buffer = Buffer.from(await savedBlobs[0]!.blob.arrayBuffer());
     const zip = await JSZip.loadAsync(buffer);
     const dbBuffer = await zip.file("collection.anki2")!.async("uint8array");
 
@@ -649,11 +650,55 @@ describe("generateAnkiPackage", () => {
     const SQL = await initSqlJs({ wasmBinary } as Parameters<typeof initSqlJs>[0]);
     const db = new SQL.Database(dbBuffer);
 
+    // Both notes are inserted (2 notes), but only the cloze card gets a card entry.
+    // The non-cloze sibling has no {{c\d+::}} matches and is correctly skipped.
     const notesResult = db.exec("SELECT COUNT(*) FROM notes");
-    expect(notesResult[0].values[0][0]).toBe(2);
+    expect(notesResult[0]!.values[0][0]).toBe(2);
 
     const cardsResult = db.exec("SELECT COUNT(*) FROM cards");
-    expect(cardsResult[0].values[0][0]).toBe(2);
+    expect(cardsResult[0]!.values[0][0]).toBe(1);
+
+    db.close();
+  });
+
+  it("mixed cloze deck reports correct cardsInserted via populateDb", async () => {
+    // The generateAnkiPackage zero-cards guard (cardsInserted === 0) is
+    // defense-in-depth: isCloze uses the same regex as the per-card cloze
+    // match, so when isCloze is true at least one card will always produce
+    // card entries. This test asserts the cardsInserted count directly via
+    // the populateDb return value, documenting the invariant.
+    const initSqlJs = (await import("sql.js")).default;
+    const wasmPath = path.join(process.cwd(), "node_modules", "sql.js", "dist", "sql-wasm-browser.wasm");
+    const wasmBinary = fs.readFileSync(wasmPath);
+    const SQL = await initSqlJs({ wasmBinary } as Parameters<typeof initSqlJs>[0]);
+    const db = new SQL.Database();
+
+    // Create the schema inline (copied from createDB()) to avoid coupling to the
+    // private async helper. Only notes + cards tables are exercised by this test.
+    db.run(`CREATE TABLE col (id INTEGER PRIMARY KEY, crt INTEGER NOT NULL, mod INTEGER NOT NULL, scm INTEGER NOT NULL, ver INTEGER NOT NULL, dty INTEGER NOT NULL, usn INTEGER NOT NULL, ls INTEGER NOT NULL, conf TEXT NOT NULL, models TEXT NOT NULL, decks TEXT NOT NULL, dconf TEXT NOT NULL, tags TEXT NOT NULL)`);
+    db.run(`CREATE TABLE notes (id INTEGER PRIMARY KEY, guid TEXT NOT NULL, mid INTEGER NOT NULL, mod INTEGER NOT NULL, usn INTEGER NOT NULL, tags TEXT NOT NULL, flds TEXT NOT NULL, sfld TEXT NOT NULL, csum INTEGER NOT NULL, flags INTEGER NOT NULL, data TEXT NOT NULL)`);
+    db.run(`CREATE TABLE cards (id INTEGER PRIMARY KEY, nid INTEGER NOT NULL, did INTEGER NOT NULL, ord INTEGER NOT NULL, mod INTEGER NOT NULL, usn INTEGER NOT NULL, type INTEGER NOT NULL, queue INTEGER NOT NULL, due INTEGER NOT NULL, ivl INTEGER NOT NULL, factor INTEGER NOT NULL, reps INTEGER NOT NULL, lapses INTEGER NOT NULL, left INTEGER NOT NULL, odue INTEGER NOT NULL, odid INTEGER NOT NULL, flags INTEGER NOT NULL, data TEXT NOT NULL)`);
+    db.run(`CREATE TABLE revlog (id INTEGER PRIMARY KEY, cid INTEGER NOT NULL, usn INTEGER NOT NULL, ease INTEGER NOT NULL, ivl INTEGER NOT NULL, lastIvl INTEGER NOT NULL, factor INTEGER NOT NULL, time INTEGER NOT NULL, type INTEGER NOT NULL)`);
+    db.run(`CREATE TABLE graves (usn INTEGER NOT NULL, oid INTEGER NOT NULL, type INTEGER NOT NULL)`);
+
+    const result = populateDb(db, {
+      name: "Mixed Cloze Guard",
+      cards: [
+        { front: "{{c1::one}}", back: "definition" },
+        { front: "Plain A", back: "back A" },
+        { front: "Plain B", back: "back B" },
+      ],
+    });
+
+    // Only the cloze card produces a card entry; the 2 plain siblings are skipped.
+    expect(result.cardsInserted).toBe(1);
+    expect(result.deckId).toBeGreaterThan(0);
+
+    // Verify the DB state matches: 3 notes but only 1 card entry.
+    const notesCount = db.exec("SELECT COUNT(*) FROM notes");
+    expect(notesCount[0]!.values[0][0]).toBe(3);
+    const cardsCount = db.exec("SELECT COUNT(*) FROM cards");
+    expect(cardsCount[0]!.values[0][0]).toBe(1);
 
     db.close();
   });
@@ -661,10 +706,10 @@ describe("generateAnkiPackage", () => {
   it("randomAnkiId returns 1 when crypto returns 0", () => {
     const original = crypto.getRandomValues;
     try {
-      crypto.getRandomValues = vi.fn((arr: any) => {
+      crypto.getRandomValues = vi.fn((arr: Uint32Array) => {
         arr[0] = 0;
         return arr;
-      }) as any;
+      }) as typeof crypto.getRandomValues;
       const id = randomAnkiId();
       expect(id).toBe(1);
     } finally {
@@ -687,7 +732,7 @@ describe("generateAnkiPackage", () => {
     expect(savedBlobs).toHaveLength(1);
 
     const { default: JSZip } = await import("jszip");
-    const buffer = Buffer.from(await savedBlobs[0].blob.arrayBuffer());
+    const buffer = Buffer.from(await savedBlobs[0]!.blob.arrayBuffer());
     const zip = await JSZip.loadAsync(buffer);
     const dbBuffer = await zip.file("collection.anki2")!.async("uint8array");
 
@@ -704,13 +749,88 @@ describe("generateAnkiPackage", () => {
     const db = new SQL.Database(dbBuffer);
 
     const fldsResult = db.exec("SELECT flds FROM notes ORDER BY id");
-    const allFlds = fldsResult[0].values.map((row) => row[0] as string).join("");
+    const allFlds = fldsResult[0]!.values.map((row) => row[0] as string).join("");
     // Control characters should be sanitized
     expect(allFlds).not.toContain("\x00");
     expect(allFlds).not.toContain("\x7f");
     // \x1f in front should become space; only the field separator remains
     expect(allFlds).toContain("unit separator");
 
+    db.close();
+  });
+});
+
+describe("anki \u2014 cascade-free branch-closure batch (round 2)", () => {
+  it("cloze card with {{c0::term}} samples the Math.max(0, clozeIdx - 1) = 0 path", async () => {
+    savedBlobs.length = 0;
+    await generateAnkiPackage({
+      name: "Cloze Zero",
+      cards: [{ front: "{{c0::baseline}}", back: "definition" }],
+    });
+    const { default: JSZip } = await import("jszip");
+    const buffer = Buffer.from(await savedBlobs[0]!.blob.arrayBuffer());
+    const zip = await JSZip.loadAsync(buffer);
+    const dbBuffer = await zip.file("collection.anki2")!.async("uint8array");
+    const initSqlJs = (await import("sql.js")).default;
+    const wasmPath = path.join(process.cwd(), "node_modules", "sql.js", "dist", "sql-wasm-browser.wasm");
+    const wasmBinary = fs.readFileSync(wasmPath);
+    const SQL = await initSqlJs({ wasmBinary } as Parameters<typeof initSqlJs>[0]);
+    const db = new SQL.Database(dbBuffer);
+    const ordResult = db.exec("SELECT ord FROM cards");
+    expect(ordResult[0]!.values.length).toBeGreaterThanOrEqual(1);
+    db.close();
+  });
+
+  it("cloze model + non-cloze sibling: non-cloze card is skipped (no spurious ord:0 entry)", async () => {
+    savedBlobs.length = 0;
+    await generateAnkiPackage({
+      name: "Mixed Cloze",
+      cards: [
+        { front: "{{c1::one}}", back: "definition" },
+        { front: "Plain front", back: "Plain back" },
+      ],
+    });
+    const { default: JSZip } = await import("jszip");
+    const buffer = Buffer.from(await savedBlobs[0]!.blob.arrayBuffer());
+    const zip = await JSZip.loadAsync(buffer);
+    const dbBuffer = await zip.file("collection.anki2")!.async("uint8array");
+    const initSqlJs = (await import("sql.js")).default;
+    const wasmPath = path.join(process.cwd(), "node_modules", "sql.js", "dist", "sql-wasm-browser.wasm");
+    const wasmBinary = fs.readFileSync(wasmPath);
+    const SQL = await initSqlJs({ wasmBinary } as Parameters<typeof initSqlJs>[0]);
+    const db = new SQL.Database(dbBuffer);
+    // The cloze card {{c1::one}} produces 1 card; the plain card is skipped.
+    // Both notes are still inserted (2 notes), but only the cloze card gets a card entry.
+    const cardsResult = db.exec("SELECT COUNT(*) FROM cards");
+    expect(cardsResult[0]!.values[0][0]).toBe(1);
+    const notesResult = db.exec("SELECT COUNT(*) FROM notes");
+    expect(notesResult[0]!.values[0][0]).toBe(2);
+    db.close();
+  });
+});
+;
+
+describe("anki — cascade-free round-2 batch (cloze {{c0::zero}} deferred branch)", () => {
+  it("cloze {{c0::zero}} card insertion: ord = Math.max(0, 0 - 1) = 0\u2014exercises the Math.max negative-clamp arm", async () => {
+    savedBlobs.length = 0;
+    await generateAnkiPackage({
+      name: "Cloze Zero Round 2",
+      cards: [{ front: "{{c0::zero baseline}}", back: "definition" }],
+    });
+    expect(savedBlobs).toHaveLength(1);
+    const { default: JSZip } = await import("jszip");
+    const buffer = Buffer.from(await savedBlobs[0]!.blob.arrayBuffer());
+    const zip = await JSZip.loadAsync(buffer);
+    const dbBuffer = await zip.file("collection.anki2")!.async("uint8array");
+    const initSqlJs = (await import("sql.js")).default;
+    const wasmPath = path.join(process.cwd(), "node_modules", "sql.js", "dist", "sql-wasm-browser.wasm");
+    const wasmBinary = fs.readFileSync(wasmPath);
+    const SQL = await initSqlJs({ wasmBinary } as Parameters<typeof initSqlJs>[0]);
+    const db = new SQL.Database(dbBuffer);
+    const notesCount = db.exec("SELECT COUNT(*) FROM notes");
+    expect(notesCount[0]!.values[0][0]).toBe(1);
+    const ordResult = db.exec("SELECT ord FROM cards");
+    expect(ordResult[0]!.values[0][0]).toBe(0);
     db.close();
   });
 });

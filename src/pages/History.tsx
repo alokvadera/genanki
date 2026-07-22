@@ -2,11 +2,14 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Activity, ArrowLeft, BarChart3, Clock3, Layers, Search, X } from "lucide-react";
 import { useNavigate, useParams, Link } from "react-router";
-import { useMutation, useQuery, useAction } from "convex/react";
+import { useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import type { Doc } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { ArchivedRunViewer } from "@/components/ArchivedRunViewer";
 import { useDeckStore } from "@/hooks/use-deck-store";
+import { useDeviceToken } from "@/hooks/use-device-token";
 import { formatDistanceToNow } from "date-fns";
 
 function formatTime(value: number): string {
@@ -36,20 +39,11 @@ export default function History() {
   const listArchivedRuns = useAction(api.decryptActions.listArchivedRunsAction);
 
   // Stable browser device token
-  const deviceToken = useState(() => {
-    let token = localStorage.getItem("device_token");
-    if (!token) {
-      token = typeof crypto !== "undefined" && crypto.randomUUID
-        ? crypto.randomUUID()
-        : Math.random().toString(36).substring(2) + Date.now().toString(36);
-      localStorage.setItem("device_token", token);
-    }
-    return token;
-  })[0];
+  const deviceToken = useDeviceToken();
 
-  const [activeJobs, setActiveJobs] = useState<any[]>([]);
-  const [jobs, setJobs] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [activeJobs, setActiveJobs] = useState<Doc<"generationJobs">[]>([]);
+  const [jobs, setJobs] = useState<Doc<"generationJobs">[]>([]);
+  const [, setLoading] = useState(true);
 
   const fetchRuns = async () => {
     try {
@@ -67,18 +61,17 @@ export default function History() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchRuns();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     const timer = setInterval(() => {
       setNow(Date.now());
-      if (activeJobs.length > 0) {
-        fetchRuns();
-      }
     }, 3000);
     return () => clearInterval(timer);
-  }, [activeJobs.length]);
+  }, []);
 
   const firstJobId = jobs[0]?._id;
 
@@ -93,7 +86,7 @@ export default function History() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b-[3px] border-black bg-white">
+      <header className="border-b-[3px] border-border bg-card text-card-foreground">
         <div className="w-full px-6 lg:px-10 py-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-center gap-3 min-w-0">
             <Button asChild variant="outline" className="nb-border nb-shadow-sm nb-hover-shadow font-bold text-sm px-3 h-9">
@@ -113,6 +106,7 @@ export default function History() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <ThemeToggle />
             <Button asChild variant="outline" className="nb-border nb-shadow-sm nb-hover-shadow font-bold text-sm px-4 h-9">
               <Link to="/usage">
                 <BarChart3 className="w-4 h-4" />

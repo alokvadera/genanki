@@ -10,6 +10,8 @@ import { OptimusDashboard } from "@/components/OptimusDashboard";
 import { PROVIDERS, getKeyFromLabel } from "@/lib/providerConfig";
 import { CLOUDFLARE_DAILY_BUDGET } from "@/convex/budget";
 
+import { ThemeToggle } from "@/components/ThemeToggle";
+
 function formatTokens(value: number): string {
   return new Intl.NumberFormat("en-US").format(Math.max(0, Math.round(value)));
 }
@@ -19,11 +21,11 @@ function formatTime(value: number): string {
 }
 
 const PROVIDER_COLORS: Record<string, { bar: string; bg: string; text: string }> = {
-  groq: { bar: "bg-indigo-500", bg: "bg-indigo-50", text: "text-indigo-700" },
-  cerebras: { bar: "bg-teal-500", bg: "bg-teal-50", text: "text-teal-700" },
-  cloudflare: { bar: "bg-amber-500", bg: "bg-amber-50", text: "text-amber-700" },
-  kilo: { bar: "bg-rose-500", bg: "bg-rose-50", text: "text-rose-700" },
-  openrouter: { bar: "bg-purple-500", bg: "bg-purple-50", text: "text-purple-700" },
+  groq: { bar: "bg-indigo-500", bg: "bg-indigo-50 dark:bg-indigo-950/40", text: "text-indigo-700 dark:text-indigo-300" },
+  cerebras: { bar: "bg-teal-500", bg: "bg-teal-50 dark:bg-teal-950/40", text: "text-teal-700 dark:text-teal-300" },
+  cloudflare: { bar: "bg-amber-500", bg: "bg-amber-50 dark:bg-amber-950/40", text: "text-amber-700 dark:text-amber-300" },
+  kilo: { bar: "bg-rose-500", bg: "bg-rose-50 dark:bg-rose-950/40", text: "text-rose-700 dark:text-rose-300" },
+  openrouter: { bar: "bg-purple-500", bg: "bg-purple-50 dark:bg-purple-950/40", text: "text-purple-700 dark:text-purple-300" },
 };
 
 function getProviderColor(provider: string) {
@@ -57,8 +59,8 @@ export default function ProviderUsage() {
   const requests = summary?.requests ?? 0;
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b-[3px] border-black bg-white">
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="border-b-[3px] border-border bg-card text-card-foreground">
         <div className="w-full px-6 lg:px-10 py-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <Button asChild variant="outline" className="nb-border nb-shadow-sm nb-hover-shadow font-bold text-sm px-3 h-9">
@@ -72,13 +74,16 @@ export default function ProviderUsage() {
                 Provider Usage
               </h1>
               <p className="text-xs text-muted-foreground font-medium mt-0.5">
-                Groq is the primary provider. Cerebras, Kilo, OpenRouter, and Cloudflare Workers AI only step in when needed.
+                Groq is the primary provider. Cerebras, Kilo, OpenRouter, and Cloudflare Workers AI step in when needed.
               </p>
             </div>
           </div>
-          <div className="hidden sm:flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
-            <span className="nb-border bg-secondary px-2 py-1">Primary: Groq</span>
-            <span className="nb-border bg-white px-2 py-1">Fallbacks: Cerebras, Kilo, OpenRouter, Cloudflare</span>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <div className="hidden md:flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
+              <span className="nb-border bg-secondary text-secondary-foreground px-2 py-1">Primary: Groq</span>
+              <span className="nb-border bg-card px-2 py-1">Fallbacks: Cerebras, Kilo, OpenRouter, Cloudflare</span>
+            </div>
           </div>
         </div>
       </header>

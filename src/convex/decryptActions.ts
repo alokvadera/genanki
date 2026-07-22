@@ -3,6 +3,7 @@
 import { v } from "convex/values";
 import { action } from "./_generated/server";
 import { api } from "./_generated/api";
+import type { Doc } from "./_generated/dataModel";
 import { decrypt, hashIp } from "./encryption";
 
 /**
@@ -12,28 +13,28 @@ export const listActiveRunsAction = action({
   args: {
     deviceToken: v.optional(v.string()),
   },
-  handler: async (ctx, args): Promise<any[]> => {
+  handler: async (ctx, args): Promise<Doc<"generationJobs">[]> => {
     const metadata = await ctx.meta.getRequestMetadata();
     const ip = metadata?.ip || "127.0.0.1";
     const creatorIpHash = hashIp(ip);
     const creatorDeviceIdHash = args.deviceToken ? hashIp(args.deviceToken) : undefined;
 
     // Call internal query to list matching active jobs
-    const jobs = (await ctx.runQuery(api.ipRateLimiter.listActiveJobsByHash, {
+    const jobs = await ctx.runQuery(api.ipRateLimiter.listActiveJobsByHash, {
       creatorIpHash,
       creatorDeviceIdHash,
-    })) as any[];
+    });
 
     // Decrypt on-the-fly using appropriate key seed
-    return jobs.map((job: any) => {
+    return jobs.map((job) => {
       const isDeviceCreator = args.deviceToken && job.creatorDeviceIdHash === creatorDeviceIdHash;
       const keySeed = isDeviceCreator ? args.deviceToken! : ip;
 
       return {
         ...job,
-        resultDeckName: job.encDeckName ? decrypt(job.encDeckName, keySeed) : undefined,
-        resultSummary: job.encSummary ? decrypt(job.encSummary, keySeed) : undefined,
-        resultCards: job.encCards ? JSON.parse(decrypt(job.encCards, keySeed)) : undefined,
+        ...(job.encDeckName !== undefined && { resultDeckName: decrypt(job.encDeckName, keySeed) }),
+        ...(job.encSummary !== undefined && { resultSummary: decrypt(job.encSummary, keySeed) }),
+        ...(job.encCards !== undefined && { resultCards: JSON.parse(decrypt(job.encCards, keySeed)) }),
         message: job.encMessage ? decrypt(job.encMessage, keySeed) : job.message,
         error: job.encError ? decrypt(job.encError, keySeed) : job.error,
       };
@@ -49,27 +50,27 @@ export const listArchivedRunsAction = action({
     limit: v.optional(v.number()),
     deviceToken: v.optional(v.string()),
   },
-  handler: async (ctx, args): Promise<any[]> => {
+  handler: async (ctx, args): Promise<Doc<"generationJobs">[]> => {
     const metadata = await ctx.meta.getRequestMetadata();
     const ip = metadata?.ip || "127.0.0.1";
     const creatorIpHash = hashIp(ip);
     const creatorDeviceIdHash = args.deviceToken ? hashIp(args.deviceToken) : undefined;
 
-    const jobs = (await ctx.runQuery(api.ipRateLimiter.listArchivedJobsByHash, {
+    const jobs = await ctx.runQuery(api.ipRateLimiter.listArchivedJobsByHash, {
       creatorIpHash,
       creatorDeviceIdHash,
       limit: args.limit,
-    })) as any[];
+    });
 
-    return jobs.map((job: any) => {
+    return jobs.map((job) => {
       const isDeviceCreator = args.deviceToken && job.creatorDeviceIdHash === creatorDeviceIdHash;
       const keySeed = isDeviceCreator ? args.deviceToken! : ip;
 
       return {
         ...job,
-        resultDeckName: job.encDeckName ? decrypt(job.encDeckName, keySeed) : undefined,
-        resultSummary: job.encSummary ? decrypt(job.encSummary, keySeed) : undefined,
-        resultCards: job.encCards ? JSON.parse(decrypt(job.encCards, keySeed)) : undefined,
+        ...(job.encDeckName !== undefined && { resultDeckName: decrypt(job.encDeckName, keySeed) }),
+        ...(job.encSummary !== undefined && { resultSummary: decrypt(job.encSummary, keySeed) }),
+        ...(job.encCards !== undefined && { resultCards: JSON.parse(decrypt(job.encCards, keySeed)) }),
         message: job.encMessage ? decrypt(job.encMessage, keySeed) : job.message,
         error: job.encError ? decrypt(job.encError, keySeed) : job.error,
       };
@@ -85,13 +86,13 @@ export const getRunDetailAction = action({
     jobId: v.id("generationJobs"),
     deviceToken: v.optional(v.string()),
   },
-  handler: async (ctx, args): Promise<any> => {
+  handler: async (ctx, args): Promise<Doc<"generationJobs"> | null> => {
     const metadata = await ctx.meta.getRequestMetadata();
     const ip = metadata?.ip || "127.0.0.1";
     const creatorIpHash = hashIp(ip);
     const creatorDeviceIdHash = args.deviceToken ? hashIp(args.deviceToken) : undefined;
 
-    const job = (await ctx.runQuery(api.ipRateLimiter.getJobById, { jobId: args.jobId })) as any;
+    const job = await ctx.runQuery(api.ipRateLimiter.getJobById, { jobId: args.jobId });
     if (!job) return null;
 
     const isIpCreator = job.creatorIpHash === creatorIpHash;
@@ -113,9 +114,9 @@ export const getRunDetailAction = action({
 
     return {
       ...job,
-      resultDeckName: job.encDeckName ? decrypt(job.encDeckName, keySeed) : undefined,
-      resultSummary: job.encSummary ? decrypt(job.encSummary, keySeed) : undefined,
-      resultCards: job.encCards ? JSON.parse(decrypt(job.encCards, keySeed)) : undefined,
+      ...(job.encDeckName !== undefined && { resultDeckName: decrypt(job.encDeckName, keySeed) }),
+      ...(job.encSummary !== undefined && { resultSummary: decrypt(job.encSummary, keySeed) }),
+      ...(job.encCards !== undefined && { resultCards: JSON.parse(decrypt(job.encCards, keySeed)) }),
       message: job.encMessage ? decrypt(job.encMessage, keySeed) : job.message,
       error: job.encError ? decrypt(job.encError, keySeed) : job.error,
     };

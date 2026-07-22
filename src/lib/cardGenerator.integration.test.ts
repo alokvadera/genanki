@@ -310,9 +310,6 @@ describe("generateCardsFromText — real-world integration", () => {
 
     it("handles chemical notation with superscripts", () => {
       const cards = generateCardsFromText(EDGE_CASES_SPECIAL_CHARS);
-      const caCard = cards.find((c) =>
-        c.front.includes("Ca") || c.front.includes("pH"),
-      );
       // Should extract at least one card from this content
       expect(cards.length).toBeGreaterThan(0);
     });

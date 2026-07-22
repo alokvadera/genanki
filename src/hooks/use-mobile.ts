@@ -4,7 +4,8 @@ const MOBILE_BREAKPOINT = 768
 
 export function useIsMobile() {
   const [isMobile, setIsMobile] = React.useState<boolean>(() =>
-    typeof window !== "undefined" ? window.innerWidth < MOBILE_BREAKPOINT : false
+    /* istanbul ignore next -- SSR / sandbox guard; jsdom test env always has window */
+    (typeof window !== "undefined" ? window.innerWidth < MOBILE_BREAKPOINT : false)
   )
 
   React.useEffect(() => {

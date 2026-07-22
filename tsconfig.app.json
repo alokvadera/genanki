@@ -23,6 +23,8 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
+    "noUncheckedIndexedAccess": false, // Disabled: incompatible with the extensive test assertion patterns throughout src/**.test.ts(x) that use `expect(result[0].x)`. source/** files (excluding tests) have been manually annotated with `!` non-null assertions where needed. Re-enable incrementally per directory with a separate tsconfig that excludes tests.
+    "exactOptionalPropertyTypes": false, // Disabled: incompatible with Convex v.optional() generated types (prop?: T rejects undefined values)
     "noPropertyAccessFromIndexSignature": false,
     "baseUrl": ".",
     "paths": {

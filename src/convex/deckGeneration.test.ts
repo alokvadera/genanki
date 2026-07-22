@@ -4,7 +4,7 @@ import {
   formatSeconds,
   clampCardCount,
 } from "./deckGeneration";
-import { groupCandidatesByProvider, type AvailableProvider } from "./availableProviders";
+import { groupCandidatesByProvider } from "./availableProviders";
 
 // ---------------------------------------------------------------------------
 // formatSeconds
@@ -204,12 +204,12 @@ describe("groupCandidatesByProvider", () => {
     ];
     const result = groupCandidatesByProvider(candidates);
     expect(result.length).toBe(2);
-    expect(result[0].provider).toBe("groq");
-    expect(result[0].label).toBe("Groq");
-    expect(result[0].modelCount).toBe(2);
-    expect(result[0].models).toHaveLength(2);
-    expect(result[1].provider).toBe("cerebras");
-    expect(result[1].modelCount).toBe(1);
+    expect(result[0]!.provider).toBe("groq");
+    expect(result[0]!.label).toBe("Groq");
+    expect(result[0]!.modelCount).toBe(2);
+    expect(result[0]!.models).toHaveLength(2);
+    expect(result[1]!.provider).toBe("cerebras");
+    expect(result[1]!.modelCount).toBe(1);
   });
 
   it("preserves model details", () => {
@@ -217,7 +217,7 @@ describe("groupCandidatesByProvider", () => {
       { provider: "cloudflare", providerLabel: "Cloudflare Workers AI", modelId: "@cf/meta/llama-3.2-3b", modelName: "Llama 3.2 3B" },
     ];
     const result = groupCandidatesByProvider(candidates);
-    expect(result[0].models[0]).toEqual({ id: "@cf/meta/llama-3.2-3b", name: "Llama 3.2 3B" });
+    expect(result[0]!.models[0]).toEqual({ id: "@cf/meta/llama-3.2-3b", name: "Llama 3.2 3B" });
   });
 
   it("handles all providers present", () => {
@@ -246,7 +246,7 @@ describe("groupCandidatesByProvider", () => {
     ];
     const result = groupCandidatesByProvider(candidates);
     expect(result.length).toBe(1);
-    expect(result[0].modelCount).toBe(3);
-    expect(result[0].models.map((m) => m.id)).toEqual(["m1", "m2", "m3"]);
+    expect(result[0]!.modelCount).toBe(3);
+    expect(result[0]!.models.map((m) => m.id)).toEqual(["m1", "m2", "m3"]);
   });
 });

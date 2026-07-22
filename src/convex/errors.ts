@@ -22,9 +22,9 @@ export class GenError extends Error {
     super(message);
     this.name = "GenError";
     this.kind = kind;
-    this.status = details?.status;
-    this.provider = details?.provider;
-    this.model = details?.model;
+    if (details?.status !== undefined) this.status = details.status;
+    if (details?.provider !== undefined) this.provider = details.provider;
+    if (details?.model !== undefined) this.model = details.model;
   }
 }
 

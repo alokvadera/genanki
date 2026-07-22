@@ -1,6 +1,15 @@
 import * as pdfjsLib from "pdfjs-dist";
 import mammoth from "mammoth/mammoth.browser";
 
+import type { PDFDocumentProxy } from "pdfjs-dist";
+
+/** pdfjs-dist outline item shape used when walking the document outline. */
+export type OutlineItem = {
+  title?: string;
+  dest?: unknown;
+  items?: OutlineItem[];
+};
+
 // Set worker source to local bundle for offline compatibility
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   "../../public/pdf.worker.min.mjs",
@@ -108,13 +117,12 @@ export async function extractPdfWithStructure(file: File): Promise<ExtractedDoc>
  * skipped rather than aborting the whole extraction.
  */
 async function resolveOutline(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  pdf: any,
+  pdf: PDFDocumentProxy,
   pageOffsets: number[],
 ): Promise<OutlineEntry[]> {
-  let rawOutline: unknown;
+  let rawOutline: OutlineItem[] | null;
   try {
-    rawOutline = await pdf.getOutline();
+    rawOutline = (await pdf.getOutline()) as OutlineItem[] | null;
   } catch {
     return [];
   }
@@ -122,22 +130,21 @@ async function resolveOutline(
 
   const entries: OutlineEntry[] = [];
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const walk = async (items: any[], level: number): Promise<void> => {
+  const walk = async (items: OutlineItem[], level: number): Promise<void> => {
     for (const item of items) {
       try {
         const pageIndex = await resolveDestPageIndex(pdf, item?.dest);
         if (pageIndex !== null && pageIndex >= 0 && pageIndex < pageOffsets.length) {
           const title = typeof item?.title === "string" ? item.title.trim() : "";
           if (title) {
-            entries.push({ title, offset: pageOffsets[pageIndex], level });
+            entries.push({ title, offset: pageOffsets[pageIndex]!, level });
           }
         }
       } catch {
         // Skip unresolved item.
       }
       if (Array.isArray(item?.items) && item.items.length > 0) {
-        await walk(item.items, level + 1);
+        await walk(item.items as OutlineItem[], level + 1);
       }
     }
   };
@@ -153,12 +160,11 @@ async function resolveOutline(
  * zero-based page index. Returns null when it can't be resolved.
  */
 async function resolveDestPageIndex(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  pdf: any,
+  pdf: PDFDocumentProxy,
   dest: unknown,
 ): Promise<number | null> {
   if (!dest) return null;
-  let explicit = dest;
+  let explicit: unknown = dest;
   if (typeof dest === "string") {
     try {
       explicit = await pdf.getDestination(dest);

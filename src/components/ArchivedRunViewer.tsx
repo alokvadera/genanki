@@ -61,6 +61,12 @@ function getStatusTone(status: GenerationJob["status"]): string {
   return "bg-amber-100 text-amber-800";
 }
 
+/** Validation error emitted by Convex/AI SDK validation failures. */
+interface ValidationError {
+  message?: string;
+  path?: string[];
+}
+
 function formatWarning(warning: string) {
   const jsonStart = warning.indexOf("[");
   if (jsonStart !== -1) {
@@ -73,7 +79,7 @@ function formatWarning(warning: string) {
           <div className="space-y-1">
             <span className="font-bold">{prefix}</span>
             <ul className="pl-4 mt-1 list-disc text-xs space-y-1">
-              {parsed.map((err: any, idx: number) => {
+              {parsed.map((err: ValidationError, idx: number) => {
                 const path = err.path ? ` (${err.path.join(".")})` : "";
                 return (
                   <li key={idx} className="text-amber-800">
@@ -109,7 +115,7 @@ function formatErrorReason(reason?: string) {
               {prefix || "Validation failed"} ({parsed.length} errors, click to expand)
             </summary>
             <ul className="pl-6 mt-2 list-disc text-[10px] space-y-1 text-amber-900 nb-border bg-amber-50/50 p-3 max-h-[160px] overflow-auto">
-              {parsed.map((err: any, idx: number) => {
+              {parsed.map((err: ValidationError, idx: number) => {
                 const path = err.path ? ` (${err.path.join(".")})` : "";
                 return (
                   <li key={idx}>
@@ -129,8 +135,8 @@ function formatErrorReason(reason?: string) {
 
   if (reason.includes("<!DOCTYPE") || reason.includes("<html") || reason.includes("<body")) {
     const titleMatch = reason.match(/<title>([\s\S]*?)<\/title>/i);
-    const title = titleMatch ? titleMatch[1].trim() : "Error page (404/500)";
-    const cleanPreview = reason.split("<")[0].trim() || `Server error: ${title}`;
+    const title = titleMatch ? titleMatch[1]!.trim() : "Error page (404/500)";
+    const cleanPreview = reason.split("<")[0]!.trim() || `Server error: ${title}`;
     
     return (
       <details className="mt-1 cursor-pointer">

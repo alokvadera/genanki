@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import * as pdfjsLib from "pdfjs-dist";
 
 const { mockRecognize, mockTerminate } = vi.hoisted(() => ({
   mockRecognize: vi.fn().mockResolvedValue({ data: { text: "OCR extracted text" } }),
@@ -38,7 +39,7 @@ vi.spyOn(document, "createElement").mockImplementation((tagName: string) => {
       clearRect: vi.fn(),
       putImageData: vi.fn(),
       canvas,
-    } as any);
+    } as unknown as CanvasRenderingContext2D);
     Object.defineProperty(canvas, "width", { value: 800, writable: true });
     Object.defineProperty(canvas, "height", { value: 600, writable: true });
     return canvas;
@@ -47,6 +48,7 @@ vi.spyOn(document, "createElement").mockImplementation((tagName: string) => {
 });
 
 import { runOcrOnPdf } from "./ocr";
+
 
 function createFile(name: string, content: string): File {
   return new File([content], name, { type: "application/pdf" });
@@ -57,6 +59,18 @@ describe("ocr", () => {
     vi.clearAllMocks();
     mockRecognize.mockResolvedValue({ data: { text: "OCR extracted text" } });
     mockTerminate.mockResolvedValue(undefined);
+
+    // Reset the pdfjs-dist getDocument mock to its default 1-page implementation
+    const defaultMockPage = {
+      getViewport: vi.fn().mockReturnValue({ width: 800, height: 600 }),
+      render: vi.fn().mockReturnValue({ promise: Promise.resolve() }),
+    };
+    vi.mocked(pdfjsLib.getDocument).mockReturnValue({
+      promise: Promise.resolve({
+        numPages: 1,
+        getPage: vi.fn().mockResolvedValue(defaultMockPage),
+      }),
+    } as unknown as ReturnType<typeof pdfjsLib.getDocument>);
   });
 
   describe("runOcrOnPdf", () => {
@@ -128,6 +142,50 @@ describe("ocr", () => {
       const file = createFile("scan.pdf", "pdf content");
       const result = await runOcrOnPdf(file);
       expect(result).toBe("OCR extracted text");
+    });
+
+    it("handles multiple pages", async () => {
+      const mockPdf = {
+        numPages: 3,
+        getPage: vi.fn().mockResolvedValue({
+          getViewport: vi.fn().mockReturnValue({ width: 800, height: 600 }),
+          render: vi.fn().mockReturnValue({ promise: Promise.resolve() }),
+        }),
+      };
+      
+      const pdfjsLib = await import("pdfjs-dist");
+      vi.mocked(pdfjsLib.getDocument).mockReturnValue({ promise: Promise.resolve(mockPdf) } as unknown as ReturnType<typeof pdfjsLib.getDocument>);
+
+      const file = createFile("multi.pdf", "pdf content");
+      const result = await runOcrOnPdf(file);
+      expect(result).toContain("OCR extracted text");
+    });
+
+    it("handles null data from recognize", async () => {
+      mockRecognize.mockResolvedValueOnce({ data: null });
+      const file = createFile("scan.pdf", "pdf content");
+      const result = await runOcrOnPdf(file);
+      expect(result).toBe("");
+    });
+
+    it("handles undefined text from recognize", async () => {
+      mockRecognize.mockResolvedValueOnce({ data: { text: undefined } });
+      const file = createFile("scan.pdf", "pdf content");
+      const result = await runOcrOnPdf(file);
+      expect(result).toBe("");
+    });
+
+    it("terminates worker even on error", async () => {
+      mockRecognize.mockRejectedValue(new Error("Fatal error"));
+      const file = createFile("scan.pdf", "pdf content");
+      
+      try {
+        await runOcrOnPdf(file);
+      } catch {
+        // Ignore error
+      }
+      
+      expect(mockTerminate).toHaveBeenCalled();
     });
   });
 });
