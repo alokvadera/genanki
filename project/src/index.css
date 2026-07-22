@@ -80,25 +80,25 @@
 }
 
 .dark {
-  --background: #09090b; /* zinc 950 deep dark */
-  --foreground: #fafafa; /* zinc 50 */
-  --card: #18181b; /* zinc 900 */
-  --card-foreground: #fafafa;
-  --popover: #18181b;
-  --popover-foreground: #fafafa;
-  --primary: #818cf8; /* soft indigo */
-  --primary-foreground: #09090b;
-  --secondary: #fcd34d; /* amber yellow */
+  --background: #09090b; /* deep midnight obsidian */
+  --foreground: #f4f4f5; /* crisp zinc 100 text */
+  --card: #141417; /* rich zinc 900 card surface */
+  --card-foreground: #f4f4f5;
+  --popover: #141417;
+  --popover-foreground: #f4f4f5;
+  --primary: #6366f1; /* electric indigo */
+  --primary-foreground: #ffffff;
+  --secondary: #fbbf24; /* cyber amber yellow */
   --secondary-foreground: #09090b;
   --muted: #27272a; /* zinc 800 */
   --muted-foreground: #a1a1aa; /* zinc 400 */
-  --accent: #fb7185; /* rose */
+  --accent: #f43f5e; /* vibrant neon rose */
   --accent-foreground: #ffffff;
-  --destructive: #f87171;
-  --border: #fafafa; /* white border */
+  --destructive: #ef4444;
+  --border: #3f3f46; /* zinc 700 clean border */
   --input: #27272a;
-  --ring: #818cf8;
-  --grid-color: rgba(250, 250, 250, 0.04);
+  --ring: #6366f1;
+  --grid-color: rgba(255, 255, 255, 0.05);
 }
 
 @layer base {
@@ -145,6 +145,29 @@
 .nb-shadow-amber {
   box-shadow: 4px 4px 0px #d97706;
 }
+
+.dark .nb-shadow {
+  box-shadow: 4px 4px 0px #000000;
+}
+.dark .nb-shadow-sm {
+  box-shadow: 2px 2px 0px #000000;
+}
+.dark .nb-shadow-lg {
+  box-shadow: 6px 6px 0px #000000;
+}
+.dark .nb-shadow-indigo {
+  box-shadow: 4px 4px 0px #6366f1;
+}
+.dark .nb-shadow-teal {
+  box-shadow: 4px 4px 0px #14b8a6;
+}
+.dark .nb-shadow-rose {
+  box-shadow: 4px 4px 0px #f43f5e;
+}
+.dark .nb-shadow-amber {
+  box-shadow: 4px 4px 0px #f59e0b;
+}
+
 .nb-hover-shadow {
   transition: box-shadow 0.15s ease, transform 0.15s ease;
 }
@@ -152,9 +175,15 @@
   box-shadow: 6px 6px 0px var(--border);
   transform: translate(-1.5px, -1.5px);
 }
+.dark .nb-hover-shadow:hover:not(:disabled) {
+  box-shadow: 6px 6px 0px #000000;
+}
 .nb-active-shadow {
   box-shadow: 2px 2px 0px var(--border);
   transform: translate(1px, 1px);
+}
+.dark .nb-active-shadow {
+  box-shadow: 2px 2px 0px #000000;
 }
 .nb-border {
   border: 3px solid var(--border);

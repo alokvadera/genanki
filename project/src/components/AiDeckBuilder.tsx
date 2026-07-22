@@ -69,7 +69,7 @@ export default function AiDeckBuilder({
   return (
     <>
       {/* AI Deck Builder */}
-      <div className="nb-border bg-white nb-shadow-rose p-5 mb-6">
+      <div className="nb-border bg-card text-card-foreground nb-shadow-rose p-5 mb-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-bold text-xs uppercase tracking-[0.2em] flex items-center gap-2 text-rose-600 dark:text-rose-400">
             <Sparkles className="w-4 h-4" />

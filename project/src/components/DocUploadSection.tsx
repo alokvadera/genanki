@@ -105,7 +105,7 @@ export default function DocUploadSection({
   return (
     <>
       {/* Upload Section */}
-      <div className="nb-border bg-white nb-shadow-teal p-5 mb-6">
+      <div className="nb-border bg-card text-card-foreground nb-shadow-teal p-5 mb-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-bold text-xs uppercase tracking-[0.2em] flex items-center gap-2 text-teal-600 dark:text-teal-400">
             <Zap className="w-4 h-4" />

@@ -185,7 +185,7 @@ export function ArchivedRunViewer({
   const recentCalls = usage?.rows ?? [];
 
   return (
-    <section className="nb-border bg-white nb-shadow-teal p-5">
+    <section className="nb-border bg-card text-card-foreground nb-shadow-teal p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-2">
