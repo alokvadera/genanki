@@ -180,7 +180,7 @@ describe("DocUploadSection", () => {
       docFileNames: ["test.pdf"],
     });
     const startBtns = screen.getAllByText("Start document run");
-    const startBtn = startBtns[startBtns.length - 1].closest("button");
+    const startBtn = startBtns![startBtns.length - 1].closest("button");
     expect(startBtn).toBeDisabled();
   });
 

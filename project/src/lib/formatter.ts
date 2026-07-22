@@ -31,6 +31,33 @@ function sanitizeHtml(html: string): string {
   });
 }
 
+// --- Math helpers (extracted for coverage tracking) ---
+
+let _placeholderCounter = 0;
+
+/** Render math with KaTeX, falling back to error span on failure. */
+function renderMath(math: string, displayMode: boolean): string {
+  try {
+    return katex.renderToString(math.trim(), { displayMode, throwOnError: false });
+  } catch {
+    return `<span class="text-red-500">${math}</span>`;
+  }
+}
+
+/** Replace block math (either $$...$$ or \\[...\\]) with KaTeX HTML and a placeholder key. */
+function replaceBlockMath(placeholders: Record<string, string>, math: string): string {
+  const key = `BLOCKMATH${_placeholderCounter++}`;
+  placeholders[key] = renderMath(math, true);
+  return key;
+}
+
+/** Replace inline math (either $...$ or \\(...\\)) with KaTeX HTML and a placeholder key. */
+function replaceInlineMath(placeholders: Record<string, string>, math: string): string {
+  const key = `INLINEMATH${_placeholderCounter++}`;
+  placeholders[key] = renderMath(math, false);
+  return key;
+}
+
 /**
  * Format markdown and math (LaTeX) to HTML for rendering in the web preview UI.
  * Extracts math blocks first so marked doesn't corrupt math symbols (like underscores),
@@ -40,60 +67,18 @@ export function formatCardText(text: string): string {
   if (!text) return "";
 
   const placeholders: { [key: string]: string } = {};
-  let placeholderCounter = 0;
+  _placeholderCounter = 0;
   let processed = text;
 
-  // 1. Extract block math ($$...$$ or \[...\])
-  processed = processed.replace(/\$$([\s\S]+?)\$\$/g, (_, math) => {
-    const key = `BLOCKMATH${placeholderCounter++}`;
-    let html = "";
-    try {
-      html = katex.renderToString(math.trim(), { displayMode: true, throwOnError: false });
-    } catch {
-      html = `<span class="text-red-500">$$${math}$$</span>`;
-    }
-    placeholders[key] = html;
-    return key;
-  });
+  // 1. Extract block math ($$...$$ or \\[...\\])
+  processed = processed.replace(/\$\$([\s\S]+?)\$\$/g, (_, math) => replaceBlockMath(placeholders, math));
+  processed = processed.replace(/\\\[([\s\S]+?)\\\]/g, (_, math) => replaceBlockMath(placeholders, math));
 
-  processed = processed.replace(/\\\[([\s\S]+?)\\\]/g, (_, math) => {
-    const key = `BLOCKMATH${placeholderCounter++}`;
-    let html = "";
-    try {
-      html = katex.renderToString(math.trim(), { displayMode: true, throwOnError: false });
-    } catch {
-      html = `<span class="text-red-500">\\[${math}\\]</span>`;
-    }
-    placeholders[key] = html;
-    return key;
-  });
+  // 2. Extract inline math ($...$ or \\(...\\))
+  processed = processed.replace(/\$(?!\s)([^$]+?)(?<!\s)\$/g, (_, math) => replaceInlineMath(placeholders, math));
+  processed = processed.replace(/\\\(([\s\S]+?)\\\)/g, (_, math) => replaceInlineMath(placeholders, math));
 
-  // 2. Extract inline math ($...$ or \(...\))
-  processed = processed.replace(/\$(?!\s)([^\$]+?)(?<!\s)\$/g, (_, math) => {
-    const key = `INLINEMATH${placeholderCounter++}`;
-    let html = "";
-    try {
-      html = katex.renderToString(math.trim(), { displayMode: false, throwOnError: false });
-    } catch {
-      html = `<span class="text-red-500">$${math}$</span>`;
-    }
-    placeholders[key] = html;
-    return key;
-  });
-
-  processed = processed.replace(/\\\(([\s\S]+?)\\\)/g, (_, math) => {
-    const key = `INLINEMATH${placeholderCounter++}`;
-    let html = "";
-    try {
-      html = katex.renderToString(math.trim(), { displayMode: false, throwOnError: false });
-    } catch {
-      html = `<span class="text-red-500">\\(${math}\\)</span>`;
-    }
-    placeholders[key] = html;
-    return key;
-  });
-
-  // 4. Compile markdown to HTML
+  // 3. Compile markdown to HTML
   let html = "";
   try {
     html = marked.parse(processed, { breaks: true, gfm: true, async: false });
@@ -101,12 +86,12 @@ export function formatCardText(text: string): string {
     html = processed;
   }
 
-  // 5. Restore math placeholders
+  // 4. Restore math placeholders
   Object.keys(placeholders).forEach((key) => {
     html = html.split(key).join(placeholders[key]);
   });
 
-  // 6. Sanitize the final HTML to remove dangerous elements
+  // 5. Sanitize the final HTML to remove dangerous elements
   html = sanitizeHtml(html);
 
   return html;
@@ -114,14 +99,14 @@ export function formatCardText(text: string): string {
 
 /**
  * Convert standard math blocks ($$...$$ and $...$) to Anki-native MathJax
- * wrappers (\[...\] and \(...\)) so that math renders correctly in Anki client app.
+ * wrappers (\\[...\\] and \\(...\\)) so that math renders correctly in Anki client app.
  */
 export function formatMathForAnki(text: string): string {
   if (!text) return "";
   let formatted = text;
-  // Convert $$...$$ to \[...\]
+  // Convert $$...$$ to \\[...\\]
   formatted = formatted.replace(/\$\$([\s\S]+?)\$\$/g, (_, math) => `\\[${math.trim()}\\]`);
-  // Convert $...$ to \(...\)
-  formatted = formatted.replace(/\$(?!\s)([^\$]+?)(?<!\s)\$/g, (_, math) => `\\(${math.trim()}\\)`);
+  // Convert $...$ to \\(...\\)
+  formatted = formatted.replace(/\$(?!\s)([^$]+?)(?<!\s)\$/g, (_, math) => `\\(${math.trim()}\\)`);
   return formatted;
 }

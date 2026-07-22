@@ -6,7 +6,7 @@ import tseslint from "typescript-eslint";
 import eslintConfigPrettier from "eslint-config-prettier/flat";
 
 export default tseslint.config(
-  { ignores: ["dist"] },
+  { ignores: ["dist", "coverage", "src/convex/_generated"] },
   {
     extends: [
       js.configs.recommended,
@@ -24,10 +24,30 @@ export default tseslint.config(
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
+      "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
       "react-refresh/only-export-components": [
         "warn",
-        { allowConstantExport: true },
+        {
+          allowConstantExport: true,
+          allowExportNames: [
+            "badgeVariants",
+            "buttonVariants",
+            "buttonGroupVariants",
+            "useFormField",
+            "navigationMenuTriggerStyle",
+            "SIDEBAR_WIDTH",
+            "useSidebar",
+            "toggleVariants",
+          ],
+        },
       ],
+    },
+  },
+  // Suppress react-refresh warnings for entry point and vendor toolbar (must be last to override)
+  {
+    files: ["src/main.tsx", "vly-toolbar-readonly.tsx"],
+    rules: {
+      "react-refresh/only-export-components": "off",
     },
   },
 );

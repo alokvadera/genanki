@@ -15,7 +15,7 @@ function clampFront(s: string): string {
 /**
  * Splits text into meaningful chunks for card generation.
  */
-function splitIntoChunks(text: string): string[] {
+export function splitIntoChunks(text: string): string[] {
   // Split by double newlines, or by numbered/bulleted lists
   const chunks: string[] = [];
 
@@ -79,7 +79,7 @@ function extractDefinitionCards(text: string): AnkiCard[] {
 /**
  * Extract list-based cards from bullet points or numbered items.
  */
-function extractListCards(text: string): AnkiCard[] {
+export function extractListCards(text: string): AnkiCard[] {
   const cards: AnkiCard[] = [];
   // Match numbered lists: "1. Item - description" or "1) Item: description"
   const numberedPattern =
@@ -176,7 +176,7 @@ function buildQuestionFromStatement(statement: string): string | null {
   // Extract the subject (roughly the first noun phrase)
   const subjectMatch = clean.match(/^([A-Z][^.,]{3,50})/);
   if (subjectMatch) {
-    const subject = subjectMatch[1].trim();
+    const subject = subjectMatch[1]!.trim();
     return `Explain: ${subject}`;
   }
 
@@ -215,7 +215,7 @@ export function generateCardsFromText(text: string, maxCards = 30): AnkiCard[] {
   const chunks = splitIntoChunks(cappedText);
   for (const chunk of chunks) {
     // Generate a meaningful question from the first sentence
-    const firstSentence = chunk.match(/^[^.!?]+[.!?]/)?.[0]?.trim();
+    const firstSentence = chunk.match(/^[^.!?]+[.!?]/)?.[0]?.trim() ?? "";
     if (firstSentence && firstSentence.length > 15 && firstSentence.length < 200) {
       // Don't create nonsense questions by appending "?" to statements.
       // Generate a meaningful question prefix based on the content.

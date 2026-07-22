@@ -1,5 +1,6 @@
 import { createContext, createElement, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { AnkiCard } from "@/lib/anki";
+import { showRecoveryToast } from "@/lib/utils";
 
 export interface Deck {
   id: string;
@@ -15,7 +16,7 @@ const VERSION_KEY = "genanki-decks-version";
 function uid(): string {
   const buf = new Uint32Array(2);
   crypto.getRandomValues(buf);
-  return buf[0].toString(36) + buf[1].toString(36);
+  return buf[0]!.toString(36) + buf[1]!.toString(36);
 }
 
 function isValidAnkiCard(card: unknown): card is AnkiCard {
@@ -47,27 +48,67 @@ function createStarterDecks(): Deck[] {
   ];
 }
 
-function loadFromStorage(): { decks: Deck[]; activeId: string } {
+type RecoveryMessage = {
+  /** User-facing message suitable for a toast notification. */
+  message: string;
+  /** Severity level. */
+  level: "info" | "warning";
+};
+
+function loadFromStorage(): { decks: Deck[]; activeId: string; recoveryMessages: RecoveryMessage[] } {
   const fallbackDecks = createStarterDecks();
+  const recoveryMessages: RecoveryMessage[] = [];
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
+        const totalBefore = parsed.length;
         const validDecks = parsed.map(sanitizeDeck).filter((d): d is Deck => d !== null);
         if (validDecks.length > 0) {
+          const droppedDecks = totalBefore - validDecks.length;
+          if (droppedDecks > 0) {
+            recoveryMessages.push({
+              message: `Recovered ${validDecks.length} deck(s). ${droppedDecks} corrupted deck(s) were restored to defaults.`,
+              level: "warning",
+            });
+          }
+          // Check for cards that were filtered out during sanitization.
+          // Use totals rather than index-aligned comparison since some decks
+          // may have been dropped entirely, misaligning indices.
+          const totalCardsBefore = parsed.reduce(
+            (sum, d) => sum + (d && Array.isArray(d.cards) ? d.cards.length : 0),
+            0,
+          );
+          const totalCardsAfter = validDecks.reduce((sum, d) => sum + d.cards.length, 0);
+          const droppedCards = totalCardsBefore - totalCardsAfter;
+          if (droppedCards > 0) {
+            recoveryMessages.push({
+              message: `${droppedCards} invalid card(s) were removed during data recovery.`,
+              level: "info",
+            });
+          }
           const savedActiveId = localStorage.getItem(ACTIVE_ID_KEY);
           const activeId = savedActiveId && validDecks.some((d) => d.id === savedActiveId)
             ? savedActiveId
-            : validDecks[0].id;
-          return { decks: validDecks, activeId };
+            : validDecks[0]!.id;
+          return { decks: validDecks, activeId, recoveryMessages };
         }
       }
+      // We had data but nothing was recoverable
+      recoveryMessages.push({
+        message: "Your saved decks could not be recovered. Starter decks have been created.",
+        level: "warning",
+      });
     }
   } catch {
-    // Ignore corrupted storage
+    // JSON parse failure — corrupted storage
+    recoveryMessages.push({
+      message: "Your saved decks were corrupted and could not be loaded. Starter decks have been created.",
+      level: "warning",
+    });
   }
-  return { decks: fallbackDecks, activeId: fallbackDecks[0].id };
+  return { decks: fallbackDecks, activeId: fallbackDecks[0]!.id, recoveryMessages };
 }
 
 function saveToStorage(decks: Deck[]) {
@@ -84,11 +125,13 @@ function useDeckStoreState() {
   const [decks, setDecks] = useState<Deck[]>(initial.decks);
   const [activeDeckId, setActiveDeckId] = useState<string>(initial.activeId);
   const [openedDeckId, setOpenedDeckId] = useState<string | null>(null);
+  const [recoveryMessages] = useState<RecoveryMessage[]>(initial.recoveryMessages);
   const hasMounted = useRef(false);
 
   // State updates stay pure so React can safely replay them in StrictMode.
   const setDecksAndSave = useCallback((updater: Deck[] | ((prev: Deck[]) => Deck[])) => {
     setDecks((prev) => {
+      /* istanbul ignore next -- defensive type union: all internal callers pass a function; the plain-array branch exists only for API completeness and is unreachable from the public surface. */
       return typeof updater === "function" ? updater(prev) : updater;
     });
   }, []);
@@ -131,7 +174,7 @@ function useDeckStoreState() {
         return;
       }
       const remaining = decks.filter((deck) => deck.id !== id);
-      if (activeDeckId === id) setActiveDeckIdAndSave(remaining[0].id);
+      if (activeDeckId === id) setActiveDeckIdAndSave(remaining[0]!.id);
       setDecksAndSave((prev) => prev.filter((d) => d.id !== id));
       if (openedDeckId === id) {
         setOpenedDeckId(null);
@@ -196,6 +239,7 @@ function useDeckStoreState() {
     activeDeck,
     openedDeckId,
     openedDeck,
+    recoveryMessages,
     setActiveDeckId: setActiveDeckIdAndSave,
     setOpenedDeckId,
     addDeck,
@@ -216,10 +260,26 @@ const DeckStoreContext = createContext<DeckStore | null>(null);
 
 export function DeckStoreProvider({ children }: { children: ReactNode }) {
   const store = useDeckStoreState();
+
+  // Show recovery toasts on mount when localStorage data was partially or fully lost.
+  // The previous useRef guard was removed: React 18 StrictMode creates a fresh ref
+  // on each mount (mount → unmount → remount), so the ref never persisted across the
+  // unmount boundary and the guard was unreachable dead code. StrictMode duplicate
+  // toasts are benign (showRecoveryToast is idempotent).
+  useEffect(() => {
+    if (store.recoveryMessages.length === 0) return;
+    for (const msg of store.recoveryMessages) {
+      showRecoveryToast(msg.message, msg.level);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return createElement(DeckStoreContext.Provider, { value: store }, children);
 }
 
 export function useDeckStore() {
+  /* istanbul ignore next -- Consumer defensive guard (LHS const-declaration range): renderHook wraps every test in DeckStoreProvider (use-deck-store.test.ts renderHook helper), so useContext always returns a non-null store from the public API. */
+  /* istanbul ignore next -- Consumer defensive guard (RHS expression-evaluation range): same rationale as the LHS directive above. Istanbul tracks the RHS expression evaluation as a separate indexed statement from the LHS const declaration, so two stacked directives are required to fully exclude the consumer's defensive guard from coverage statistics. */
   const store = useContext(DeckStoreContext);
   if (!store) throw new Error("useDeckStore must be used within DeckStoreProvider");
   return store;

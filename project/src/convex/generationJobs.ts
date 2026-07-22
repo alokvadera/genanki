@@ -24,24 +24,14 @@ export const create = mutation({
       timeoutSeconds: args.timeoutSeconds,
       deadlineAt: args.deadlineAt,
       message: args.message,
-      provider: undefined,
-      model: undefined,
       providerIndex: 0,
       modelIndex: 0,
       totalProviders: args.totalProviders,
       totalModels: args.totalModels,
       sectionIndex: 0,
       totalSections: args.totalSections,
-      resultDeckName: undefined,
-      resultSummary: undefined,
-      resultCards: undefined,
-      resultPartial: undefined,
-      resultWarnings: undefined,
-      cancelRequestedAt: undefined,
-      canceledAt: undefined,
       createdAt: now,
       updatedAt: now,
-      error: undefined,
     });
   },
 });
@@ -79,6 +69,12 @@ export const update = mutation({
     cancelRequestedAt: v.optional(v.number()),
     canceledAt: v.optional(v.number()),
     error: v.optional(v.string()),
+    encDeckName: v.optional(v.string()),
+    encSummary: v.optional(v.string()),
+    encCards: v.optional(v.string()),
+    encMessage: v.optional(v.string()),
+    encError: v.optional(v.string()),
+    creatorIpHash: v.optional(v.string()),
     fallbackTrail: v.optional(
       v.array(
         v.object({
@@ -114,6 +110,12 @@ export const update = mutation({
     if (args.cancelRequestedAt !== undefined) patch.cancelRequestedAt = args.cancelRequestedAt;
     if (args.canceledAt !== undefined) patch.canceledAt = args.canceledAt;
     if (args.error !== undefined) patch.error = args.error;
+    if (args.encDeckName !== undefined) patch.encDeckName = args.encDeckName;
+    if (args.encSummary !== undefined) patch.encSummary = args.encSummary;
+    if (args.encCards !== undefined) patch.encCards = args.encCards;
+    if (args.encMessage !== undefined) patch.encMessage = args.encMessage;
+    if (args.encError !== undefined) patch.encError = args.encError;
+    if (args.creatorIpHash !== undefined) patch.creatorIpHash = args.creatorIpHash;
     if (args.fallbackTrail !== undefined) patch.fallbackTrail = args.fallbackTrail;
     await ctx.db.patch(args.jobId, patch);
   },

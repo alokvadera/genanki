@@ -99,4 +99,27 @@ describe("useIsMobile", () => {
     });
     expect(result.current).toBe(true);
   });
+
+  it("cleans up event listener on unmount", () => {
+    const { mql } = setupMatchMediaMock();
+    setWidth(1024);
+    const { unmount } = renderHook(() => useIsMobile());
+    unmount();
+    expect(mql.removeEventListener).toHaveBeenCalled();
+  });
+
+  it("handles window.innerWidth being 0", () => {
+    setupMatchMediaMock();
+    setWidth(0);
+    const { result } = renderHook(() => useIsMobile());
+    expect(result.current).toBe(true);
+  });
+
+  it("handles very large window.innerWidth", () => {
+    setupMatchMediaMock();
+    setWidth(99999);
+    const { result } = renderHook(() => useIsMobile());
+    expect(result.current).toBe(false);
+  });
 });
+

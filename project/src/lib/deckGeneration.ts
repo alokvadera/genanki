@@ -62,35 +62,6 @@ export function extractJsonObject(text: string): string | null {
     }
   }
 
-  // 3. Ultra-fallback: find the first position where depth returns to 0
-  //    using the same quote-aware scan as step 2. This avoids capturing
-  //    trailing prose after a truncated JSON object (P3).
-  depth = 0;
-  inString = false;
-  escaped = false;
-  for (let i = start; i < trimmed.length; i++) {
-    const ch = trimmed[i];
-    if (inString) {
-      if (escaped) {
-        escaped = false;
-      } else if (ch === "\\") {
-        escaped = true;
-      } else if (ch === '"') {
-        inString = false;
-      }
-      continue;
-    }
-    if (ch === '"') {
-      inString = true;
-    } else if (ch === "{") {
-      depth++;
-    } else if (ch === "}") {
-      depth--;
-      if (depth === 0) {
-        return trimmed.slice(start, i + 1).trim();
-      }
-    }
-  }
   // If we never found a balanced close, return null (don't guess)
   return null;
 }

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
+import type { MutationCtx } from "./_generated/server";
 import {
   getDayWindowStart,
   checkAndLogIpHandler,
@@ -43,7 +44,7 @@ describe("IP Rate Limiter & Budgeting", () => {
         },
       };
 
-      const result = await checkAndLogIpHandler(mockCtx, { ip: "1.2.3.4", estimatedTokens: 1000 });
+      const result = await checkAndLogIpHandler(mockCtx as unknown as MutationCtx, { ip: "1.2.3.4", estimatedTokens: 1000 });
       expect(result.allowed).toBe(false);
       expect(result.reason).toContain("blocked");
       expect(mockQueryUnique).toHaveBeenCalled();
@@ -67,7 +68,7 @@ describe("IP Rate Limiter & Budgeting", () => {
         },
       };
 
-      const result = await checkAndLogIpHandler(mockCtx, { ip: "1.2.3.4", estimatedTokens: 1000 });
+      const result = await checkAndLogIpHandler(mockCtx as unknown as MutationCtx, { ip: "1.2.3.4", estimatedTokens: 1000 });
       expect(result.allowed).toBe(true);
       expect(result.ip).toBe("1.2.3.4");
       expect(mockInsert).toHaveBeenCalledWith("ipRateState", expect.objectContaining({
@@ -100,7 +101,7 @@ describe("IP Rate Limiter & Budgeting", () => {
       };
 
       // 1000 estimated tokens would exceed the 50,000 limit
-      const result = await checkAndLogIpHandler(mockCtx, { ip: "1.2.3.4", estimatedTokens: 1000 });
+      const result = await checkAndLogIpHandler(mockCtx as unknown as MutationCtx, { ip: "1.2.3.4", estimatedTokens: 1000 });
       expect(result.allowed).toBe(false);
       expect(result.reason).toContain("Daily token limit");
     });
@@ -133,7 +134,7 @@ describe("IP Rate Limiter & Budgeting", () => {
         },
       };
 
-      const result = await checkAndLogIpHandler(mockCtx, { 
+      const result = await checkAndLogIpHandler(mockCtx as unknown as MutationCtx, { 
         ip: "1.2.3.5", // new dynamic IP
         estimatedTokens: 500, 
         deviceIdHash: "dev-id-hash" 
@@ -172,7 +173,7 @@ describe("IP Rate Limiter & Budgeting", () => {
         },
       };
 
-      await deductIpTokensHandler(mockCtx, { ip: "1.2.3.4", tokens: 2500 });
+      await deductIpTokensHandler(mockCtx as unknown as MutationCtx, { ip: "1.2.3.4", tokens: 2500 });
       
       expect(mockPatch).toHaveBeenCalledWith("state-id", expect.objectContaining({
         dayTokensUsed: 3500, // 1000 + 2500

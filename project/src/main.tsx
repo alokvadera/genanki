@@ -4,6 +4,7 @@ import React, { StrictMode, useEffect, lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router";
 import { DeckStoreProvider } from "@/hooks/use-deck-store";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import "./index.css";
 import "katex/dist/katex.min.css";
 
@@ -128,26 +129,28 @@ createRoot(document.getElementById("root")!).render(
           </ToolbarErrorBoundary>
         </Suspense>
       )}
-      <ConvexProvider client={convex}>
-        <DeckStoreProvider>
-        <BrowserRouter>
-          <RouteSyncer />
-          <Suspense fallback={<RouteLoading />}>
-            <Routes>
-              <Route path="/" element={<Landing />} />
-              <Route path="/app" element={<AnkiCreator />} />
-              <Route path="/runs" element={<History />} />
-              <Route path="/runs/:jobId" element={<History />} />
-              <Route path="/history" element={<History />} />
-              <Route path="/history/:jobId" element={<History />} />
-              <Route path="/usage" element={<ProviderUsage />} />
-              <Route path="/admin" element={<IpAdmin />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-        </BrowserRouter>
-        </DeckStoreProvider>
-      </ConvexProvider>
+      <ThemeProvider defaultTheme="system">
+        <ConvexProvider client={convex}>
+          <DeckStoreProvider>
+          <BrowserRouter>
+            <RouteSyncer />
+            <Suspense fallback={<RouteLoading />}>
+              <Routes>
+                <Route path="/" element={<Landing />} />
+                <Route path="/app" element={<AnkiCreator />} />
+                <Route path="/runs" element={<History />} />
+                <Route path="/runs/:jobId" element={<History />} />
+                <Route path="/history" element={<History />} />
+                <Route path="/history/:jobId" element={<History />} />
+                <Route path="/usage" element={<ProviderUsage />} />
+                <Route path="/admin" element={<IpAdmin />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
+          </BrowserRouter>
+          </DeckStoreProvider>
+        </ConvexProvider>
+      </ThemeProvider>
       <Toaster />
     </RootErrorBoundary>
   </StrictMode>,

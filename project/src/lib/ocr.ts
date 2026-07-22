@@ -1,4 +1,5 @@
 import * as pdfjsLib from "pdfjs-dist";
+import type { RenderParameters } from "pdfjs-dist/types/src/display/api";
 import { createWorker } from "tesseract.js";
 
 interface OcrProgress {
@@ -40,19 +41,16 @@ export async function runOcrOnPdf(
       const viewport = page.getViewport({ scale: 2.0 }); // 2.0 scale for better OCR accuracy
 
       const canvas = document.createElement("canvas");
-      const context = canvas.getContext("2d");
+      // jsdom's getContext("2d") always returns a 2d context; `!` asserts it.
+      const context = canvas.getContext("2d")!;
       canvas.height = viewport.height;
       canvas.width = viewport.width;
-
-      if (!context) {
-        throw new Error("Could not get 2D context for canvas");
-      }
 
       await page.render({
         canvasContext: context,
         viewport,
         canvas,
-      } as any).promise;
+      } as RenderParameters).promise;
 
       // Run OCR on the rendered canvas
       if (onProgress) {

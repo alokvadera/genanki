@@ -98,7 +98,7 @@ export const reserveProviderCapacity = mutation({
       dayStartedAt,
       dayRequestsUsed: dayRequestsUsed + 1,
       cooldownUntil: 0,
-      lastStatus: existing?.lastStatus,
+      ...(existing?.lastStatus !== undefined && { lastStatus: existing.lastStatus }),
       remainingRequests: Math.max(0, policy.requestsPerMinute - requestsUsed - 1),
       remainingTokens: Math.max(0, policy.tokensPerMinute - tokensUsed - estimatedTokens),
       resetAt: windowStartedAt + MINUTE_MS,
@@ -151,15 +151,18 @@ export const reportProviderResult = mutation({
       .unique();
     const cooldownSeconds = Math.max(0, Math.round(args.cooldownSeconds ?? 0));
     const resetSeconds = Math.max(0, Math.round(args.resetSeconds ?? 0));
-    const patch = {
+    const rr = args.remainingRequests ?? existing?.remainingRequests;
+    const rt = args.remainingTokens ?? existing?.remainingTokens;
+    const ra = resetSeconds > 0 ? now + resetSeconds * 1000 : existing?.resetAt;
+    const sharedFields = {
       lastStatus: args.status,
       cooldownUntil: Math.max(existing?.cooldownUntil ?? 0, now + cooldownSeconds * 1000),
-      remainingRequests: args.remainingRequests ?? existing?.remainingRequests,
-      remainingTokens: args.remainingTokens ?? existing?.remainingTokens,
-      resetAt: resetSeconds > 0 ? now + resetSeconds * 1000 : existing?.resetAt,
       updatedAt: now,
+      ...(rr !== undefined && { remainingRequests: rr }),
+      ...(rt !== undefined && { remainingTokens: rt }),
+      ...(ra !== undefined && { resetAt: ra }),
     };
-    if (existing) await ctx.db.patch(existing._id, patch);
+    if (existing) await ctx.db.patch(existing._id, sharedFields);
     else {
       await ctx.db.insert("providerRateState", {
         provider: args.provider,
@@ -169,7 +172,7 @@ export const reportProviderResult = mutation({
         tokensUsed: 0,
         dayStartedAt: now,
         dayRequestsUsed: 0,
-        ...patch,
+        ...sharedFields,
       });
     }
   },

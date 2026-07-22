@@ -29,11 +29,11 @@ export const record = mutation({
       providerLabel: args.providerLabel,
       model: args.model,
       kind: args.kind,
-      jobId: args.jobId,
+      ...(args.jobId !== undefined && { jobId: args.jobId }),
       promptTokens: Math.max(0, Math.round(args.promptTokens)),
       completionTokens: Math.max(0, Math.round(args.completionTokens)),
       totalTokens: Math.max(0, Math.round(args.totalTokens)),
-      ip: args.ip,
+      ...(args.ip !== undefined && { ip: args.ip }),
       createdAt: args.createdAt ?? Date.now(),
     });
   },

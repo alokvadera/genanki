@@ -11,7 +11,8 @@ const CEREBRAS_MODELS_URL = "https://api.cerebras.ai/v1/models";
  *  prevents resource-exhaustion / cost DoS from unexpectedly large bodies. */
 const MAX_RESPONSE_BYTES = 2_000_000;
 
-export type ProviderName = "groq" | "cerebras" | "openrouter" | "kilo" | "cloudflare";
+export const PROVIDER_NAMES = ["groq", "cerebras", "openrouter", "kilo", "cloudflare"] as const;
+export type ProviderName = (typeof PROVIDER_NAMES)[number];
 
 export type AiModelCandidate = {
   provider: ProviderName;
@@ -82,6 +83,13 @@ let cachedOpenRouterFree: { fetchedAt: number; models: AiModelCandidate[] } | nu
 let cachedGroq: { fetchedAt: number; models: AiModelCandidate[] } | null = null;
 let cachedCerebras: { fetchedAt: number; models: AiModelCandidate[] } | null = null;
 
+export function invalidateModelCache(): void {
+  cachedCatalog = null;
+  cachedOpenRouterFree = null;
+  cachedGroq = null;
+  cachedCerebras = null;
+}
+
 const MODEL_CACHE_TTL_MS = 5 * 60_000;
 const GROQ_MODEL_PRIORITY = new Map([
   ["llama-3.1-8b-instant", 0],
@@ -95,7 +103,9 @@ const GROQ_MODEL_PRIORITY = new Map([
 function shuffleInPlace<T>(items: T[]): T[] {
   for (let i = items.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [items[i], items[j]] = [items[j], items[i]];
+    const temp = items[i]!;
+    items[i] = items[j]!;
+    items[j] = temp;
   }
   return items;
 }
@@ -172,18 +182,23 @@ function parseHeaderNumber(response: Response, name: string): number | undefined
 }
 
 function readRateLimitSnapshot(response: Response, provider: ProviderName): RateLimitSnapshot {
+  const snapshot: RateLimitSnapshot = {};
   if (provider === "cerebras") {
-    return {
-      remainingRequests: parseHeaderNumber(response, "x-ratelimit-remaining-requests-day"),
-      remainingTokens: parseHeaderNumber(response, "x-ratelimit-remaining-tokens-minute"),
-      resetSeconds: parseHeaderNumber(response, "x-ratelimit-reset-tokens-minute"),
-    };
+    const rr = parseHeaderNumber(response, "x-ratelimit-remaining-requests-day");
+    const rt = parseHeaderNumber(response, "x-ratelimit-remaining-tokens-minute");
+    const rs = parseHeaderNumber(response, "x-ratelimit-reset-tokens-minute");
+    if (rr !== undefined) snapshot.remainingRequests = rr;
+    if (rt !== undefined) snapshot.remainingTokens = rt;
+    if (rs !== undefined) snapshot.resetSeconds = rs;
+  } else {
+    const rr = parseHeaderNumber(response, "x-ratelimit-remaining-requests");
+    const rt = parseHeaderNumber(response, "x-ratelimit-remaining-tokens");
+    const rs = parseHeaderNumber(response, "x-ratelimit-reset-tokens");
+    if (rr !== undefined) snapshot.remainingRequests = rr;
+    if (rt !== undefined) snapshot.remainingTokens = rt;
+    if (rs !== undefined) snapshot.resetSeconds = rs;
   }
-  return {
-    remainingRequests: parseHeaderNumber(response, "x-ratelimit-remaining-requests"),
-    remainingTokens: parseHeaderNumber(response, "x-ratelimit-remaining-tokens"),
-    resetSeconds: parseHeaderNumber(response, "x-ratelimit-reset-tokens"),
-  };
+  return snapshot;
 }
 
 function supportsJsonModeFromParameters(params?: string[]): boolean {
@@ -488,7 +503,7 @@ export async function buildModelCandidates(): Promise<AiModelCandidate[]> {
       label: "Groq",
       providerIndex: 0,
       baseUrl: "https://api.groq.com/openai/v1",
-      headers: groqModels[0].headers,
+      headers: groqModels[0]!.headers,
       models: groqModels,
     });
   }
@@ -499,7 +514,7 @@ export async function buildModelCandidates(): Promise<AiModelCandidate[]> {
       label: "Cerebras",
       providerIndex: 1,
       baseUrl: "https://api.cerebras.ai/v1",
-      headers: cerebrasModels[0].headers,
+      headers: cerebrasModels[0]!.headers,
       models: cerebrasModels,
     });
   }
@@ -510,7 +525,7 @@ export async function buildModelCandidates(): Promise<AiModelCandidate[]> {
       label: "Kilo",
       providerIndex: 2,
       baseUrl: normalizeBaseUrl(process.env.KILO_BASE_URL || ""),
-      headers: kiloModels[0].headers,
+      headers: kiloModels[0]!.headers,
       models: kiloModels,
     });
   }
@@ -521,7 +536,7 @@ export async function buildModelCandidates(): Promise<AiModelCandidate[]> {
       label: "OpenRouter",
       providerIndex: 3,
       baseUrl: "https://openrouter.ai/api/v1",
-      headers: openRouterModels[0].headers,
+      headers: openRouterModels[0]!.headers,
       models: openRouterModels,
     });
   }
@@ -531,8 +546,8 @@ export async function buildModelCandidates(): Promise<AiModelCandidate[]> {
       provider: "cloudflare",
       label: "Cloudflare Workers AI",
       providerIndex: 4,
-      baseUrl: cloudflareModels[0].baseUrl,
-      headers: cloudflareModels[0].headers,
+      baseUrl: cloudflareModels[0]!.baseUrl,
+      headers: cloudflareModels[0]!.headers,
       models: cloudflareModels,
     });
   }

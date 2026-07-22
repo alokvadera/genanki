@@ -7,7 +7,6 @@ import {
   type AiModelCandidate,
   type ChatUsage,
 } from "./aiProviders";
-import { formatSeconds } from "../lib/generationTiming";
 import { GenError, isTimeoutError, isGenerationCanceledError } from "./errors";
 
 const FALLBACK_PENALTY_SECONDS = 12;
@@ -54,6 +53,8 @@ export type OrchestrationPatch = {
   canceledAt?: number;
   error?: string;
   fallbackTrail?: FallbackRecord[];
+  creatorIpHash?: string;
+  creatorDeviceIdHash?: string;
 };
 
 type FallbackRecord = {
@@ -148,6 +149,7 @@ export async function attemptWithProviderFallback<T>(
     assertWithinDeadline(deadlineAt);
 
     const candidate = attemptCandidates[attempt];
+    if (!candidate) continue;
     const attemptStartedAt = Date.now();
     let attemptErrorMsg = "";
 
@@ -209,10 +211,10 @@ export async function attemptWithProviderFallback<T>(
         provider: candidate.provider,
         model: candidate.modelId,
         status: 200,
-        remainingRequests: result.rateLimit?.remainingRequests,
-        remainingTokens: result.rateLimit?.remainingTokens,
-        resetSeconds: result.rateLimit?.resetSeconds,
-        projectedNeurons: capacity.allowed ? Math.ceil((systemPrompt.length + userContent.length) / 4) + maxTokens : undefined,
+        ...(result.rateLimit?.remainingRequests !== undefined && { remainingRequests: result.rateLimit.remainingRequests }),
+        ...(result.rateLimit?.remainingTokens !== undefined && { remainingTokens: result.rateLimit.remainingTokens }),
+        ...(result.rateLimit?.resetSeconds !== undefined && { resetSeconds: result.rateLimit.resetSeconds }),
+        ...(capacity.allowed && { projectedNeurons: Math.ceil((systemPrompt.length + userContent.length) / 4) + maxTokens }),
         actualNeurons: tokens,
       });
 
@@ -246,10 +248,11 @@ export async function attemptWithProviderFallback<T>(
           provider: candidate.provider,
           model: candidate.modelId,
           status: err.status,
-          remainingRequests: err.rateLimit?.remainingRequests,
-          remainingTokens: err.rateLimit?.remainingTokens,
-          resetSeconds: err.rateLimit?.resetSeconds,
-          cooldownSeconds: err.retryAfterSeconds ?? (err.status === 429 || err.status === 503 ? 15 : undefined),
+          ...(err.rateLimit?.remainingRequests !== undefined && { remainingRequests: err.rateLimit.remainingRequests }),
+          ...(err.rateLimit?.remainingTokens !== undefined && { remainingTokens: err.rateLimit.remainingTokens }),
+          ...(err.rateLimit?.resetSeconds !== undefined && { resetSeconds: err.rateLimit.resetSeconds }),
+          ...(err.retryAfterSeconds !== undefined && { cooldownSeconds: err.retryAfterSeconds }),
+          ...(err.retryAfterSeconds === undefined && (err.status === 429 || err.status === 503) && { cooldownSeconds: 15 }),
         });
       }
 

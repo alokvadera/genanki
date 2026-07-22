@@ -2,7 +2,6 @@ export type Candidate = {
   provider: string;
   modelId: string;
   providerLabel?: string;
-  [key: string]: any;
 };
 
 export type PerformanceRow = {
@@ -36,10 +35,6 @@ export function prioritizeCandidates<T extends Candidate>(
 
   // Use a default stable order for fallback providers
   const PROVIDER_ORDER = ["groq", "cerebras", "kilo", "openrouter", "cloudflare"];
-
-  for (const provider of PROVIDER_ORDER) {
-    grouped.set(provider, []);
-  }
 
   for (const candidate of candidates) {
     const list = grouped.get(candidate.provider) ?? [];
@@ -88,7 +83,6 @@ export function prioritizeCandidates<T extends Candidate>(
 }
 
 function scoreCandidate(row: PerformanceRow | undefined, candidate: Candidate): number {
-  const isPreferred = false; // Priority handled at grouping level
   const costPer1M = COST_TABLE[candidate.modelId] ?? DEFAULT_COST;
   const isFreeTier = costPer1M === 0;
 

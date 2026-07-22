@@ -30,7 +30,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--border-radius": "var(--radius)",
         } as React.CSSProperties
       }
-      {...props}
+      {...props as React.ComponentPropsWithoutRef<typeof Sonner>}
     />
   )
 }

@@ -2,8 +2,8 @@
 
 import { action, type ActionCtx } from "./_generated/server";
 import { v } from "convex/values";
-import type { Id } from "./_generated/dataModel";
-import { api, internal } from "./_generated/api";
+import type { Doc, Id } from "./_generated/dataModel";
+import { api } from "./_generated/api";
 import { buildModelCandidates } from "./aiProviders";
 import { parseAiDeckGeneration } from "../lib/deckGeneration";
 import {
@@ -14,8 +14,9 @@ import {
 } from "../lib/generationTiming";
 import { prioritizeCandidates } from "../lib/routing";
 import { buildDocumentSystemPrompt, buildSystemPrompt } from "./promptBuilder";
-import { attemptWithProviderFallback, assertWithinDeadline, type OrchestrationPatch } from "./providerOrchestrator";
+import { attemptWithProviderFallback, type OrchestrationPatch } from "./providerOrchestrator";
 import { GenError, isGenerationCanceledError } from "./errors";
+import type { AiModelCandidate } from "./aiProviders";
 import { encrypt, hashIp } from "./encryption";
 
 // (P5) Import and re-export for backward compatibility — primary definition moved to generationTiming.ts
@@ -66,7 +67,7 @@ export function chunkText(text: string, maxChunks = MAX_CHUNKS): string[] {
   const sampled: string[] = [];
   const step = (chunks.length - 1) / (maxChunks - 1);
   for (let i = 0; i < maxChunks; i++) {
-    sampled.push(chunks[Math.round(i * step)]);
+    sampled.push(chunks[Math.round(i * step)]!);
   }
   return sampled;
 }
@@ -92,44 +93,46 @@ async function getCandidateChain(
 async function updateJob(
   ctx: ActionCtx,
   jobId: Id<"generationJobs"> | undefined,
-  patch: any,
+  patch: OrchestrationPatch,
   keySeed?: string,
 ): Promise<void> {
   if (!jobId) return;
 
+  const mutationPatch: Partial<Doc<"generationJobs">> = { ...patch };
+
   if (keySeed) {
-    if (patch.resultDeckName !== undefined) {
-      patch.encDeckName = encrypt(patch.resultDeckName, keySeed);
-      patch.resultDeckName = undefined; // clear plaintext
+    if (mutationPatch.resultDeckName !== undefined) {
+      mutationPatch.encDeckName = encrypt(mutationPatch.resultDeckName, keySeed);
+      delete mutationPatch.resultDeckName; // clear plaintext
     }
-    if (patch.resultSummary !== undefined) {
-      patch.encSummary = encrypt(patch.resultSummary, keySeed);
-      patch.resultSummary = undefined; // clear plaintext
+    if (mutationPatch.resultSummary !== undefined) {
+      mutationPatch.encSummary = encrypt(mutationPatch.resultSummary, keySeed);
+      delete mutationPatch.resultSummary; // clear plaintext
     }
-    if (patch.resultCards !== undefined) {
-      patch.encCards = encrypt(JSON.stringify(patch.resultCards), keySeed);
-      patch.resultCards = undefined; // clear plaintext
+    if (mutationPatch.resultCards !== undefined) {
+      mutationPatch.encCards = encrypt(JSON.stringify(mutationPatch.resultCards), keySeed);
+      delete mutationPatch.resultCards; // clear plaintext
     }
-    if (patch.message !== undefined) {
-      patch.encMessage = encrypt(patch.message, keySeed);
+    if (mutationPatch.message !== undefined) {
+      mutationPatch.encMessage = encrypt(mutationPatch.message, keySeed);
       // Keep a generic non-sensitive status message for public reactivity
-      if (patch.message.includes("complete")) {
-        patch.message = "Section complete";
-      } else if (patch.message.includes("Preparing")) {
-        patch.message = "Preparing generation";
+      if (mutationPatch.message.includes("complete")) {
+        mutationPatch.message = "Section complete";
+      } else if (mutationPatch.message.includes("Preparing")) {
+        mutationPatch.message = "Preparing generation";
       } else {
-        patch.message = "Generating cards...";
+        mutationPatch.message = "Generating cards...";
       }
     }
-    if (patch.error !== undefined) {
-      patch.encError = encrypt(patch.error, keySeed);
-      patch.error = "Generation failed. Review details in your history.";
+    if (mutationPatch.error !== undefined) {
+      mutationPatch.encError = encrypt(mutationPatch.error, keySeed);
+      mutationPatch.error = "Generation failed. Review details in your history.";
     }
   }
 
   await ctx.runMutation(api.generationJobs.update, {
     jobId,
-    ...patch,
+    ...mutationPatch,
   });
 }
 
@@ -137,7 +140,7 @@ async function recordUsage(
   ctx: ActionCtx,
   jobId: Id<"generationJobs"> | undefined,
   kind: "prompt" | "document",
-  candidate: any,
+  candidate: AiModelCandidate,
   systemPrompt: string,
   userContent: string,
   content: string,
@@ -269,14 +272,13 @@ export const generateDeckFromDocument = action({
 
     await updateJob(ctx, args.jobId, {
       creatorIpHash,
-      creatorDeviceIdHash,
+      ...(creatorDeviceIdHash !== undefined && { creatorDeviceIdHash }),
       status: "running",
       progress: 0,
       etaSeconds: estimatedSeconds,
       timeoutSeconds,
       deadlineAt,
       message: `Preparing generation across ${providerCount} provider(s) and ${candidates.length} model(s) (${formatSeconds(estimatedSeconds)} est.)`,
-      provider: undefined,
       providerIndex: 0,
       totalProviders: providerCount,
       totalModels: candidates.length,
@@ -343,7 +345,7 @@ export const generateDeckFromDocument = action({
         },
         updateJob: (patch) => updateJob(ctx, args.jobId, patch, keySeed),
         assertJobActive: () => assertJobActive(ctx, args.jobId),
-        context: { ctx, jobId: args.jobId, deadlineAt, estimatedSeconds, sectionIndex: i, totalSections, kind: "document" }
+        context: { ctx, ...(args.jobId !== undefined && { jobId: args.jobId }), deadlineAt, estimatedSeconds, sectionIndex: i, totalSections, kind: "document" as const }
       });
 
       if (!res.success && res.lastErr) {
@@ -411,7 +413,7 @@ export const generateDeckFromDocument = action({
         },
         updateJob: (patch) => updateJob(ctx, args.jobId, patch, keySeed),
         assertJobActive: () => assertJobActive(ctx, args.jobId),
-        context: { ctx, jobId: args.jobId, deadlineAt, estimatedSeconds, sectionIndex: chunks.length, totalSections, kind: "document" }
+        context: { ctx, ...(args.jobId !== undefined && { jobId: args.jobId }), deadlineAt, estimatedSeconds, sectionIndex: chunks.length, totalSections, kind: "document" as const }
       });
 
       if (!res.success && res.lastErr) {
@@ -545,14 +547,13 @@ export const generateDeckFromPrompt = action({
 
     await updateJob(ctx, args.jobId, {
       creatorIpHash,
-      creatorDeviceIdHash,
+      ...(creatorDeviceIdHash !== undefined && { creatorDeviceIdHash }),
       status: "running",
       progress: 0,
       etaSeconds,
       timeoutSeconds,
       deadlineAt,
       message: `Preparing model chain across ${providerCount} provider(s) and ${candidates.length} model(s) (${formatSeconds(etaSeconds)} est.)`,
-      provider: undefined,
       providerIndex: 0,
       totalProviders: providerCount,
       totalModels: candidates.length,
@@ -570,7 +571,7 @@ export const generateDeckFromPrompt = action({
 
     const maxTokens = Math.min(4096, requestedCount * 90 + 300);
     
-    let resultCards: any[] = [];
+    let resultCards: Array<{ front: string; back: string }> = [];
     let resultDeckName = deckName;
     let resultSummary = "";
     let parsedCardCount = 0;
@@ -610,7 +611,7 @@ export const generateDeckFromPrompt = action({
       },
       updateJob: (patch) => updateJob(ctx, args.jobId, patch, keySeed),
       assertJobActive: () => assertJobActive(ctx, args.jobId),
-      context: { ctx, jobId: args.jobId, deadlineAt, estimatedSeconds: etaSeconds, kind: "prompt" }
+      context: { ctx, ...(args.jobId !== undefined && { jobId: args.jobId }), deadlineAt, estimatedSeconds: etaSeconds, kind: "prompt" as const }
     });
 
     if (res.fallbackTrail.length > 0) {

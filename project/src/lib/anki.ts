@@ -19,7 +19,7 @@ export { ANKI_SCHEMA_VERSION };
 export function generateGuid(): string {
   const buf = new Uint32Array(5);
   crypto.getRandomValues(buf);
-  return Array.from(buf, (n) => n.toString(36)).join("");
+  return Array.from(buf, (n: number) => n.toString(36)).join("");
 }
 
 /**
@@ -30,7 +30,7 @@ export function generateGuid(): string {
 export function randomAnkiId(): number {
   const buf = new Uint32Array(1);
   crypto.getRandomValues(buf);
-  return buf[0] % 0x7fffffff || 1;
+  return buf[0]! % 0x7fffffff || 1;
 }
 
 /**
@@ -54,7 +54,7 @@ export function crc32(text: string): number {
   let crc = 0xffffffff;
   for (let i = 0; i < text.length; i++) {
     const byte = text.charCodeAt(i) & 0xff;
-    crc = (crc >>> 8) ^ CRC32_TABLE[(crc ^ byte) & 0xff];
+    crc = (crc >>> 8) ^ (CRC32_TABLE[(crc ^ byte) & 0xff] ?? 0);
   }
   return (crc ^ 0xffffffff) >>> 0;
 }
@@ -167,10 +167,12 @@ async function createDB(): Promise<Database> {
   return db;
 }
 
-export function populateDb(db: Database, deckData: AnkiDeckData): number {
+export function populateDb(db: Database, deckData: AnkiDeckData): { deckId: number; cardsInserted: number } {
+  const now = Math.floor(Date.now() / 1000);
   const modelId = randomAnkiId();
   const deckId = randomAnkiId();
   const isCloze = deckData.cards.some((card) => /\{\{c\d+::/i.test(card.front));
+  let cardsInserted = 0;
 
   const model = isCloze
     ? {
@@ -288,7 +290,7 @@ export function populateDb(db: Database, deckData: AnkiDeckData): number {
       extendRev: 0,
       id: deckId,
       lrnToday: [0, 0],
-      mod: NOW,
+      mod: now,
       name: deckData.name,
       nameTooLong: false,
       repToday: [0, 0],
@@ -306,9 +308,9 @@ export function populateDb(db: Database, deckData: AnkiDeckData): number {
     `INSERT INTO col (id, crt, mod, scm, ver, dty, usn, ls, conf, models, decks, dconf, tags)
      VALUES (1, $1, $2, $3, $4, 0, -1, 0, $5, $6, $7, $8, '{}')`,
     [
-      NOW,
-      NOW,
-      NOW * 1000,
+      now,
+      now,
+      now * 1000,
       ANKI_SCHEMA_VERSION,
       JSON.stringify(conf),
       JSON.stringify(models),
@@ -328,34 +330,41 @@ export function populateDb(db: Database, deckData: AnkiDeckData): number {
     db.run(
       `INSERT INTO notes (id, guid, mid, mod, usn, tags, flds, sfld, csum, flags, data)
        VALUES ($1, $2, $3, $4, -1, '', $5, $6, $7, 0, '')`,
-      [nid, guid, modelId, NOW, flds, sfld, csum]
+      [nid, guid, modelId, now, flds, sfld, csum]
     );
 
     if (isCloze) {
       const matches = [...card.front.matchAll(/\{\{c(\d+)::/gi)];
-      const indices = Array.from(new Set(matches.map((m) => parseInt(m[1]))));
-      const activeIndices = indices.length > 0 ? indices : [1];
+      const indices = Array.from(new Set(matches.map((m) => parseInt(m[1]!)))).filter((n) => !isNaN(n));
 
-      activeIndices.forEach((clozeIdx) => {
+      // Skip cards without cloze syntax in a cloze-flagged deck —
+      // the deck-level isCloze check is inclusive, but individual
+      // cards may be Basic cards mixed in. Creating a spurious
+      // ord:0 entry would corrupt the Anki import.
+      if (indices.length === 0) return;
+
+      indices.forEach((clozeIdx) => {
         const cid = randomAnkiId();
         const ord = Math.max(0, clozeIdx - 1);
         db.run(
           `INSERT INTO cards (id, nid, did, ord, mod, usn, type, queue, due, ivl, factor, reps, lapses, left, odue, odid, flags, data)
            VALUES ($1, $2, $3, $4, $5, -1, 0, 0, $6, 0, 0, 0, 0, 0, 0, 0, 0, '')`,
-          [cid, nid, deckId, ord, NOW, i + 1]
+          [cid, nid, deckId, ord, now, i + 1]
         );
+        cardsInserted++;
       });
     } else {
       const cid = randomAnkiId();
       db.run(
         `INSERT INTO cards (id, nid, did, ord, mod, usn, type, queue, due, ivl, factor, reps, lapses, left, odue, odid, flags, data)
          VALUES ($1, $2, $3, 0, $4, -1, 0, 0, $5, 0, 0, 0, 0, 0, 0, 0, 0, '')`,
-        [cid, nid, deckId, NOW, i + 1]
+        [cid, nid, deckId, now, i + 1]
       );
+      cardsInserted++;
     }
   });
 
-  return deckId;
+  return { deckId, cardsInserted };
 }
 
 export async function generateAnkiPackage(deckData: AnkiDeckData): Promise<void> {
@@ -364,7 +373,15 @@ export async function generateAnkiPackage(deckData: AnkiDeckData): Promise<void>
   }
 
   const db = await createDB();
-  populateDb(db, deckData);
+  const { cardsInserted } = populateDb(db, deckData);
+
+  /* istanbul ignore next -- defense-in-depth: isCloze uses the same regex as per-card matchAll, so cardsInserted >= 1 whenever isCloze is true. Protects against future logic divergence. */
+  if (cardsInserted === 0) {
+    throw new Error(
+      "No cards were generated. If your deck uses cloze syntax ({{c1::...}}), " +
+      "ensure at least one card contains valid cloze markers.",
+    );
+  }
 
   const buf = new Uint8Array(db.export());
 

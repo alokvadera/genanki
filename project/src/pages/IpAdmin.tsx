@@ -1,15 +1,12 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import {
-  ShieldAlert,
   ArrowLeft,
   Search,
   Lock,
   Globe,
-  Ban,
   Settings,
   RefreshCw,
-  Edit2,
   FileText,
   Cpu,
   Layers,
@@ -20,16 +17,24 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
-import { Link, useNavigate } from "react-router";
+import { Link } from "react-router";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { formatDistanceToNow } from "date-fns";
 import { Toaster, toast } from "sonner";
-import { OptimusDashboard } from "@/components/OptimusDashboard";
 
 const DEFAULT_DAILY_LIMIT = 50000;
+
+function getInitialAuth(): { isAuthenticated: boolean; secretKey: string } {
+  const savedSecret = sessionStorage.getItem("admin_secret");
+  const envSecret = import.meta.env.VITE_ADMIN_SECRET || "";
+  if (savedSecret && savedSecret === envSecret) {
+    return { isAuthenticated: true, secretKey: savedSecret };
+  }
+  return { isAuthenticated: false, secretKey: "" };
+}
 
 function formatTokens(value: number): string {
   return new Intl.NumberFormat("en-US").format(Math.max(0, Math.round(value)));
@@ -40,10 +45,9 @@ function formatTime(value: number): string {
 }
 
 export default function IpAdmin() {
-  const navigate = useNavigate();
   const [passphrase, setPassphrase] = useState("");
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [secretKey, setSecretKey] = useState("");
+  const [isAuthenticated, setIsAuthenticated] = useState(() => getInitialAuth().isAuthenticated);
+  const [secretKey, setSecretKey] = useState(() => getInitialAuth().secretKey);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedIp, setExpandedIp] = useState<string | null>(null);
@@ -53,16 +57,6 @@ export default function IpAdmin() {
   const [customLimitVal, setCustomLimitVal] = useState("");
   const [editingNoteIp, setEditingNoteIp] = useState<string | null>(null);
   const [customNoteVal, setCustomNoteVal] = useState("");
-
-  // Load auth state from session storage on mount
-  useEffect(() => {
-    const savedSecret = sessionStorage.getItem("admin_secret");
-    const envSecret = import.meta.env.VITE_ADMIN_SECRET || "";
-    if (savedSecret && savedSecret === envSecret) {
-      setSecretKey(savedSecret);
-      setIsAuthenticated(true);
-    }
-  }, []);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,69 +81,69 @@ export default function IpAdmin() {
 
   const toggleBlock = async (ip: string, deviceIdHash: string | undefined, currentBlocked: boolean) => {
     try {
-      const state = ips?.find((x: any) => x.ip === ip || (deviceIdHash && x.deviceIdHash === deviceIdHash));
+      const state = ips?.find((x) => x.ip === ip || (deviceIdHash && x.deviceIdHash === deviceIdHash));
       await setRule({
         adminSecret: secretKey,
         ip,
-        deviceIdHash,
+        ...(deviceIdHash !== undefined && { deviceIdHash }),
         isBlocked: !currentBlocked,
-        customDailyLimit: state?.customDailyLimit,
-        note: state?.note,
+        ...(state?.customDailyLimit !== undefined && { customDailyLimit: state.customDailyLimit }),
+        ...(state?.note !== undefined && { note: state.note }),
       });
       toast.success(`${currentBlocked ? "Unblocked" : "Blocked"} visitor`);
-    } catch (e: any) {
-      toast.error(e.message || "Failed to update IP block rule");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to update IP block rule");
     }
   };
 
   const handleSaveLimit = async (ip: string, deviceIdHash: string | undefined) => {
     try {
       const limit = customLimitVal.trim() ? parseInt(customLimitVal, 10) : undefined;
-      const state = ips?.find((x: any) => x.ip === ip || (deviceIdHash && x.deviceIdHash === deviceIdHash));
+      const state = ips?.find((x) => x.ip === ip || (deviceIdHash && x.deviceIdHash === deviceIdHash));
       await setRule({
         adminSecret: secretKey,
         ip,
-        deviceIdHash,
+        ...(deviceIdHash !== undefined && { deviceIdHash }),
         isBlocked: state?.isBlocked ?? false,
-        customDailyLimit: limit,
-        note: state?.note,
+        ...(limit !== undefined && { customDailyLimit: limit }),
+        ...(state?.note !== undefined && { note: state.note }),
       });
       setEditingLimitIp(null);
       toast.success(`Custom limit updated`);
-    } catch (e: any) {
-      toast.error(e.message || "Failed to update custom limit");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to update custom limit");
     }
   };
 
   const handleSaveNote = async (ip: string, deviceIdHash: string | undefined) => {
     try {
-      const state = ips?.find((x: any) => x.ip === ip || (deviceIdHash && x.deviceIdHash === deviceIdHash));
+      const state = ips?.find((x) => x.ip === ip || (deviceIdHash && x.deviceIdHash === deviceIdHash));
       await setRule({
         adminSecret: secretKey,
         ip,
-        deviceIdHash,
+        ...(deviceIdHash !== undefined && { deviceIdHash }),
         isBlocked: state?.isBlocked ?? false,
-        customDailyLimit: state?.customDailyLimit,
-        note: customNoteVal.trim() || undefined,
+        ...(state?.customDailyLimit !== undefined && { customDailyLimit: state.customDailyLimit }),
+        ...(customNoteVal.trim() !== "" && { note: customNoteVal.trim() }),
       });
       setEditingNoteIp(null);
       toast.success(`Internal note updated`);
-    } catch (e: any) {
-      toast.error(e.message || "Failed to update note");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to update note");
     }
   };
 
   const handleResetTokens = async (ip: string, deviceIdHash: string | undefined) => {
     if (!window.confirm(`Are you sure you want to reset today's token usage for this visitor?`)) return;
     try {
-      await resetIpTokens({ adminSecret: secretKey, ip, deviceIdHash });
+      await resetIpTokens({ adminSecret: secretKey, ip, ...(deviceIdHash !== undefined && { deviceIdHash }) });
       toast.success(`Today's token usage reset to 0`);
-    } catch (e: any) {
-      toast.error(e.message || "Failed to reset tokens");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to reset tokens");
     }
   };
 
-  const filteredIps = (ips ?? []).filter((item: any) => {
+  const filteredIps = (ips ?? []).filter((item) => {
     const matchPrimary = item.ip.toLowerCase().includes(searchQuery.toLowerCase());
     const matchAssociated = item.associatedIps?.some((a: string) => 
       a.toLowerCase().includes(searchQuery.toLowerCase())
@@ -206,8 +200,8 @@ export default function IpAdmin() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b-[3px] border-black bg-white">
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="border-b-[3px] border-border bg-card text-card-foreground">
         <div className="w-full px-6 lg:px-10 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <Button asChild variant="outline" className="nb-border nb-shadow-sm nb-hover-shadow font-bold text-sm px-3 h-9">
@@ -226,7 +220,8 @@ export default function IpAdmin() {
             </div>
           </div>
           <div className="flex items-center gap-2 uppercase tracking-[0.1em] text-xs font-bold shrink-0">
-            <span className="nb-border bg-emerald-50 text-emerald-800 px-2.5 py-1 flex items-center gap-1.5">
+            <ThemeToggle />
+            <span className="nb-border bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 px-2.5 py-1 flex items-center gap-1.5">
               <CheckCircle2 className="w-3.5 h-3.5" /> IP limit active
             </span>
           </div>
@@ -315,7 +310,7 @@ export default function IpAdmin() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredIps.map((item: any) => {
+                    {filteredIps.map((item) => {
                       const limit = item.customDailyLimit ?? DEFAULT_DAILY_LIMIT;
                       const percent = Math.min(100, Math.max(0, (item.dayTokensUsed / limit) * 100));
                       const isExpanded = expandedIp === item.ip;
@@ -501,7 +496,7 @@ export default function IpAdmin() {
             </div>
 
             {(() => {
-              const item = ips?.find((x: any) => x.ip === expandedIp);
+              const item = ips?.find((x) => x.ip === expandedIp);
               if (!item) return <p className="text-sm font-medium">Record not loaded.</p>;
 
               return (
@@ -543,7 +538,7 @@ export default function IpAdmin() {
                       {item.providersUsed.length === 0 ? (
                         <p className="text-xs text-muted-foreground">No provider queries recorded.</p>
                       ) : (
-                        item.providersUsed.map((p: any) => (
+                        item.providersUsed.map((p) => (
                           <div key={p.label} className="nb-border-2 bg-muted/20 p-3 flex justify-between items-center">
                             <div>
                               <p className="text-xs font-bold">{p.label}</p>
@@ -569,7 +564,7 @@ export default function IpAdmin() {
                       {item.modelsUsed.length === 0 ? (
                         <p className="text-xs text-muted-foreground">No model queries recorded.</p>
                       ) : (
-                        item.modelsUsed.map((m: any) => (
+                        item.modelsUsed.map((m) => (
                           <div key={m.name} className="nb-border-2 bg-muted/20 p-3 flex justify-between items-center">
                             <div>
                               <p className="text-xs font-bold font-mono">{m.name}</p>

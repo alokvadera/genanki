@@ -4,6 +4,7 @@ import {
   estimateDocumentEtaSeconds,
   estimatePromptTimeoutSeconds,
   estimateDocumentTimeoutSeconds,
+  formatSeconds,
 } from "@/lib/generationTiming";
 
 describe("estimatePromptEtaSeconds", () => {
@@ -127,5 +128,42 @@ describe("estimateDocumentTimeoutSeconds", () => {
 
   it("returns integer values", () => {
     expect(Number.isInteger(estimateDocumentTimeoutSeconds(15, 3))).toBe(true);
+  });
+});
+
+describe("formatSeconds", () => {
+  it("returns '0s' for NaN (Number.isFinite true arm)", () => {
+    expect(formatSeconds(NaN)).toBe("0s");
+  });
+
+  it("returns '0s' for Infinity (Number.isFinite true arm)", () => {
+    expect(formatSeconds(Infinity)).toBe("0s");
+    expect(formatSeconds(-Infinity)).toBe("0s");
+  });
+
+  it("returns '0s' for zero and negative (rounded to 0)", () => {
+    expect(formatSeconds(0)).toBe("0s");
+    expect(formatSeconds(-5)).toBe("0s");
+  });
+
+  it("formats sub-minute values as '<N>s' (minutes <= 0 true arm)", () => {
+    expect(formatSeconds(1)).toBe("1s");
+    expect(formatSeconds(45)).toBe("45s");
+    expect(formatSeconds(59)).toBe("59s");
+  });
+
+  it("formats minute+ values as '<N>m <SS>s' (minutes > 0 default arm)", () => {
+    expect(formatSeconds(60)).toBe("1m 00s");
+    expect(formatSeconds(125)).toBe("2m 05s");
+    expect(formatSeconds(3661)).toBe("61m 01s");
+  });
+
+  it("rounds fractional seconds before formatting", () => {
+    expect(formatSeconds(59.5)).toBe("1m 00s");
+    expect(formatSeconds(125.4)).toBe("2m 05s");
+  });
+
+  it("pads single-digit seconds to 2-digit format", () => {
+    expect(formatSeconds(65)).toBe("1m 05s");
   });
 });

@@ -1,5 +1,6 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, type MutationCtx } from "./_generated/server";
+import type { Doc } from "./_generated/dataModel";
 
 const DEFAULT_DAILY_LIMIT = 50_000;
 
@@ -9,24 +10,24 @@ export function getDayWindowStart(now: number): number {
 }
 
 export async function checkAndLogIpHandler(
-  ctx: any,
+  ctx: MutationCtx,
   args: { ip: string; estimatedTokens: number; deviceIdHash?: string }
 ) {
   const now = Date.now();
   const dayWindowStart = getDayWindowStart(now);
 
   // 1. Check IP blocklist
-  let rule: any = null;
+  let rule: Doc<"ipRules"> | null = null;
   if (args.deviceIdHash) {
     rule = await ctx.db
       .query("ipRules")
-      .withIndex("by_deviceIdHash", (q: any) => q.eq("deviceIdHash", args.deviceIdHash))
+      .withIndex("by_deviceIdHash", (q) => q.eq("deviceIdHash", args.deviceIdHash))
       .unique();
   }
   if (!rule) {
     rule = await ctx.db
       .query("ipRules")
-      .withIndex("by_ip", (q: any) => q.eq("ip", args.ip))
+      .withIndex("by_ip", (q) => q.eq("ip", args.ip))
       .unique();
   }
 
@@ -41,22 +42,24 @@ export async function checkAndLogIpHandler(
   const dailyLimit = rule?.customDailyLimit ?? DEFAULT_DAILY_LIMIT;
 
   // 2. Check token budget state
-  let state: any = null;
+  let state: Doc<"ipRateState"> | null = null;
   if (args.deviceIdHash) {
     state = await ctx.db
       .query("ipRateState")
-      .withIndex("by_deviceIdHash", (q: any) => q.eq("deviceIdHash", args.deviceIdHash))
+      .withIndex("by_deviceIdHash", (q) => q.eq("deviceIdHash", args.deviceIdHash))
       .unique();
   }
   if (!state) {
     state = await ctx.db
       .query("ipRateState")
-      .withIndex("by_ip", (q: any) => q.eq("ip", args.ip))
+      .withIndex("by_ip", (q) => q.eq("ip", args.ip))
       .unique();
   }
 
-  const isNewDay = !state || dayWindowStart > state.dayWindowStart;
-  const dayTokensUsed = isNewDay ? 0 : state.dayTokensUsed;
+  const isNewDay = state === null || dayWindowStart > state.dayWindowStart;
+  // Invariant: isNewDay===false implies state!==null (see definition above), but
+  // TS can't narrow through a boolean variable. The ?? 0 is unreachable on this branch.
+  const dayTokensUsed = isNewDay ? 0 : (state?.dayTokensUsed ?? 0);
 
   if (dayTokensUsed + args.estimatedTokens > dailyLimit) {
     const secondsUntilMidnight = Math.max(
@@ -77,10 +80,11 @@ export async function checkAndLogIpHandler(
   }
 
   const nextState = {
-    deviceIdHash: args.deviceIdHash || state?.deviceIdHash,
+    ...(args.deviceIdHash !== undefined ? { deviceIdHash: args.deviceIdHash } : state?.deviceIdHash !== undefined && { deviceIdHash: state.deviceIdHash }),
     associatedIps: currentIps,
     ip: args.ip,
-    dayWindowStart: isNewDay ? dayWindowStart : state.dayWindowStart,
+    // Same invariant as above: state is guaranteed non-null when isNewDay is false.
+    dayWindowStart: isNewDay ? dayWindowStart : (state?.dayWindowStart ?? dayWindowStart),
     dayTokensUsed: dayTokensUsed,
     totalTokensAllTime: state?.totalTokensAllTime ?? 0,
     totalRequests: (state?.totalRequests ?? 0) + 1,
@@ -112,20 +116,20 @@ export const checkAndLogIp = mutation({
 });
 
 export async function deductIpTokensHandler(
-  ctx: any,
+  ctx: MutationCtx,
   args: { ip: string; tokens: number; deviceIdHash?: string }
 ) {
-  let state: any = null;
+  let state: Doc<"ipRateState"> | null = null;
   if (args.deviceIdHash) {
     state = await ctx.db
       .query("ipRateState")
-      .withIndex("by_deviceIdHash", (q: any) => q.eq("deviceIdHash", args.deviceIdHash))
+      .withIndex("by_deviceIdHash", (q) => q.eq("deviceIdHash", args.deviceIdHash))
       .unique();
   }
   if (!state) {
     state = await ctx.db
       .query("ipRateState")
-      .withIndex("by_ip", (q: any) => q.eq("ip", args.ip))
+      .withIndex("by_ip", (q) => q.eq("ip", args.ip))
       .unique();
   }
 
@@ -205,7 +209,7 @@ export const adminListIps = query({
 
         return {
           ip: state.ip,
-          deviceIdHash: state.deviceIdHash,
+          ...(state.deviceIdHash !== undefined && { deviceIdHash: state.deviceIdHash }),
           associatedIps: ipList,
           dayWindowStart: state.dayWindowStart,
           dayTokensUsed: state.dayTokensUsed,
@@ -320,7 +324,7 @@ export const listActiveJobsByHash = query({
       .order("desc")
       .take(100);
 
-    let deviceRows: any[] = [];
+    let deviceRows: Doc<"generationJobs">[] = [];
     if (args.creatorDeviceIdHash) {
       deviceRows = await ctx.db
         .query("generationJobs")
@@ -329,7 +333,7 @@ export const listActiveJobsByHash = query({
         .take(100);
     }
 
-    const mergedMap = new Map<string, any>();
+    const mergedMap = new Map<string, Doc<"generationJobs">>();
     for (const r of [...ipRows, ...deviceRows]) {
       mergedMap.set(r._id, r);
     }
@@ -354,7 +358,7 @@ export const listArchivedJobsByHash = query({
       .order("desc")
       .take(limit * 3);
 
-    let deviceRows: any[] = [];
+    let deviceRows: Doc<"generationJobs">[] = [];
     if (args.creatorDeviceIdHash) {
       deviceRows = await ctx.db
         .query("generationJobs")
@@ -363,7 +367,7 @@ export const listArchivedJobsByHash = query({
         .take(limit * 3);
     }
 
-    const mergedMap = new Map<string, any>();
+    const mergedMap = new Map<string, Doc<"generationJobs">>();
     for (const r of [...ipRows, ...deviceRows]) {
       mergedMap.set(r._id, r);
     }
