@@ -8,6 +8,8 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // SSR hydration guard — must set state in effect to avoid mismatch
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 

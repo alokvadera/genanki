@@ -687,7 +687,7 @@ describe("useDeckStore \u2014 cascade-free branch-closure batch (round 2)", () =
       { id: "good", name: "Good", cards: [{ front: "Q", back: "A" }] },
       { name: "Missing-Id", cards: [] },
     ]);
-    const { result, rerender } = renderHook(() => useDeckStore());
+    const { result: _result, rerender } = renderHook(() => useDeckStore());
     await act(async () => {
       await new Promise((r) => setTimeout(r, 5));
     });

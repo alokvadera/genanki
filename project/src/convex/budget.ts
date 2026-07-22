@@ -53,3 +53,14 @@ export function getWaitSecondsUntilUtcMidnight(timestampMs: number): number {
   );
   return Math.max(0, Math.ceil((nextMidnight.getTime() - timestampMs) / 1000));
 }
+
+/** Human-readable time-until-midnight string (e.g. "3h 42m", "15m", "<1m"). */
+export function formatTimeUntilMidnight(timestampMs: number): string {
+  const seconds = getWaitSecondsUntilUtcMidnight(timestampMs);
+  if (seconds <= 0) return "now";
+  if (seconds < 60) return "<1m";
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  if (hours > 0) return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+  return `${minutes}m`;
+}

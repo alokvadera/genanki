@@ -1,5 +1,7 @@
 "use node";
 
+import { GenError } from "./errors";
+
 const REQUEST_TIMEOUT_MS = 15_000;
 const CHAT_TIMEOUT_MS = 60_000;
 const OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models";
@@ -634,7 +636,10 @@ export async function callChatCompletion({
   const data = JSON.parse(bodyText) as ChatCompletionResponse;
   const content = data.choices?.[0]?.message?.content?.trim();
   if (!content) {
-    throw new Error(`${candidate.providerLabel} returned an empty response`);
+    throw new GenError("empty_output", `${candidate.providerLabel} returned an empty response`, {
+      provider: candidate.provider,
+      model: candidate.modelId,
+    });
   }
 
   return {

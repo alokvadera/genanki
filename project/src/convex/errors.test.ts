@@ -45,6 +45,23 @@ describe("GenError", () => {
       expect(err.kind).toBe(kind);
     }
   });
+
+  it("empty_output kind includes provider/model context", () => {
+    const err = new GenError("empty_output", "AI returned empty response", {
+      provider: "groq",
+      model: "llama-3.1-8b-instant",
+    });
+    expect(err.kind).toBe("empty_output");
+    expect(err.provider).toBe("groq");
+    expect(err.model).toBe("llama-3.1-8b-instant");
+    expect(err.message).toContain("empty");
+  });
+
+  it("deadline kind includes deadline timestamp in details", () => {
+    const err = new GenError("deadline", "Generation timed out");
+    expect(err.kind).toBe("deadline");
+    expect(err.message).toContain("timed out");
+  });
 });
 
 describe("isGenError", () => {

@@ -1,5 +1,14 @@
 import { describe, it, expect } from "vitest";
-import { assertWithinDeadline, getAttemptTimeoutMs, computeAttemptCandidates, MAX_ATTEMPTS } from "./providerOrchestrator";
+import {
+  assertWithinDeadline,
+  getAttemptTimeoutMs,
+  computeAttemptCandidates,
+  computeBackoffCooldown,
+  BACKOFF_BASE_SECONDS,
+  BACKOFF_MAX_SECONDS,
+  BACKOFF_JITTER_FRACTION,
+  MAX_ATTEMPTS,
+} from "./providerOrchestrator";
 import { GenError } from "./errors";
 import type { ProviderName } from "./aiProviders";
 
@@ -205,5 +214,74 @@ describe("optimus map-lookup", () => {
     const perfByKey = new Map(samplePerfRecords.map(p => [keyFor(p.provider, p.model), p]));
     expect(stateByKey.get("unknown:model")).toBeUndefined();
     expect(perfByKey.get("unknown:model")).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// computeBackoffCooldown — exponential backoff with jitter
+// ---------------------------------------------------------------------------
+describe("computeBackoffCooldown", () => {
+  const distantDeadline = Date.now() + 3600_000; // 1 hour away
+
+  it("returns BACKOFF_BASE_SECONDS (3s) + jitter for attempt 0", () => {
+    // With random=0 (no jitter), cooldown = 3s
+    const result = computeBackoffCooldown(0, distantDeadline, () => 0);
+    expect(result).toBe(BACKOFF_BASE_SECONDS);
+  });
+
+  it("returns 6s + jitter for attempt 1 (3 * 2^1 = 6)", () => {
+    const result = computeBackoffCooldown(1, distantDeadline, () => 0);
+    expect(result).toBe(6);
+  });
+
+  it("returns 12s + jitter for attempt 2 (3 * 2^2 = 12)", () => {
+    const result = computeBackoffCooldown(2, distantDeadline, () => 0);
+    expect(result).toBe(12);
+  });
+
+  it("returns 24s + jitter for attempt 3 (3 * 2^3 = 24)", () => {
+    const result = computeBackoffCooldown(3, distantDeadline, () => 0);
+    expect(result).toBe(24);
+  });
+
+  it("caps at BACKOFF_MAX_SECONDS (60) for high attempt counts", () => {
+    const result = computeBackoffCooldown(10, distantDeadline, () => 0);
+    expect(result).toBeLessThanOrEqual(BACKOFF_MAX_SECONDS);
+    // 3 * 2^10 = 3072, clamped to 60
+    expect(result).toBe(BACKOFF_MAX_SECONDS);
+  });
+
+  it("adds jitter up to 50% of base delay with random=1", () => {
+    const result = computeBackoffCooldown(0, distantDeadline, () => 1);
+    // base=3, jitter=3*0.5*1=1.5, total=4.5
+    expect(result).toBe(3 + 3 * BACKOFF_JITTER_FRACTION);
+  });
+
+  it("caps cooldown by remaining deadline when deadline is imminent", () => {
+    const imminentDeadline = Date.now() + 5_000; // 5 seconds away
+    const result = computeBackoffCooldown(3, imminentDeadline, () => 0);
+    // baseDelay = 24, remainingSeconds ≈ 5, should use remaining ≈ 5
+    expect(result).toBeLessThanOrEqual(6);
+    expect(result).toBeGreaterThanOrEqual(1);
+  });
+
+  it("always returns at least 1 second", () => {
+    const pastDeadline = Date.now() - 1; // Already past
+    const result = computeBackoffCooldown(0, pastDeadline, () => 0);
+    expect(result).toBeGreaterThanOrEqual(1);
+  });
+
+  it("jitter always stays within [0, 50%] of base delay", () => {
+    // Test with deterministic random values at the extremes
+    const resultZero = computeBackoffCooldown(1, distantDeadline, () => 0);
+    const resultMax = computeBackoffCooldown(1, distantDeadline, () => 1);
+    expect(resultZero).toBe(6); // no jitter
+    expect(resultMax).toBe(6 + 6 * BACKOFF_JITTER_FRACTION); // max jitter = 9
+  });
+
+  it("BACKOFF constants are correctly defined", () => {
+    expect(BACKOFF_BASE_SECONDS).toBe(3);
+    expect(BACKOFF_MAX_SECONDS).toBe(60);
+    expect(BACKOFF_JITTER_FRACTION).toBe(0.5);
   });
 });

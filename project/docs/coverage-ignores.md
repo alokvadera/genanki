@@ -6,12 +6,12 @@ As of **2026-07-22**, the project has achieved **100% coverage** across all metr
 
 | Metric | Actual | Threshold | Headroom |
 |--------|--------|-----------|----------|
-| Statements | 530/530 (100%) | 99% | +1.00pp |
-| Branches | 281/281 (100%) | 97% | +3.00pp |
+| Statements | 537/537 (100%) | 99% | +1.00pp |
+| Branches | 285/285 (100%) | 99% | +1.00pp |
 | Functions | 96/96 (100%) | 99% | +1.00pp |
-| Lines | 484/484 (100%) | 99% | +1.00pp |
+| Lines | 491/491 (100%) | 99% | +1.00pp |
 
-870 tests across 32 test files pass cleanly. See `npm run coverage:report` for the latest live snapshot.
+916 tests across 33 test files pass cleanly. See `npm run coverage:report` for the latest live snapshot.
 
 ## Key architectural change: `istanbul ignore next` → `istanbul ignore start/end`
 
@@ -271,9 +271,10 @@ Run `npm run coverage:report` for the latest formatted output.
 ### Latest measurement (2026-07-22)
 
 - **All 15 source files**: 100% statements / 100% branches / 100% functions / 100% lines
-- **Thresholds** (vitest.config.ts): `99/97/99/99` (lines/branches/functions/statements)
-- **Headroom**: lines=+1.00pp, branches=+3.00pp, functions=+1.00pp, statements=+1.00pp
+- **Thresholds** (vitest.config.ts): `99/99/99/99` (lines/branches/functions/statements)
+- **Headroom**: lines=+1.00pp, branches=+1.00pp, functions=+1.00pp, statements=+1.00pp
 - **All thresholds pass** with positive headroom on every metric.
+- **916 tests** across 33 test files.
 
 The "honest ceiling" discussion from prior versions is retired. Full 100%
 coverage was achieved through a combination of:
@@ -284,7 +285,7 @@ coverage was achieved through a combination of:
 
 ### Future threshold raises
 
-With 100% actual on all metrics and thresholds at 99/97/99/99, raising any
-threshold above current values is not mathematically feasible — the ceiling
-is already at 100% on all metrics, and `100 + N` would require `> 100%`
-aggregate coverage. The current thresholds represent the effective ceiling.
+All metrics are already at 100% actual with thresholds at the 99% ceiling.
+Raising any threshold to 100% would require >100% aggregate coverage, which
+is mathematically impossible. The `99/99/99/99` threshold is the highest
+satisfiable floor given the 0—100% bounded metric domain.

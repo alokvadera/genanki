@@ -8,12 +8,38 @@ import {
   type ChatUsage,
 } from "./aiProviders";
 import { GenError, isTimeoutError, isGenerationCanceledError } from "./errors";
+import { logger } from "./logger";
 
 const FALLBACK_PENALTY_SECONDS = 12;
 const TIMEOUT_BUFFER_MS = 2500;
+const CANCELLATION_CHECK_TTL_MS = 1500;
 
 /** Maximum fallback attempts per section to bound cost. */
 export const MAX_ATTEMPTS = 2;
+
+/** Backoff constants (exported for testing). */
+export const BACKOFF_BASE_SECONDS = 3;
+export const BACKOFF_MAX_SECONDS = 60;
+export const BACKOFF_JITTER_FRACTION = 0.5;
+
+/**
+ * Compute exponential backoff cooldown with jitter, clamped by remaining deadline.
+ * Exported as a pure function for testability.
+ *
+ * @param attempt — zero-based attempt index
+ * @param deadlineAt — absolute deadline timestamp (ms)
+ * @param randomFn — injectable random source (defaults to Math.random)
+ */
+export function computeBackoffCooldown(
+  attempt: number,
+  deadlineAt: number,
+  randomFn: () => number = Math.random,
+): number {
+  const baseDelay = Math.min(BACKOFF_MAX_SECONDS, BACKOFF_BASE_SECONDS * Math.pow(2, attempt));
+  const jitter = randomFn() * baseDelay * BACKOFF_JITTER_FRACTION;
+  const remainingSeconds = Math.max(1, (deadlineAt - Date.now()) / 1000);
+  return Math.min(baseDelay + jitter, remainingSeconds);
+}
 
 /**
  * Compute the candidates to attempt, capping to MAX_ATTEMPTS.
@@ -144,9 +170,33 @@ export async function attemptWithProviderFallback<T>(
   let lastErr: unknown = null;
   let success = false;
 
+  logger.info("Starting provider attempt sequence", {
+    jobId: context.jobId,
+    kind: context.kind,
+    candidates: attemptCandidates.length,
+    providers: providerCount,
+    sectionIndex: context.sectionIndex,
+    totalSections: context.totalSections,
+  });
+
+  // Cached cancellation check to avoid N+1 DB reads (150+ per run)
+  let lastCancelCheck = 0;
+
   for (let attempt = 0; attempt < attemptCandidates.length && !success; attempt++) {
-    await assertJobActive();
-    assertWithinDeadline(deadlineAt);
+    // Cached cancellation: only re-query if TTL has elapsed
+    const now = Date.now();
+    if (now - lastCancelCheck >= CANCELLATION_CHECK_TTL_MS) {
+      await assertJobActive();
+      lastCancelCheck = now;
+    }
+
+    // Deadline check — non-fatal: returns partial cards rather than crashing
+    if (Date.now() > deadlineAt) {
+      lastErr = new GenError("deadline", "Generation timed out before completion");
+      fallbackTrail.push({ provider: "system", model: "system", outcome: "skipped", reason: "Deadline exceeded, returning partial results" });
+      logger.warn("Deadline exceeded", { jobId: context.jobId, deadlineAt, sectionIndex: context.sectionIndex });
+      break;
+    }
 
     const candidate = attemptCandidates[attempt];
     if (!candidate) continue;
@@ -164,6 +214,7 @@ export async function attemptWithProviderFallback<T>(
         lastErr = new GenError("rate_limited", `${candidate.providerLabel} budget cooling down for ${capacity.waitSeconds}s`);
         attemptErrorMsg = `Rate limited (${capacity.waitSeconds}s)`;
         fallbackTrail.push({ provider: candidate.providerLabel, model: candidate.modelName, outcome: "skipped", reason: attemptErrorMsg });
+        logger.warn("Provider rate-limited", { jobId: context.jobId, provider: candidate.provider, model: candidate.modelId, waitSeconds: capacity.waitSeconds });
         await updateJob({
           provider: candidate.providerLabel,
           providerIndex: candidate.providerIndex,
@@ -224,6 +275,30 @@ export async function attemptWithProviderFallback<T>(
       await onSuccess(parsed, candidate, result.content, result.usage);
 
       fallbackTrail.push({ provider: candidate.providerLabel, model: candidate.modelName, outcome: "success", reason: "Succeeded" });
+
+      logger.info("Provider attempt succeeded", {
+        jobId: context.jobId,
+        provider: candidate.provider,
+        model: candidate.modelId,
+        latencyMs,
+        tokens,
+      });
+
+      // Record per-attempt telemetry
+      if (context.jobId) {
+        await ctx.runMutation(api.generationTelemetry.record, {
+          event: "attempt",
+          jobId: context.jobId,
+          kind: context.kind,
+          durationMs: latencyMs,
+          tokensUsed: tokens,
+          provider: candidate.providerLabel,
+          model: candidate.modelName,
+          outcome: "success",
+          metric: 1,
+        }).catch((e) => logger.error("Telemetry record failed", { provider: candidate.provider, model: candidate.modelId, error: String(e) }));
+      }
+
       success = true;
 
     } catch (err) {
@@ -233,6 +308,29 @@ export async function attemptWithProviderFallback<T>(
       lastErr = err;
       attemptErrorMsg = err instanceof Error ? err.message : String(err);
       fallbackTrail.push({ provider: candidate.providerLabel, model: candidate.modelName, outcome: "failed", reason: attemptErrorMsg });
+
+      logger.warn("Provider attempt failed", {
+        jobId: context.jobId,
+        provider: candidate.provider,
+        model: candidate.modelId,
+        error: attemptErrorMsg,
+        latencyMs: Date.now() - attemptStartedAt,
+      });
+
+      // Record per-attempt telemetry
+      if (context.jobId) {
+        await ctx.runMutation(api.generationTelemetry.record, {
+          event: "attempt",
+          jobId: context.jobId,
+          kind: context.kind,
+          durationMs: Date.now() - attemptStartedAt,
+          tokensUsed: 0,
+          provider: candidate.providerLabel,
+          model: candidate.modelName,
+          outcome: "failed",
+          metric: 0,
+        }).catch((e) => logger.error("Telemetry record failed", { provider: candidate.provider, model: candidate.modelId, error: String(e) }));
+      }
 
       await ctx.runMutation(api.rateLimits.recordPerformance, {
         provider: candidate.provider,
@@ -244,16 +342,23 @@ export async function attemptWithProviderFallback<T>(
       });
 
       if (err instanceof ProviderRequestError) {
-        await ctx.runMutation(api.rateLimits.reportProviderResult, {
+        const retryAfter = err.retryAfterSeconds;
+        const mutationArgs: Record<string, unknown> = {
           provider: candidate.provider,
           model: candidate.modelId,
           status: err.status,
           ...(err.rateLimit?.remainingRequests !== undefined && { remainingRequests: err.rateLimit.remainingRequests }),
           ...(err.rateLimit?.remainingTokens !== undefined && { remainingTokens: err.rateLimit.remainingTokens }),
           ...(err.rateLimit?.resetSeconds !== undefined && { resetSeconds: err.rateLimit.resetSeconds }),
-          ...(err.retryAfterSeconds !== undefined && { cooldownSeconds: err.retryAfterSeconds }),
-          ...(err.retryAfterSeconds === undefined && (err.status === 429 || err.status === 503) && { cooldownSeconds: 15 }),
-        });
+        };
+
+        if (retryAfter !== undefined && retryAfter > 0) {
+          mutationArgs.cooldownSeconds = retryAfter;
+        } else if (err.status === 429 || err.status === 503) {
+          mutationArgs.cooldownSeconds = computeBackoffCooldown(attempt, deadlineAt);
+        }
+
+        await ctx.runMutation(api.rateLimits.reportProviderResult, mutationArgs as unknown as Parameters<typeof api.rateLimits.reportProviderResult>[0]);
       }
 
       if (isTimeoutError(err)) {
@@ -276,6 +381,13 @@ export async function attemptWithProviderFallback<T>(
       });
     }
   }
+
+  logger.info("Provider attempt sequence complete", {
+    jobId: context.jobId,
+    success,
+    falls: fallbackTrail.length,
+    trail: fallbackTrail.map((f) => `${f.provider}/${f.model}:${f.outcome}`),
+  });
 
   return { success, lastErr, fallbackTrail };
 }

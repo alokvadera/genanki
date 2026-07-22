@@ -54,7 +54,7 @@ export default function DeckSidebar({
               className={`nb-border-2 p-2.5 cursor-pointer transition-all nb-hover-shadow group ${
                 activeDeckId === deck.id
                   ? "bg-secondary font-bold nb-shadow-sm"
-                  : "bg-white hover:bg-muted"
+                  : "bg-card dark:bg-card hover:bg-muted"
               }`}
             >
               {editingDeckName === deck.id ? (

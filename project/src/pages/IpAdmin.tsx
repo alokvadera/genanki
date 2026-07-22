@@ -299,7 +299,7 @@ export default function IpAdmin() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="border-b-2 border-black bg-muted/20 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    <tr className="border-b-2 border-border bg-muted/20 text-xs font-bold uppercase tracking-wider text-muted-foreground">
                       <th className="p-4">IP Address</th>
                       <th className="p-4">Status</th>
                       <th className="p-4">Today's tokens</th>
