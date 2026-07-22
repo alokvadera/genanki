@@ -38,11 +38,11 @@ export default function DeckDetailModal({
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
-            className="nb-border nb-shadow-lg bg-white max-w-3xl w-full max-h-[90vh] flex flex-col"
+            className="nb-border nb-shadow-lg bg-card max-w-3xl w-full max-h-[90vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="p-5 border-b-[3px] border-black flex items-center justify-between shrink-0">
+            <div className="p-5 border-b-[3px] border-border flex items-center justify-between shrink-0">
               <div>
                 <h2 className="text-lg font-bold flex items-center gap-2">
                   <BookOpen className="w-5 h-5" />
@@ -99,7 +99,7 @@ export default function DeckDetailModal({
             </div>
 
             {/* Footer */}
-            <div className="p-4 border-t-[3px] border-black shrink-0 bg-muted/30">
+            <div className="p-4 border-t-[3px] border-border shrink-0 bg-muted/30">
               <div className="flex items-center justify-between">
                 <p className="text-xs text-muted-foreground font-medium">
                   Click any card to preview · Use pencil to edit · Use trash to delete

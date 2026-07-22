@@ -19,7 +19,7 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
         className={`nb-border nb-shadow-sm h-9 w-9 p-0 bg-card ${className}`}
         aria-label="Toggle theme"
       >
-        <Sun className="w-4 h-4 text-amber-500" />
+        <div className="w-4 h-4" />
       </Button>
     );
   }

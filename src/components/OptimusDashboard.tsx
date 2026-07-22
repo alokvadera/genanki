@@ -13,7 +13,7 @@ export function OptimusDashboard() {
 
   if (healthData === undefined) {
     return (
-      <div className="nb-border bg-white nb-shadow-sm p-3 animate-pulse">
+      <div className="nb-border bg-card nb-shadow-sm p-3 animate-pulse">
         <div className="flex items-center gap-2 text-muted-foreground font-bold text-sm">
           <BrainCircuit className="h-4 w-4" />
           <span>Optimus Loading...</span>

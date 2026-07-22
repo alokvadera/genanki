@@ -90,9 +90,9 @@ describe("PreviewModal", () => {
     expect(frontBox).toBeInTheDocument();
   });
 
-  it("renders back card in a white background box", () => {
+  it("renders back card in a card background box", () => {
     render(<PreviewModal {...defaultProps} previewCard={mockCard} />);
-    const backBox = screen.getByText("The process by which plants convert light into energy").closest("[class*='bg-white']");
+    const backBox = screen.getByText("The process by which plants convert light into energy").closest("[class*='bg-card']");
     expect(backBox).toBeInTheDocument();
   });
 });

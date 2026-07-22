@@ -27,7 +27,7 @@ export default function BulkImportPanel({
           exit={{ opacity: 0, height: 0 }}
           className="overflow-hidden mb-6"
         >
-          <div className="nb-border bg-white nb-shadow-rose p-5">
+          <div className="nb-border bg-card nb-shadow-rose p-5">
             <h2 className="font-bold text-xs uppercase tracking-[0.2em] mb-3 flex items-center gap-2 text-rose-600 dark:text-rose-400">
               <Sparkles className="w-4 h-4" />
               BULK IMPORT

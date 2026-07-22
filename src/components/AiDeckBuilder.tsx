@@ -255,7 +255,7 @@ export default function AiDeckBuilder({
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden mb-6"
           >
-            <div className="nb-border bg-white nb-shadow-sm p-5">
+            <div className="nb-border bg-card nb-shadow-sm p-5">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h2 className="font-bold text-sm flex items-center gap-2">

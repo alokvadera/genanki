@@ -18,8 +18,9 @@ export function showRecoveryToast(
       const fn = level === "warning" ? toast.warning : toast.info;
       fn(message, { duration: level === "warning" ? 8000 : 4000 });
     })
-    /* istanbul ignore next -- defensive no-op when dynamic sonner import fails (e.g. sonner package removed) */
+    /* istanbul ignore start -- defensive no-op when dynamic sonner import fails (e.g. sonner package removed) */
     .catch(() => { /* sonner not available */ });
+    /* istanbul ignore end */
 }
 
 /**

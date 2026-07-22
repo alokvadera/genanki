@@ -124,32 +124,32 @@ export default function History() {
       </header>
 
       <main className="w-full px-6 lg:px-10 py-6">
-        <section className="nb-border-2 bg-black text-white nb-shadow-amber p-4 sm:p-5 mb-6">
+        <section className="nb-border-2 bg-foreground text-background nb-shadow-amber p-4 sm:p-5 mb-6 dark:bg-card dark:text-foreground">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3">
-              <div className="border-2 border-white bg-primary p-2">
+              <div className="border-2 border-border bg-primary p-2">
                 <Activity className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/60">Run control center</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Run control center</p>
                 <h2 className="text-lg font-bold tracking-tight mt-1">
                   {activeJobs.length > 0
                     ? `${activeJobs.length} run${activeJobs.length !== 1 ? "s" : ""} in progress`
                     : "No runs in progress"}
                 </h2>
-                <p className="text-xs text-white/70 font-medium mt-1">
+                <p className="text-xs text-muted-foreground font-medium mt-1">
                   This page updates live while providers, models, and document sections change.
                 </p>
               </div>
             </div>
-            <Link to="/app" className="nb-border bg-white text-black px-3 py-2 text-xs font-bold nb-hover-shadow">
+            <Link to="/app" className="nb-border bg-secondary text-secondary-foreground px-3 py-2 text-xs font-bold nb-hover-shadow">
               Start another run
             </Link>
           </div>
         </section>
 
         {activeJobs.length > 0 && (
-          <section className="nb-border bg-white nb-shadow-rose p-4 sm:p-5 mb-6">
+          <section className="nb-border bg-card nb-shadow-rose p-4 sm:p-5 mb-6">
             <div className="flex items-end justify-between gap-3 mb-4">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary mb-1">Live now</p>
@@ -167,7 +167,7 @@ export default function History() {
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2 mb-2">
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 bg-blue-100 text-blue-800">
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300">
                             <Activity className="w-3 h-3" /> {statusLabel}
                           </span>
                           <span className="text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 bg-white nb-border">
@@ -203,7 +203,7 @@ export default function History() {
                       </div>
                     </div>
                     <div className="mt-4 flex items-center gap-3">
-                      <div className="h-2 flex-1 bg-white overflow-hidden nb-border-2">
+                      <div className="h-2 flex-1 bg-card overflow-hidden nb-border-2">
                         <motion.div
                           className="h-full bg-primary"
                           initial={false}
@@ -213,7 +213,7 @@ export default function History() {
                       <button
                         type="button"
                         onClick={() => cancelGenerationJob({ jobId: job._id })}
-                        className="inline-flex items-center gap-1 nb-border bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700 nb-hover-shadow"
+                        className="inline-flex items-center gap-1 nb-border bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700 nb-hover-shadow dark:bg-red-950/30 dark:text-red-300"
                       >
                         <X className="w-3.5 h-3.5" /> Cancel
                       </button>
@@ -243,7 +243,7 @@ export default function History() {
           </section>
         )}
 
-        <div className="nb-border bg-white nb-shadow-teal p-4 sm:p-5 mb-6">
+        <div className="nb-border bg-card nb-shadow-teal p-4 sm:p-5 mb-6">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-1">
@@ -260,7 +260,7 @@ export default function History() {
         </div>
 
         <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-          <aside className="nb-border bg-white nb-shadow-indigo p-4">
+          <aside className="nb-border bg-card nb-shadow-indigo p-4">
             <div className="flex items-center justify-between gap-3 mb-4">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
@@ -280,11 +280,10 @@ export default function History() {
                  jobs.map((job, index) => {
                   const isSelected = selectedJob?._id === job._id;
                   const tone =
-                    job.status === "succeeded"
-                      ? "bg-emerald-100 text-emerald-800"
+                    job.status === "succeeded"                        ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300"
                       : job.status === "failed"
-                        ? "bg-red-100 text-red-800"
-                        : "bg-slate-100 text-slate-800";
+                        ? "bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-300"
+                        : "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300";
                   const runLabel = `${job.status} ${job.kind} run${
                     job.resultDeckName ? `: ${job.resultDeckName}` : ""
                   }${job.resultCards?.length ? `, ${job.resultCards.length} cards` : ""}`;
@@ -361,30 +360,30 @@ export default function History() {
                       Run details
                     </p>
                     <div className="mt-3 grid gap-3 grid-cols-2 sm:grid-cols-5">
-                      <div className="nb-border bg-white p-3">
+                      <div className="nb-border bg-card p-3">
                         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Status</p>
                         <p className="text-sm font-bold tracking-tight mt-1">{selectedJob.status}</p>
                       </div>
-                      <div className="nb-border bg-white p-3">
+                      <div className="nb-border bg-card p-3">
                         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Progress</p>
                         <p className="text-sm font-bold tracking-tight mt-1">
                           {selectedJob.status === "succeeded" ? "100%" : `${Math.round((selectedJob.progress ?? 0) * 100)}%`}
                         </p>
                       </div>
-                      <div className="nb-border bg-white p-3">
+                      <div className="nb-border bg-card p-3">
                         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">ETA</p>
                         <p className="text-sm font-bold tracking-tight mt-1">
                           {selectedJob.status === "succeeded" ? "0s" : formatDuration(selectedJob.etaSeconds ?? 0)}
                         </p>
                       </div>
-                      <div className="nb-border bg-white p-3">
+                      <div className="nb-border bg-card p-3">
                         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Budget</p>
                         <p className="text-sm font-bold tracking-tight mt-1">
                           {formatTokens(selectedJob.timeoutSeconds)}
                           <span className="ml-1 text-xs font-medium text-muted-foreground">seconds</span>
                         </p>
                       </div>
-                      <div className="nb-border bg-white p-3">
+                      <div className="nb-border bg-card p-3">
                         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Archived</p>
                         <p className="text-sm font-bold tracking-tight mt-1">{formatTime(selectedJob.updatedAt)}</p>
                       </div>
@@ -393,7 +392,7 @@ export default function History() {
                 }
               />
             ) : (
-              <div className="nb-border bg-white nb-shadow-indigo p-6">
+              <div className="nb-border bg-card nb-shadow-indigo p-6">
                 <p className="text-sm font-bold">No archived run selected</p>
                 <p className="mt-2 text-sm text-muted-foreground font-medium">
                   Finish a generation first, then come back here to inspect the archived run.

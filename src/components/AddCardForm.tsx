@@ -75,7 +75,7 @@ export default function AddCardForm({
           <Upload className="w-4 h-4" />
           Bulk Import
         </Button>
-        <label className="nb-border nb-shadow-sm nb-hover-shadow bg-white px-4 h-9 inline-flex items-center gap-2 text-sm font-bold cursor-pointer hover:bg-muted transition-colors">
+        <label className="nb-border nb-shadow-sm nb-hover-shadow bg-card px-4 h-9 inline-flex items-center gap-2 text-sm font-bold cursor-pointer hover:bg-muted transition-colors">
           <FileText className="w-4 h-4" />
           CSV File
           <input

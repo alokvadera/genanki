@@ -24,35 +24,35 @@ const features = [
     icon: <HelpCircle className="w-6 h-6" />,
     title: "Cloze Deletion Support",
     desc: "Generate fill-in-the-blank style cards automatically. Perfect for memorizing terms, phrases, and key definitions.",
-    color: "bg-[#ffe066]",
+    color: "bg-secondary",
     shadow: "nb-shadow-indigo",
   },
   {
     icon: <Calculator className="w-6 h-6" />,
     title: "LaTeX & Rich Markdown",
     desc: "Format math equations ($x$) and code snippets beautifully. Auto-escapes HTML for native compatibility in Anki.",
-    color: "bg-[#4ecdc4]",
+    color: "bg-teal-400/30 dark:bg-teal-800/40",
     shadow: "nb-shadow-teal",
   },
   {
     icon: <Camera className="w-6 h-6" />,
     title: "Client-Side OCR Engine",
     desc: "Extract text from scanned PDFs directly in your browser using local Tesseract.js. Your documents never leave your device.",
-    color: "bg-accent",
+    color: "bg-accent dark:text-accent-foreground",
     shadow: "nb-shadow-rose",
   },
   {
     icon: <Files className="w-6 h-6" />,
     title: "Multi-File Upload & Merge",
     desc: "Upload and parse multiple PDF, Word, TXT, or MD documents concurrently, merging them automatically into a single custom deck.",
-    color: "bg-[#a8e6cf]",
+    color: "bg-teal-200 dark:bg-teal-800/40",
     shadow: "nb-shadow-indigo",
   },
   {
     icon: <Download className="w-6 h-6" />,
     title: "Export .apkg",
     desc: "Download production-ready Anki packages. Import directly into Anki desktop or mobile.",
-    color: "bg-white",
+    color: "bg-card",
     shadow: "nb-shadow-amber",
   },
 ];
@@ -114,8 +114,7 @@ export default function Landing() {
               Start Creating
             </a>
             <a
-              href="#features"
-              className="nb-border nb-shadow-sm nb-hover-shadow bg-white px-7 py-3 font-bold text-base inline-flex items-center gap-2"
+              href="#features"               className="nb-border nb-shadow-sm nb-hover-shadow bg-card px-7 py-3 font-bold text-base inline-flex items-center gap-2"
             >
               Learn More
             </a>
@@ -129,11 +128,11 @@ export default function Landing() {
           transition={{ duration: 0.5, delay: 0.15 }}
           className="mt-14 sm:mt-20 max-w-2xl mx-auto"
         >
-          <div className="nb-border nb-shadow-indigo bg-white p-1">
+          <div className="nb-border nb-shadow-indigo bg-card p-1">
             <div className="nb-border-2 bg-muted p-3 flex items-center gap-2 mb-3">
               <div className="w-3 h-3 bg-accent nb-border-2" />
               <div className="w-3 h-3 bg-secondary nb-border-2" />
-              <div className="w-3 h-3 bg-[#4ecdc4] nb-border-2" />
+              <div className="w-3 h-3 bg-teal-400 dark:bg-teal-500 nb-border-2" />
               <span className="text-[10px] font-bold text-muted-foreground ml-2 uppercase tracking-widest">
                 genanki
               </span>
@@ -145,7 +144,7 @@ export default function Landing() {
                 </p>
                 <p className="font-bold text-lg">What is photosynthesis?</p>
               </div>
-              <div className="nb-border-2 bg-white p-4">
+              <div className="nb-border-2 bg-card p-4">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">
                   Back
                 </p>
@@ -155,11 +154,11 @@ export default function Landing() {
               </div>
             </div>
             <div className="p-3 pt-0 flex gap-2">
-              <div className="nb-border-2 bg-[#4ecdc4] px-3 py-1.5 text-xs font-bold flex items-center gap-1.5">
+              <div className="nb-border-2 bg-teal-400 dark:bg-teal-500 px-3 py-1.5 text-xs font-bold flex items-center gap-1.5">
                 <BookOpen className="w-3.5 h-3.5" />
                 Biology 101
               </div>
-              <div className="nb-border-2 bg-white px-3 py-1.5 text-xs font-bold flex items-center gap-1.5">
+              <div className="nb-border-2 bg-card px-3 py-1.5 text-xs font-bold flex items-center gap-1.5">
                 <Download className="w-3.5 h-3.5" />
                 Export .apkg
               </div>
@@ -169,7 +168,7 @@ export default function Landing() {
       </section>
 
       {/* Features */}
-      <section id="features" className="border-t-[3px] border-black bg-white">
+      <section id="features" className="border-t-[3px] border-border bg-card dark:bg-background">
         <div className="w-full px-6 lg:px-10 py-16 sm:py-20">
           <motion.div
             initial={{ opacity: 0 }}
@@ -191,7 +190,7 @@ export default function Landing() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.08 }}
               >
-                <div className={`nb-border ${f.shadow} nb-hover-shadow bg-white p-6 h-full`}>
+                <div className={`nb-border ${f.shadow} nb-hover-shadow bg-card p-6 h-full`}>
                   <div
                     className={`nb-border-2 ${f.color} inline-block p-2.5 mb-4`}
                   >
@@ -209,7 +208,7 @@ export default function Landing() {
       </section>
 
       {/* How It Works */}
-      <section className="border-t-[3px] border-black bg-secondary/30">
+      <section className="border-t-[3px] border-border bg-muted/30 dark:bg-muted/10">
         <div className="w-full px-6 lg:px-10 py-16 sm:py-20">
           <motion.div
             initial={{ opacity: 0 }}
@@ -262,7 +261,7 @@ export default function Landing() {
       </section>
 
       {/* CTA */}
-      <section className="border-t-[3px] border-black bg-white">
+      <section className="border-t-[3px] border-border bg-card dark:bg-background">
         <div className="w-full px-6 lg:px-10 py-16 sm:py-20 text-center">
           <motion.div
             initial={{ opacity: 0 }}
@@ -289,7 +288,7 @@ export default function Landing() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t-[3px] border-black">
+      <footer className="border-t-[3px] border-border bg-background">
         <div className="w-full px-6 lg:px-10 py-6 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground font-medium">
             © {new Date().getFullYear()} genanki. All rights reserved.

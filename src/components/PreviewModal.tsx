@@ -23,7 +23,7 @@ export default function PreviewModal({ previewCard, onClose }: PreviewModalProps
             initial={{ scale: 0.9 }}
             animate={{ scale: 1 }}
             exit={{ scale: 0.9 }}
-            className="nb-border nb-shadow-lg bg-white max-w-lg w-full p-6"
+            className="nb-border nb-shadow-lg bg-card max-w-lg w-full p-6"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4">
@@ -37,11 +37,11 @@ export default function PreviewModal({ previewCard, onClose }: PreviewModalProps
                 />
               </div>
             </div>
-            <div className="border-t-[3px] border-black pt-4">
+            <div className="border-t-[3px] border-border pt-4">
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">
                 Back
               </p>
-              <div className="nb-border-2 bg-white p-4 min-h-[80px] flex items-center justify-center">
+              <div className="nb-border-2 bg-card p-4 min-h-[80px] flex items-center justify-center">
                 <div 
                   className="text-base w-full text-left md:text-center prose prose-sm max-w-none"
                   dangerouslySetInnerHTML={{ __html: formatCardText(previewCard.back) }}

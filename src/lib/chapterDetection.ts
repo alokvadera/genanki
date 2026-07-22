@@ -67,8 +67,9 @@ function boundariesToChapters(boundaries: Boundary[], textLength: number): Detec
       end,
       source: b.source,
     };
-    /* istanbul ignore next: callers (matchHeading, detectFromOutline) always set b.level on each boundary */
+    /* istanbul ignore start: callers (matchHeading, detectFromOutline) always set b.level on each boundary */
     if (b.level !== undefined) chapter.level = b.level;
+    /* istanbul ignore end */
     chapters.push(chapter);
   }
   return chapters;
@@ -140,8 +141,9 @@ function coverPreamble(chapters: DetectedChapter[], _: string): DetectedChapter[
       end: first.start,
       source: first.source,
     };
-    /* istanbul ignore next: outline entries always carry a level (defaults to 0); Layer 2 regex produces levels via headingLevel() which is always defined */
+    /* istanbul ignore start: outline entries always carry a level (defaults to 0); Layer 2 regex produces levels via headingLevel() which is always defined */
     if (first.level !== undefined) intro.level = first.level;
+    /* istanbul ignore end */
     return [intro, ...chapters];
   }
   return [{ ...first, start: 0 }, ...chapters.slice(1)];
@@ -185,8 +187,9 @@ function headingLevel(line: string): number {
   const numbered = line.match(/^(\d+)(\.\d+)?(\.\d+)?\s+/);
   if (numbered) {
     if (numbered[3]) return 2;
-    /* istanbul ignore next -- defense-in-depth: HEADING_PATTERNS[4] requires `\d+\.` literal dot, so any `line` where `numbered` is truthy via `matchHeading` has at least one of `numbered[2]`/`numbered[3]` defined (or short-circuits via `return 2`). The bare "1 Section" form passes `headingLevel`'s regex but fails HEADING_PATTERNS[4], so it never reaches this branch through the public API. */
+    /* istanbul ignore start -- defense-in-depth: HEADING_PATTERNS[4] requires `\d+\.` literal dot, so any `line` where `numbered` is truthy via `matchHeading` has at least one of `numbered[2]`/`numbered[3]` defined (or short-circuits via `return 2`). The bare "1 Section" form passes `headingLevel`'s regex but fails HEADING_PATTERNS[4], so it never reaches this branch through the public API. */
     if (numbered[2]) return 1;
+    /* istanbul ignore end */
   }
   return 0;
 }
@@ -207,8 +210,9 @@ function matchHeading(rawLine: string): { title: string; level: number } | null 
   for (const re of HEADING_PATTERNS) {
     const m = line.match(re);
     if (m) {
-      /* istanbul ignore next: HEADING_PATTERNS[0..4] all produce a group-1 capture; the `?? m[0]` arm is structurally unreachable */
+      /* istanbul ignore start: HEADING_PATTERNS[0..4] all produce a group-1 capture; the `?? m[0]` arm is structurally unreachable */
       const title = (m[1] ?? m[0]).trim();
+      /* istanbul ignore end */
       return { title, level: headingLevel(line) };
     }
   }

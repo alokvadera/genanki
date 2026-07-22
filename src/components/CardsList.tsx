@@ -52,7 +52,7 @@ export default function CardsList({
 
   return (
     <div className="nb-border bg-card text-card-foreground nb-shadow-indigo">
-      <div className="p-4 border-b-[3px] border-black flex items-center justify-between">
+      <div className="p-4 border-b-[3px] border-border flex items-center justify-between">
         <h2 className="font-bold text-xs uppercase tracking-[0.2em] flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
           <Layers className="w-4 h-4" />
           CARDS ({activeDeck?.cards.length ?? 0})
@@ -79,19 +79,19 @@ export default function CardsList({
                 {editingIdx === idx ? (
                   <div
                     className={`p-4 space-y-2 bg-muted/30 ${
-                      !isLast ? "border-b-[3px] border-black" : ""
+                      !isLast ? "border-b-[3px] border-border" : ""
                     }`}
                   >
                     <Input
                       value={editFront}
                       onChange={(e) => setEditFront(e.target.value)}
-                      className="nb-border-2 text-sm font-bold bg-white"
+                      className="nb-border-2 text-sm font-bold bg-card"
                       placeholder="Front"
                     />
                     <Textarea
                       value={editBack}
                       onChange={(e) => setEditBack(e.target.value)}
-                      className="nb-border-2 text-sm min-h-[80px] resize-none bg-white"
+                      className="nb-border-2 text-sm min-h-[80px] resize-none bg-card"
                       placeholder="Back"
                     />
                     <div className="flex gap-2">
@@ -115,7 +115,7 @@ export default function CardsList({
                 ) : (
                   <div
                     className={`p-3 flex items-start gap-3 hover:bg-muted/30 transition-colors ${
-                      !isLast ? "border-b-[3px] border-black" : ""
+                      !isLast ? "border-b-[3px] border-border" : ""
                     }`}
                   >
                     <span className="nb-border bg-secondary text-xs font-bold px-2 py-0.5 shrink-0 mt-0.5">
