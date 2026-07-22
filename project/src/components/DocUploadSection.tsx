@@ -140,7 +140,7 @@ export default function DocUploadSection({
                   className={`flex-1 nb-border-2 px-3 py-2 text-xs font-bold transition-all ${
                     docMode === "ai"
                       ? "bg-primary text-primary-foreground nb-shadow-sm"
-                      : "bg-white hover:bg-muted"
+                      : "bg-card hover:bg-muted"
                   }`}
                 >
                   <Sparkles className="w-3.5 h-3.5 inline -mt-0.5 mr-1" />
@@ -151,7 +151,7 @@ export default function DocUploadSection({
                   className={`flex-1 nb-border-2 px-3 py-2 text-xs font-bold transition-all ${
                     docMode === "quick"
                       ? "bg-primary text-primary-foreground nb-shadow-sm"
-                      : "bg-white hover:bg-muted"
+                      : "bg-card hover:bg-muted"
                   }`}
                 >
                   <Zap className="w-3.5 h-3.5 inline -mt-0.5 mr-1" />
@@ -274,7 +274,7 @@ export default function DocUploadSection({
 
               {/* Chapter selection */}
               {docMode === "ai" && docFileNames.length > 0 && !processing && chaptersDetected && docChapters.length > 0 && (
-                <div className="mb-4 nb-border-2 bg-white p-3">
+                <div className="mb-4 nb-border-2 bg-card p-3">
                   <div className="flex items-center justify-between mb-2">
                     <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
                       Chapters ({selectedChapterIds.size}/{docChapters.length} selected)
@@ -288,7 +288,7 @@ export default function DocUploadSection({
                       </button>
                       <button
                         onClick={() => onSelectAllChapters(false)}
-                        className="nb-border nb-shadow-sm nb-hover-shadow px-2 py-1 text-[11px] font-bold bg-white"
+                        className="nb-border nb-shadow-sm nb-hover-shadow px-2 py-1 text-[11px] font-bold bg-card"
                       >
                         None
                       </button>
@@ -417,7 +417,7 @@ export default function DocUploadSection({
                     </p>
                     <div className="space-y-2 mb-3">
                       {docFileNames.map((name, idx) => (
-                        <div key={idx} className="flex items-center justify-between bg-white nb-border-2 px-3 py-1.5 text-xs font-bold">
+                        <div key={idx} className="flex items-center justify-between bg-card nb-border-2 px-3 py-1.5 text-xs font-bold">
                           <span className="truncate mr-2">{name}</span>
                           <button
                             onClick={() => onRemoveFile(idx)}
@@ -468,7 +468,7 @@ export default function DocUploadSection({
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden mb-6"
           >
-            <div className="nb-border bg-white nb-shadow-sm p-5">
+            <div className="nb-border bg-card nb-shadow-sm p-5">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h2 className="font-bold text-sm flex items-center gap-2">

@@ -40,7 +40,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
 
       return (
         <div className="min-h-[200px] flex items-center justify-center p-6">
-          <div className="nb-border bg-white max-w-md text-center p-6">
+          <div className="nb-border bg-card max-w-md text-center p-6">
             <div className="text-destructive font-bold text-sm mb-2">
               Something went wrong
             </div>

@@ -114,7 +114,7 @@ export default function ProviderUsage() {
                     </p>
                     <p className="text-2xl font-bold tracking-tight mt-1">{item.value}</p>
                   </div>
-                  <div className="nb-border bg-white p-3">
+                  <div className="nb-border bg-card p-3">
                     <Icon className="w-5 h-5" />
                   </div>
                 </div>
@@ -123,7 +123,7 @@ export default function ProviderUsage() {
           })}
         </section>
 
-        <section className="nb-border bg-white nb-shadow-indigo p-5">
+        <section className="nb-border bg-card nb-shadow-indigo p-5">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between mb-4">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-600 mb-1">
@@ -163,7 +163,7 @@ export default function ProviderUsage() {
           </div>
         </section>
 
-        <section className="nb-border bg-white nb-shadow-teal p-5">
+        <section className="nb-border bg-card nb-shadow-teal p-5">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between mb-4">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-teal-600 mb-1">
@@ -213,7 +213,7 @@ export default function ProviderUsage() {
                       <p className="text-xs font-medium text-muted-foreground">
                         {cloudflareBudget ? formatTokens(cloudflareBudget.neuronsUsed) : 0} / {formatTokens(CLOUDFLARE_DAILY_BUDGET)} Neurons
                       </p>
-                      <div className="mt-2 h-1.5 w-full bg-white overflow-hidden nb-border">
+                      <div className="mt-2 h-1.5 w-full bg-card overflow-hidden nb-border">
                         <motion.div
                           className={`h-full ${cloudflareBudget && cloudflareBudget.neuronsUsed >= CLOUDFLARE_DAILY_BUDGET ? 'bg-amber-500' : 'bg-primary'}`}
                           initial={false}
@@ -229,7 +229,7 @@ export default function ProviderUsage() {
         </section>
 
         <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-          <div className="nb-border bg-white nb-shadow-rose p-5">
+          <div className="nb-border bg-card nb-shadow-rose p-5">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-rose-600 mb-1">
@@ -259,7 +259,7 @@ export default function ProviderUsage() {
                           <p className="text-xs text-muted-foreground font-medium">tokens</p>
                         </div>
                       </div>
-                      <div className="mt-3 h-2 w-full bg-white overflow-hidden nb-border">
+                      <div className="mt-3 h-2 w-full bg-card overflow-hidden nb-border">
                         <motion.div
                           className={`h-full ${getProviderColor(stat.provider).bar}`}
                           initial={false}
@@ -278,7 +278,7 @@ export default function ProviderUsage() {
             </div>
           </div>
 
-          <div className="nb-border bg-white nb-shadow-indigo p-5">
+          <div className="nb-border bg-card nb-shadow-indigo p-5">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-600 mb-1">
@@ -308,7 +308,7 @@ export default function ProviderUsage() {
                       {stat.requests} request(s) · prompt {formatTokens(stat.promptTokens)} · completion{" "}
                       {formatTokens(stat.completionTokens)}
                     </p>
-                    <div className="mt-2 h-1.5 w-full bg-white overflow-hidden nb-border">
+                    <div className="mt-2 h-1.5 w-full bg-card overflow-hidden nb-border">
                       <motion.div
                         className={`h-full ${getProviderColor(stat.provider).bar}`}
                         initial={false}
@@ -322,7 +322,7 @@ export default function ProviderUsage() {
           </div>
         </section>
 
-        <section className="nb-border bg-white nb-shadow-amber p-5">
+        <section className="nb-border bg-card nb-shadow-amber p-5">
           <div className="flex items-center justify-between mb-4">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-600 mb-1">

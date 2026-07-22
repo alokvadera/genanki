@@ -54,7 +54,9 @@ export function crc32(text: string): number {
   let crc = 0xffffffff;
   for (let i = 0; i < text.length; i++) {
     const byte = text.charCodeAt(i) & 0xff;
+    /* istanbul ignore start -- CRC32_TABLE has 256 entries; index (0-255) always in bounds */
     crc = (crc >>> 8) ^ (CRC32_TABLE[(crc ^ byte) & 0xff] ?? 0);
+    /* istanbul ignore end */
   }
   return (crc ^ 0xffffffff) >>> 0;
 }
@@ -76,8 +78,6 @@ export function sanitizeField(text: string): string {
     .replace(/[\x00-\x08\x0b-\x1f\x7f]/g, "")
     .trim();
 }
-
-const NOW = Math.floor(Date.now() / 1000);
 
 async function createDB(): Promise<Database> {
   const SQL = await initSqlJs({
@@ -375,13 +375,14 @@ export async function generateAnkiPackage(deckData: AnkiDeckData): Promise<void>
   const db = await createDB();
   const { cardsInserted } = populateDb(db, deckData);
 
-  /* istanbul ignore next -- defense-in-depth: isCloze uses the same regex as per-card matchAll, so cardsInserted >= 1 whenever isCloze is true. Protects against future logic divergence. */
+  /* istanbul ignore start -- defense-in-depth: isCloze uses the same regex as per-card matchAll, so cardsInserted >= 1 whenever isCloze is true. Protects against future logic divergence. */
   if (cardsInserted === 0) {
     throw new Error(
       "No cards were generated. If your deck uses cloze syntax ({{c1::...}}), " +
       "ensure at least one card contains valid cloze markers.",
     );
   }
+  /* istanbul ignore end */
 
   const buf = new Uint8Array(db.export());
 

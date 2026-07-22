@@ -26,7 +26,7 @@ export default function DeckDetailCardItem({
   const [editBack, setEditBack] = useState(card.back);
 
   return (
-    <div className="border-b-[3px] border-black last:border-b-0">
+    <div className="border-b-[3px] border-border last:border-b-0">
       {editing ? (
         <div className="p-4 space-y-2 bg-muted/30">
           <Input

@@ -350,7 +350,7 @@ export default function DocumentGenerationSection({
   return (
     <ErrorBoundary
       fallback={
-        <div className="nb-border bg-white p-5 mb-6 text-sm text-destructive font-bold">
+        <div className="nb-border bg-card p-5 mb-6 text-sm text-destructive font-bold">
           Document upload section failed to load. Please refresh the page.
         </div>
       }

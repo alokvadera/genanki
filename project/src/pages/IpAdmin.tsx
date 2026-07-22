@@ -163,7 +163,7 @@ export default function IpAdmin() {
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-md nb-border bg-white nb-shadow-rose p-6 sm:p-8"
+          className="w-full max-w-md nb-border bg-card nb-shadow-rose p-6 sm:p-8"
         >
           <div className="flex flex-col items-center text-center">
             <div className="nb-border bg-rose-50 p-4 mb-4">
@@ -255,7 +255,7 @@ export default function IpAdmin() {
                       </p>
                       <p className="text-2xl font-bold tracking-tight mt-1">{item.value}</p>
                     </div>
-                    <div className="nb-border bg-white p-3">
+                    <div className="nb-border bg-card p-3">
                       <Icon className="w-5 h-5" />
                     </div>
                   </div>
@@ -286,7 +286,7 @@ export default function IpAdmin() {
             </div>
           </div>
 
-          <div className="nb-border bg-white nb-shadow-indigo overflow-hidden">
+          <div className="nb-border bg-card nb-shadow-indigo overflow-hidden">
             {ips === undefined ? (
               <div className="p-8 text-center text-muted-foreground font-semibold flex items-center justify-center gap-2">
                 <RefreshCw className="w-5 h-5 animate-spin" /> Loading client database...
@@ -479,7 +479,7 @@ export default function IpAdmin() {
           <motion.section
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
-            className="nb-border bg-white nb-shadow-amber p-5 space-y-4"
+            className="nb-border bg-card nb-shadow-amber p-5 space-y-4"
           >
             <div className="flex items-center justify-between border-b border-border pb-3">
               <div>
@@ -515,7 +515,7 @@ export default function IpAdmin() {
                         {item.associatedIps.map((ipAddr: string) => (
                           <span 
                             key={ipAddr} 
-                            className={`font-mono text-xs font-bold px-2 py-1 nb-border bg-white ${
+                            className={`font-mono text-xs font-bold px-2 py-1 nb-border bg-card ${
                               ipAddr === item.ip ? "border-indigo-600 text-indigo-600 bg-indigo-50" : ""
                             }`}
                             title={ipAddr === item.ip ? "Last active IP" : "Historical dynamic IP"}

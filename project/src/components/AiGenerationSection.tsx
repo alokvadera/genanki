@@ -122,7 +122,7 @@ export default function AiGenerationSection({
   return (
     <ErrorBoundary
       fallback={
-        <div className="nb-border bg-white p-5 mb-6 text-sm text-destructive font-bold">
+        <div className="nb-border bg-card p-5 mb-6 text-sm text-destructive font-bold">
           AI deck builder failed to load. Please refresh the page.
         </div>
       }

@@ -23,7 +23,7 @@ const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 function RouteLoading() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="nb-border nb-shadow-sm bg-white p-6 font-bold text-sm animate-pulse">
+      <div className="nb-border nb-shadow-sm bg-card p-6 font-bold text-sm animate-pulse">
         Loading...
       </div>
     </div>
@@ -68,7 +68,7 @@ class RootErrorBoundary extends React.Component<
     if (this.state.hasError) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-background text-foreground p-6">
-          <div className="nb-border nb-shadow bg-white max-w-lg text-center p-8">
+          <div className="nb-border nb-shadow bg-card max-w-lg text-center p-8">
             <p className="text-sm font-bold">Preview runtime error</p>
             <p className="mt-3 text-xs text-muted-foreground break-words font-medium">
               {this.state.message}

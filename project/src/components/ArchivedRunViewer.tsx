@@ -10,11 +10,11 @@ import { Button } from "@/components/ui/button";
 import { formatCardText } from "@/lib/formatter";
 
 const PROVIDER_COLORS: Record<string, { bar: string; bg: string; text: string }> = {
-  groq: { bar: "bg-indigo-500", bg: "bg-indigo-50", text: "text-indigo-700" },
-  cerebras: { bar: "bg-teal-500", bg: "bg-teal-50", text: "text-teal-700" },
-  cloudflare: { bar: "bg-amber-500", bg: "bg-amber-50", text: "text-amber-700" },
-  kilo: { bar: "bg-rose-500", bg: "bg-rose-50", text: "text-rose-700" },
-  openrouter: { bar: "bg-purple-500", bg: "bg-purple-50", text: "text-purple-700" },
+  groq: { bar: "bg-indigo-500", bg: "bg-indigo-50 dark:bg-indigo-950/30", text: "text-indigo-700 dark:text-indigo-300" },
+  cerebras: { bar: "bg-teal-500", bg: "bg-teal-50 dark:bg-teal-950/30", text: "text-teal-700 dark:text-teal-300" },
+  cloudflare: { bar: "bg-amber-500", bg: "bg-amber-50 dark:bg-amber-950/30", text: "text-amber-700 dark:text-amber-300" },
+  kilo: { bar: "bg-rose-500", bg: "bg-rose-50 dark:bg-rose-950/30", text: "text-rose-700 dark:text-rose-300" },
+  openrouter: { bar: "bg-purple-500", bg: "bg-purple-50 dark:bg-purple-950/30", text: "text-purple-700 dark:text-purple-300" },
 };
 
 function getProviderColor(provider: string) {
@@ -54,11 +54,11 @@ function getStatusLabel(status: GenerationJob["status"]): string {
 }
 
 function getStatusTone(status: GenerationJob["status"]): string {
-  if (status === "succeeded") return "bg-emerald-100 text-emerald-800";
-  if (status === "canceled") return "bg-slate-100 text-slate-800";
-  if (status === "failed") return "bg-red-100 text-red-800";
-  if (status === "running") return "bg-blue-100 text-blue-800";
-  return "bg-amber-100 text-amber-800";
+  if (status === "succeeded") return "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300";
+  if (status === "canceled") return "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300";
+  if (status === "failed") return "bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-300";
+  if (status === "running") return "bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300";
+  return "bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300";
 }
 
 /** Validation error emitted by Convex/AI SDK validation failures. */
@@ -114,7 +114,7 @@ function formatErrorReason(reason?: string) {
             <summary className="text-xs text-amber-800 font-semibold hover:text-amber-950">
               {prefix || "Validation failed"} ({parsed.length} errors, click to expand)
             </summary>
-            <ul className="pl-6 mt-2 list-disc text-[10px] space-y-1 text-amber-900 nb-border bg-amber-50/50 p-3 max-h-[160px] overflow-auto">
+            <ul className="pl-6 mt-2 list-disc text-[10px] space-y-1 text-amber-900 dark:text-amber-200 nb-border bg-amber-50/50 dark:bg-amber-950/30 p-3 max-h-[160px] overflow-auto">
               {parsed.map((err: ValidationError, idx: number) => {
                 const path = err.path ? ` (${err.path.join(".")})` : "";
                 return (
@@ -195,7 +195,7 @@ export function ArchivedRunViewer({
             <span className="text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 bg-secondary nb-border">
               {job.kind}
             </span>
-            <span className="text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 bg-white nb-border">
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 bg-card nb-border">
               {job.requestedCount} cards
             </span>
           </div>
@@ -237,7 +237,7 @@ export function ArchivedRunViewer({
             <button
               type="button"
               onClick={onAddToCurrent}
-              className="nb-border bg-white px-3 py-1.5 text-xs font-bold nb-hover-shadow"
+              className="nb-border bg-card px-3 py-1.5 text-xs font-bold nb-hover-shadow"
             >
               Add to current deck
             </button>
@@ -246,7 +246,7 @@ export function ArchivedRunViewer({
             <button
               type="button"
               onClick={onClose}
-              className="nb-border bg-white px-3 py-1.5 text-xs font-bold nb-hover-shadow"
+              className="nb-border bg-card px-3 py-1.5 text-xs font-bold nb-hover-shadow"
             >
               {closeLabel}
             </button>
@@ -261,11 +261,11 @@ export function ArchivedRunViewer({
       ) : null}
 
       {job.resultWarnings?.length ? (
-        <div className="mt-4 nb-border-2 bg-amber-50 p-3">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-800">Warnings</p>
+        <div className="mt-4 nb-border-2 bg-amber-50 dark:bg-amber-950/30 p-3">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-800 dark:text-amber-200">Warnings</p>
           <ul className="mt-2 space-y-2 text-sm text-amber-900 font-medium">
             {job.resultWarnings.map((warning) => (
-              <li key={warning} className="nb-border bg-white p-2.5">{formatWarning(warning)}</li>
+              <li key={warning} className="nb-border bg-card p-2.5">{formatWarning(warning)}</li>
             ))}
           </ul>
         </div>
@@ -275,10 +275,10 @@ export function ArchivedRunViewer({
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
-              { label: "Total tokens", value: formatTokens(totalTokens), icon: Cpu, tint: "bg-indigo-50", accent: "text-indigo-600" },
-              { label: "Prompt", value: formatTokens(promptTokens), icon: Layers, tint: "bg-teal-50", accent: "text-teal-600" },
-              { label: "Completion", value: formatTokens(completionTokens), icon: Sparkles, tint: "bg-rose-50", accent: "text-rose-600" },
-              { label: "Requests", value: formatTokens(requests), icon: BarChart3, tint: "bg-amber-50", accent: "text-amber-600" },
+              { label: "Total tokens", value: formatTokens(totalTokens), icon: Cpu, tint: "bg-indigo-50 dark:bg-indigo-950/30", accent: "text-indigo-600 dark:text-indigo-300" },
+              { label: "Prompt", value: formatTokens(promptTokens), icon: Layers, tint: "bg-teal-50 dark:bg-teal-950/30", accent: "text-teal-600 dark:text-teal-300" },
+              { label: "Completion", value: formatTokens(completionTokens), icon: Sparkles, tint: "bg-rose-50 dark:bg-rose-950/30", accent: "text-rose-600 dark:text-rose-300" },
+              { label: "Requests", value: formatTokens(requests), icon: BarChart3, tint: "bg-amber-50 dark:bg-amber-950/30", accent: "text-amber-600 dark:text-amber-300" },
             ].map((item) => {
               const Icon = item.icon;
               return (
@@ -290,7 +290,7 @@ export function ArchivedRunViewer({
                       </p>
                       <p className="text-lg font-bold tracking-tight mt-1">{item.value}</p>
                     </div>
-                    <div className="nb-border bg-white p-2">
+                    <div className="nb-border bg-card p-2">
                       <Icon className="w-4 h-4" />
                     </div>
                   </div>
@@ -433,10 +433,9 @@ export function ArchivedRunViewer({
               </p>
               <div className="mt-3 grid gap-2 max-h-[320px] overflow-auto pr-1">
                 {job.fallbackTrail.map((record, index) => (
-                  <div key={index} className="nb-border bg-white p-3 flex flex-col gap-1">
+                  <div key={index} className="nb-border bg-card p-3 flex flex-col gap-1">
                     <div className="flex items-center justify-between">
-                      <p className="text-sm font-bold tracking-tight">{record.provider} / {record.model}</p>
-                      <span className={`text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 ${record.outcome === 'success' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
+                      <p className="text-sm font-bold tracking-tight">{record.provider} / {record.model}</p>                        <span className={`text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 ${record.outcome === 'success' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300'}`}>
                         {record.outcome}
                       </span>
                     </div>
@@ -454,7 +453,7 @@ export function ArchivedRunViewer({
               </p>
               <div className="mt-3 grid gap-3 max-h-[520px] overflow-auto pr-1">
                 {job.resultCards.map((card, index) => (
-                  <div key={`${job._id}-${index}`} className="nb-border bg-white p-3">
+                  <div key={`${job._id}-${index}`} className="nb-border bg-card p-3">
                     <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-2">
                       Card {index + 1}
                     </p>
