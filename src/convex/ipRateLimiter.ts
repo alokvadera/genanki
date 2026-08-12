@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query, type MutationCtx } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
+import { GenError } from "./errors";
 
 const DEFAULT_DAILY_LIMIT = 50_000;
 
@@ -161,7 +162,7 @@ export const adminListIps = query({
   args: { adminSecret: v.string() },
   handler: async (ctx, args) => {
     if (args.adminSecret !== process.env.ADMIN_SECRET) {
-      throw new Error("Unauthorized: Invalid admin secret");
+      throw new GenError("forbidden", "Unauthorized: Invalid admin secret");
     }
 
     const states = await ctx.db.query("ipRateState").collect();
@@ -242,7 +243,7 @@ export const adminSetRule = mutation({
   },
   handler: async (ctx, args) => {
     if (args.adminSecret !== process.env.ADMIN_SECRET) {
-      throw new Error("Unauthorized: Invalid admin secret");
+      throw new GenError("forbidden", "Unauthorized: Invalid admin secret");
     }
 
     const existing = args.deviceIdHash
@@ -287,7 +288,7 @@ export const adminResetIpTokens = mutation({
   },
   handler: async (ctx, args) => {
     if (args.adminSecret !== process.env.ADMIN_SECRET) {
-      throw new Error("Unauthorized: Invalid admin secret");
+      throw new GenError("forbidden", "Unauthorized: Invalid admin secret");
     }
 
     const state = args.deviceIdHash

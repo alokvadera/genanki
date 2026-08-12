@@ -75,6 +75,7 @@ export const update = mutation({
     encMessage: v.optional(v.string()),
     encError: v.optional(v.string()),
     creatorIpHash: v.optional(v.string()),
+    creatorDeviceIdHash: v.optional(v.string()),
     fallbackTrail: v.optional(
       v.array(
         v.object({
@@ -116,6 +117,7 @@ export const update = mutation({
     if (args.encMessage !== undefined) patch.encMessage = args.encMessage;
     if (args.encError !== undefined) patch.encError = args.encError;
     if (args.creatorIpHash !== undefined) patch.creatorIpHash = args.creatorIpHash;
+    if (args.creatorDeviceIdHash !== undefined) patch.creatorDeviceIdHash = args.creatorDeviceIdHash;
     if (args.fallbackTrail !== undefined) patch.fallbackTrail = args.fallbackTrail;
     await ctx.db.patch(args.jobId, patch);
   },

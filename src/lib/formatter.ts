@@ -2,6 +2,9 @@ import { marked } from "marked";
 import katex from "katex";
 import DOMPurify from "dompurify";
 
+// Re-export lightweight math formatter (zero-dependency) for backward compat
+export { formatMathForAnki } from "./cardMath";
+
 /**
  * Sanitize HTML to remove potentially dangerous elements and attributes.
  * This prevents XSS attacks while allowing safe HTML formatting.
@@ -97,16 +100,3 @@ export function formatCardText(text: string): string {
   return html;
 }
 
-/**
- * Convert standard math blocks ($$...$$ and $...$) to Anki-native MathJax
- * wrappers (\\[...\\] and \\(...\\)) so that math renders correctly in Anki client app.
- */
-export function formatMathForAnki(text: string): string {
-  if (!text) return "";
-  let formatted = text;
-  // Convert $$...$$ to \\[...\\]
-  formatted = formatted.replace(/\$\$([\s\S]+?)\$\$/g, (_, math) => `\\[${math.trim()}\\]`);
-  // Convert $...$ to \\(...\\)
-  formatted = formatted.replace(/\$(?!\s)([^$]+?)(?<!\s)\$/g, (_, math) => `\\(${math.trim()}\\)`);
-  return formatted;
-}

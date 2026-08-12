@@ -49,7 +49,7 @@ export const generateDeckFromDocument = action({
   handler: async (ctx: ActionCtx, args) => {
     const text = args.text.trim();
     if (!text) {
-      throw new Error("No text was extracted from the document");
+      throw new GenError("invalid_input", "No text was extracted from the document");
     }
 
     const metadata = await ctx.meta.getRequestMetadata();
@@ -319,7 +319,7 @@ export const generateDeckFromPrompt = action({
   handler: async (ctx: ActionCtx, args) => {
     const prompt = args.prompt.trim();
     if (!prompt) {
-      throw new Error("Provide a topic or source text for deck generation");
+      throw new GenError("invalid_input", "Provide a topic or source text for deck generation");
     }
 
     const metadata = await ctx.meta.getRequestMetadata();

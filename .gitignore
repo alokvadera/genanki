@@ -11,6 +11,8 @@ dist/
 .commandcode/
 .kilo/
 .DS_Store
+__pycache__/
+*.py[cod]
 
 # Temporary visual regression profiles & screenshots
 chrome-profile-debug/

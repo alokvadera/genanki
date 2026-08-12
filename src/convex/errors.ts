@@ -6,7 +6,9 @@ export type GenErrorKind =
   | "parse"
   | "no_providers"
   | "empty_output"
-  | "deadline";
+  | "deadline"
+  | "invalid_input"
+  | "forbidden";
 
 export class GenError extends Error {
   public kind: GenErrorKind;

@@ -21,10 +21,11 @@ export default function AnkiCreatorHeader({
 }: AnkiCreatorHeaderProps) {
   return (
     <header className="border-b-[3px] border-border bg-card text-card-foreground">
-      <div className="w-full px-6 lg:px-10 py-4 flex items-center justify-between">
+      <div className="w-full px-4 sm:px-6 lg:px-10 py-3 sm:py-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <a
             href="/"
+            aria-label="Back to home"
             className="nb-border nb-shadow-sm px-3 py-1.5 bg-secondary text-secondary-foreground font-bold text-sm nb-hover-shadow"
           >
             <ArrowLeft className="w-4 h-4 inline -mt-0.5" />
@@ -35,25 +36,32 @@ export default function AnkiCreatorHeader({
               genanki
             </h1>
             <p className="text-xs text-muted-foreground font-medium mt-0.5">
-              {deckCount} deck{deckCount !== 1 ? "s" : ""} · {cardCount} card{cardCount !== 1 ? "s" : ""}
+              {deckCount} deck{deckCount !== 1 ? "s" : ""} · {cardCount} card
+              {cardCount !== 1 ? "s" : ""}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-end">
           <ThemeToggle />
           <Button
             asChild
             variant="outline"
             className="nb-border nb-shadow-sm nb-hover-shadow font-bold text-sm px-4 h-9"
           >
-            <Link to="/runs"><Clock3 className="w-4 h-4" /> Runs</Link>
+            <Link to="/runs" aria-label="View generation runs">
+              <Clock3 className="w-4 h-4" />
+              <span className="hidden sm:inline">Runs</span>
+            </Link>
           </Button>
           <Button
             asChild
             variant="outline"
             className="nb-border nb-shadow-sm nb-hover-shadow font-bold text-sm px-4 h-9"
           >
-            <Link to="/usage"><BarChart3 className="w-4 h-4" /> Usage</Link>
+            <Link to="/usage" aria-label="View provider usage">
+              <BarChart3 className="w-4 h-4" />
+              <span className="hidden sm:inline">Usage</span>
+            </Link>
           </Button>
           <Button
             onClick={onExport}
@@ -61,7 +69,9 @@ export default function AnkiCreatorHeader({
             className="nb-border nb-shadow-sm nb-hover-shadow bg-primary text-primary-foreground font-bold text-sm px-4 h-9 disabled:opacity-40"
           >
             <Download className="w-4 h-4" />
-            <span className="hidden sm:inline">{exporting ? "Exporting..." : "Export .apkg"}</span>
+            <span className="hidden sm:inline">
+              {exporting ? "Exporting..." : "Export .apkg"}
+            </span>
             <span className="sm:hidden">.apkg</span>
           </Button>
         </div>

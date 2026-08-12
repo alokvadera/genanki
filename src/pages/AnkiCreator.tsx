@@ -61,18 +61,27 @@ export default function AnkiCreator() {
       if (savedVersion !== String(PROVIDERS_CACHE_VERSION)) {
         return {
           providers: [] as ProviderOption[],
-          cacheRecoveryReason: savedVersion !== null ? "stale-version" as const : undefined,
+          cacheRecoveryReason:
+            savedVersion !== null ? ("stale-version" as const) : undefined,
         };
       }
       const cached = localStorage.getItem(PROVIDERS_CACHE_KEY);
-      if (!cached) return { providers: [] as ProviderOption[], cacheRecoveryReason: undefined };
+      if (!cached)
+        return {
+          providers: [] as ProviderOption[],
+          cacheRecoveryReason: undefined,
+        };
       const sanitized = sanitizeProviderOptions(JSON.parse(cached));
       return {
         providers: sanitized,
-        cacheRecoveryReason: sanitized.length === 0 ? "invalid-data" as const : undefined,
+        cacheRecoveryReason:
+          sanitized.length === 0 ? ("invalid-data" as const) : undefined,
       };
     } catch {
-      return { providers: [] as ProviderOption[], cacheRecoveryReason: "parse-error" as const };
+      return {
+        providers: [] as ProviderOption[],
+        cacheRecoveryReason: "parse-error" as const,
+      };
     }
   });
 
@@ -81,8 +90,14 @@ export default function AnkiCreator() {
   useEffect(() => {
     if (providerCatalog) {
       try {
-        localStorage.setItem(PROVIDERS_CACHE_KEY, JSON.stringify(providerCatalog));
-        localStorage.setItem(PROVIDERS_CACHE_VERSION_KEY, String(PROVIDERS_CACHE_VERSION));
+        localStorage.setItem(
+          PROVIDERS_CACHE_KEY,
+          JSON.stringify(providerCatalog),
+        );
+        localStorage.setItem(
+          PROVIDERS_CACHE_VERSION_KEY,
+          String(PROVIDERS_CACHE_VERSION),
+        );
       } catch {
         // ignore localStorage write errors
       }
@@ -104,7 +119,8 @@ export default function AnkiCreator() {
     if (msg) showRecoveryToast(msg);
   }, [cacheRecoveryReason]);
 
-  const loadingProviders = providerCatalog === undefined && availableProviders.length === 0;
+  const loadingProviders =
+    providerCatalog === undefined && availableProviders.length === 0;
 
   // Device token
   const deviceToken = useDeviceToken();
@@ -124,7 +140,8 @@ export default function AnkiCreator() {
   const STALE_MS = 24 * 60 * 60 * 1000;
   useEffect(() => {
     if (catalogUpdatedAt === undefined) return;
-    const isStale = catalogUpdatedAt === 0 || Date.now() - catalogUpdatedAt > STALE_MS;
+    const isStale =
+      catalogUpdatedAt === 0 || Date.now() - catalogUpdatedAt > STALE_MS;
     if (isStale) {
       React.startTransition(() => {
         handleRefreshProviders();
@@ -159,7 +176,10 @@ export default function AnkiCreator() {
     setExporting(true);
     try {
       const { generateAnkiPackage } = await import("@/lib/anki");
-      await generateAnkiPackage({ name: activeDeck.name, cards: activeDeck.cards });
+      await generateAnkiPackage({
+        name: activeDeck.name,
+        cards: activeDeck.cards,
+      });
       recordAppEvent("export_succeeded", activeDeck.cards.length);
       showToast(`Exported "${activeDeck.name}" successfully!`);
     } catch (err) {
@@ -172,20 +192,23 @@ export default function AnkiCreator() {
 
   const deckCardCount = decks.reduce((sum, d) => sum + d.cards.length, 0);
 
-  const handleExportDeck = useCallback(async (deck: Deck) => {
-    setExporting(true);
-    try {
-      const { generateAnkiPackage } = await import("@/lib/anki");
-      await generateAnkiPackage({ name: deck.name, cards: deck.cards });
-      recordAppEvent("export_succeeded", deck.cards.length);
-      showToast(`Exported "${deck.name}" successfully!`);
-    } catch (err) {
-      recordAppEvent("export_failed");
-      showToast(err instanceof Error ? err.message : "Export failed");
-    } finally {
-      setExporting(false);
-    }
-  }, [recordAppEvent, showToast]);
+  const handleExportDeck = useCallback(
+    async (deck: Deck) => {
+      setExporting(true);
+      try {
+        const { generateAnkiPackage } = await import("@/lib/anki");
+        await generateAnkiPackage({ name: deck.name, cards: deck.cards });
+        recordAppEvent("export_succeeded", deck.cards.length);
+        showToast(`Exported "${deck.name}" successfully!`);
+      } catch (err) {
+        recordAppEvent("export_failed");
+        showToast(err instanceof Error ? err.message : "Export failed");
+      } finally {
+        setExporting(false);
+      }
+    },
+    [recordAppEvent, showToast],
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -211,7 +234,7 @@ export default function AnkiCreator() {
         onExport={handleExport}
       />
 
-      <div className="w-full px-6 lg:px-10 py-6 flex flex-col lg:flex-row gap-6">
+      <div className="w-full px-4 sm:px-6 lg:px-10 py-5 sm:py-6 flex flex-col lg:flex-row gap-5 lg:gap-6">
         <DeckSidebar
           decks={decks}
           activeDeckId={activeDeckId}
@@ -229,6 +252,31 @@ export default function AnkiCreator() {
         />
 
         <main className="flex-1 min-w-0">
+          <section className="nb-border bg-foreground text-background nb-shadow-amber dark:bg-card dark:text-foreground p-5 sm:p-6 mb-5 sm:mb-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-secondary mb-1.5">
+                  Study workspace
+                </p>
+                <h2 className="text-2xl sm:text-3xl font-bold tracking-tight leading-tight">
+                  Build a deck worth revisiting.
+                </h2>
+                <p className="text-sm text-background/70 dark:text-muted-foreground font-medium max-w-2xl mt-2 leading-relaxed">
+                  Start with a topic, a document, or one card at a time. Review
+                  the result before it becomes part of your study library.
+                </p>
+              </div>
+              <div className="shrink-0 nb-border-2 border-background/30 dark:border-border bg-background/10 dark:bg-muted/30 px-3 py-2">
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-background/60 dark:text-muted-foreground">
+                  Active deck
+                </p>
+                <p className="text-sm font-bold mt-0.5">
+                  {activeDeck?.name ?? "No deck selected"}
+                </p>
+              </div>
+            </div>
+          </section>
+
           <DocumentGenerationSection
             showToast={showToast}
             recordAppEvent={recordAppEvent}

@@ -235,6 +235,12 @@ export default function AiDeckBuilder({
                   onChange={(e) => onPromptChange(e.target.value)}
                   placeholder="Example: Create a deck on cell respiration for first-year biology students, focusing on core terms, stages, and key differences."
                   className="nb-border-2 min-h-[130px] resize-none text-sm font-medium"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !aiGenerating && aiCardCount > 0) {
+                      e.preventDefault();
+                      onGenerate();
+                    }
+                  }}
                 />
               </div>
 
