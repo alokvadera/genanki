@@ -195,7 +195,7 @@ export async function enforceIpRateLimit(
     deviceIdHash,
   });
   if (!check.allowed) {
-    throw new Error(check.reason);
+    throw new GenError("rate_limited", check.reason ?? "Rate limit exceeded");
   }
 }
 

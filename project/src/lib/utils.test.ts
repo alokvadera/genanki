@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { cn, splitCsvLine, showRecoveryToast } from "./utils";
+import { cn, splitCsvLine, showRecoveryToast, formatTokens } from "./utils";
 
 vi.mock("sonner", () => ({
   toast: { info: vi.fn(), warning: vi.fn() },
@@ -143,4 +143,18 @@ describe("splitCsvLine", () => {
 
 // Extra cn tests live in the same describe block above; no further cn tests
 // are required to hit the remaining branches.
+
+describe("formatTokens", () => {
+  it("formats with commas and rounds", () => {
+    expect(formatTokens(1234.5)).toBe("1,235");
+  });
+
+  it("clamps negative to zero", () => {
+    expect(formatTokens(-100)).toBe("0");
+  });
+
+  it("formats large numbers", () => {
+    expect(formatTokens(1_234_567)).toBe("1,234,567");
+  });
+});
 

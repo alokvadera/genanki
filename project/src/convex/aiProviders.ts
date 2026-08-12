@@ -1,6 +1,7 @@
 "use node";
 
 import { GenError } from "./errors";
+import { logger } from "./logger";
 
 const REQUEST_TIMEOUT_MS = 15_000;
 const CHAT_TIMEOUT_MS = 60_000;
@@ -293,7 +294,7 @@ async function loadOpenRouterFreeModels(): Promise<AiModelCandidate[]> {
     cachedOpenRouterFree = { fetchedAt: Date.now(), models: ordered };
     return ordered;
   } catch (err) {
-    console.error("[AiProviders] Failed to load OpenRouter free models:", err);
+    logger.error("Failed to load OpenRouter free models", { provider: "openrouter", error: String(err) });
     const fallback: AiModelCandidate[] = [
       {
         provider: "openrouter",
@@ -347,7 +348,7 @@ async function loadGroqModels(): Promise<AiModelCandidate[]> {
     cachedGroq = { fetchedAt: Date.now(), models };
     return models;
   } catch (err) {
-    console.error("[AiProviders] Failed to load Groq models:", err);
+    logger.error("Failed to load Groq models", { provider: "groq", error: String(err) });
     const fallback: AiModelCandidate[] = [
       "llama-3.1-8b-instant",
       "llama-3.3-70b-versatile",
@@ -395,7 +396,7 @@ async function loadCerebrasModels(): Promise<AiModelCandidate[]> {
       return models;
     }
   } catch (err) {
-    console.error("[AiProviders] Failed to load Cerebras models (falling back to default):", err);
+    logger.error("Failed to load Cerebras models", { provider: "cerebras", error: String(err) });
   }
 
   const fallback: AiModelCandidate[] = [

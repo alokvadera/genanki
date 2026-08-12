@@ -84,105 +84,114 @@ export default function Landing() {
 
       {/* Hero */}
       <section className="w-full px-6 lg:px-10 pt-16 sm:pt-24 pb-16">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="max-w-3xl"
-        >
-          <div className="inline-block nb-border nb-shadow-sm bg-secondary px-3 py-1 text-xs font-bold mb-6 uppercase tracking-widest">
-            100% Free · Browser-Based
-          </div>
-          <h1 className="text-4xl sm:text-6xl font-bold tracking-tight leading-[1.05] mb-5">
-            Build Anki decks
-            <br />
-            <span className="bg-accent text-accent-foreground px-2 -rotate-1 inline-block mt-1">
-              in seconds
-            </span>
-          </h1>
-          <p className="text-base sm:text-lg text-muted-foreground max-w-xl leading-relaxed mb-8 font-medium">
-            Create flashcard decks using AI smart text extractions, local PDF OCR scanning, 
-            multi-file aggregation, and Cloze deletions. Export as{" "}
-            <span className="font-bold text-foreground">.apkg</span> and open directly in Anki.
-          </p>
-          <div className="flex flex-wrap gap-3">
-            <a
-              href="/app"
-              className="nb-border nb-shadow nb-hover-shadow bg-primary text-primary-foreground px-7 py-3 font-bold text-base inline-flex items-center gap-2"
+        <div className="mx-auto max-w-7xl">
+          <div className="grid items-center gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="max-w-3xl lg:pt-4"
             >
-              <Sparkles className="w-5 h-5" />
-              Start Creating
-            </a>
-            <a
-              href="#features"               className="nb-border nb-shadow-sm nb-hover-shadow bg-card px-7 py-3 font-bold text-base inline-flex items-center gap-2"
-            >
-              Learn More
-            </a>
-          </div>
-        </motion.div>
+              <div className="inline-block nb-border nb-shadow-sm bg-secondary px-3 py-1 text-xs font-bold mb-6 uppercase tracking-widest">
+                100% Free · Browser-Based
+              </div>
+              <h1 className="text-4xl sm:text-6xl font-bold tracking-tight leading-[1.05] mb-5">
+                Build Anki decks
+                <br />
+                <span className="bg-accent text-accent-foreground px-2 -rotate-1 inline-block mt-1">
+                  in seconds
+                </span>
+              </h1>
+              <p className="text-base sm:text-lg text-muted-foreground max-w-xl leading-relaxed mb-8 font-medium">
+                Create flashcard decks using AI smart text extractions, local
+                PDF OCR scanning, multi-file aggregation, and Cloze deletions.
+                Export as{" "}
+                <span className="font-bold text-foreground">.apkg</span> and
+                open directly in Anki.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <a
+                  href="/app"
+                  className="nb-border nb-shadow nb-hover-shadow bg-primary text-primary-foreground px-7 py-3 font-bold text-base inline-flex items-center gap-2"
+                >
+                  <Sparkles className="w-5 h-5" />
+                  Start Creating
+                </a>
+                <a
+                  href="#features"
+                  className="nb-border nb-shadow-sm nb-hover-shadow bg-card px-7 py-3 font-bold text-base inline-flex items-center gap-2"
+                >
+                  Learn More
+                </a>
+              </div>
+            </motion.div>
 
-        {/* Preview Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.15 }}
-          className="mt-14 sm:mt-20 max-w-2xl mx-auto"
-        >
-          <div className="nb-border nb-shadow-indigo bg-card p-1">
-            <div className="nb-border-2 bg-muted p-3 flex items-center gap-2 mb-3">
-              <div className="w-3 h-3 bg-accent nb-border-2" />
-              <div className="w-3 h-3 bg-secondary nb-border-2" />
-              <div className="w-3 h-3 bg-teal-400 dark:bg-teal-500 nb-border-2" />
-              <span className="text-[10px] font-bold text-muted-foreground ml-2 uppercase tracking-widest">
-                genanki
-              </span>
-            </div>
-            <div className="grid grid-cols-2 gap-3 p-3">
-              <div className="nb-border-2 bg-secondary p-4">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">
-                  Front
-                </p>
-                <p className="font-bold text-lg">What is photosynthesis?</p>
+            {/* Preview Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.15 }}
+              className="mt-10 lg:mt-0 max-w-2xl mx-auto w-full"
+            >
+              <div className="nb-border nb-shadow-indigo bg-card p-1">
+                <div className="nb-border-2 bg-muted p-3 flex items-center gap-2 mb-3">
+                  <div className="w-3 h-3 bg-accent nb-border-2" />
+                  <div className="w-3 h-3 bg-secondary nb-border-2" />
+                  <div className="w-3 h-3 bg-teal-400 dark:bg-teal-500 nb-border-2" />
+                  <span className="text-[10px] font-bold text-muted-foreground ml-2 uppercase tracking-widest">
+                    genanki
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-3 p-3">
+                  <div className="nb-border-2 bg-secondary p-4">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">
+                      Front
+                    </p>
+                    <p className="font-bold text-lg">What is photosynthesis?</p>
+                  </div>
+                  <div className="nb-border-2 bg-card p-4">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">
+                      Back
+                    </p>
+                    <p className="text-sm">
+                      The process by which green plants convert light energy
+                      into chemical energy.
+                    </p>
+                  </div>
+                </div>
+                <div className="p-3 pt-0 flex gap-2">
+                  <div className="nb-border-2 bg-teal-400 dark:bg-teal-500 px-3 py-1.5 text-xs font-bold flex items-center gap-1.5">
+                    <BookOpen className="w-3.5 h-3.5" />
+                    Biology 101
+                  </div>
+                  <div className="nb-border-2 bg-card px-3 py-1.5 text-xs font-bold flex items-center gap-1.5">
+                    <Download className="w-3.5 h-3.5" />
+                    Export .apkg
+                  </div>
+                </div>
               </div>
-              <div className="nb-border-2 bg-card p-4">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">
-                  Back
-                </p>
-                <p className="text-sm">
-                  The process by which green plants convert light energy into chemical energy.
-                </p>
-              </div>
-            </div>
-            <div className="p-3 pt-0 flex gap-2">
-              <div className="nb-border-2 bg-teal-400 dark:bg-teal-500 px-3 py-1.5 text-xs font-bold flex items-center gap-1.5">
-                <BookOpen className="w-3.5 h-3.5" />
-                Biology 101
-              </div>
-              <div className="nb-border-2 bg-card px-3 py-1.5 text-xs font-bold flex items-center gap-1.5">
-                <Download className="w-3.5 h-3.5" />
-                Export .apkg
-              </div>
-            </div>
+            </motion.div>
           </div>
-        </motion.div>
+        </div>
       </section>
 
       {/* Features */}
-      <section id="features" className="border-t-[3px] border-border bg-card dark:bg-background">
+      <section
+        id="features"
+        className="border-t-[3px] border-border bg-card dark:bg-background"
+      >
         <div className="w-full px-6 lg:px-10 py-16 sm:py-20">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-          >
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">
               Everything you need
             </h2>
             <p className="text-muted-foreground font-medium max-w-md">
-              A focused tool for creating Anki flashcard decks without the bloat.
+              A focused tool for creating Anki flashcard decks without the
+              bloat.
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-10">
             {features.map((f, i) => (
               <motion.div
                 key={f.title}
@@ -190,7 +199,9 @@ export default function Landing() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.08 }}
               >
-                <div className={`nb-border ${f.shadow} nb-hover-shadow bg-card p-6 h-full`}>
+                <div
+                  className={`nb-border ${f.shadow} nb-hover-shadow bg-card p-6 h-full`}
+                >
                   <div
                     className={`nb-border-2 ${f.color} inline-block p-2.5 mb-4`}
                   >
@@ -210,10 +221,7 @@ export default function Landing() {
       {/* How It Works */}
       <section className="border-t-[3px] border-border bg-muted/30 dark:bg-muted/10">
         <div className="w-full px-6 lg:px-10 py-16 sm:py-20">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-          >
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">
               Three steps
             </h2>
@@ -247,7 +255,9 @@ export default function Landing() {
                 transition={{ delay: i * 0.1 }}
                 className="relative"
               >
-                <span className={`nb-border inline-block text-3xl font-bold px-3 py-1 mb-4 ${["bg-primary text-primary-foreground", "bg-secondary", "bg-accent text-accent-foreground"][i]}`}>
+                <span
+                  className={`nb-border inline-block text-3xl font-bold px-3 py-1 mb-4 ${["bg-primary text-primary-foreground", "bg-secondary", "bg-accent text-accent-foreground"][i]}`}
+                >
                   {s.step}
                 </span>
                 <h3 className="font-bold text-lg mb-1.5">{s.title}</h3>
@@ -263,10 +273,7 @@ export default function Landing() {
       {/* CTA */}
       <section className="border-t-[3px] border-border bg-card dark:bg-background">
         <div className="w-full px-6 lg:px-10 py-16 sm:py-20 text-center">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-          >
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <div className="inline-block nb-border nb-shadow bg-accent px-4 py-1.5 text-xs font-bold mb-6 uppercase tracking-widest text-accent-foreground">
               No signup required
             </div>

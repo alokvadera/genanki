@@ -3,7 +3,7 @@ import { ChevronDown, ChevronUp, Eye, Layers, Trash2, Pencil } from "lucide-reac
 import { motion, AnimatePresence } from "framer-motion";
 import type { AnkiCard } from "@/lib/anki";
 import type { Deck } from "@/hooks/use-deck-store";
-import { formatCardText } from "@/lib/formatter";
+import { FormattedCardText } from "@/components/FormattedCardText";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -193,18 +193,18 @@ export default function CardsList({
                             <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                               Front
                             </span>
-                            <div
+                            <FormattedCardText
+                              text={card.front}
                               className="text-sm mt-0.5 prose prose-sm max-w-none font-medium"
-                              dangerouslySetInnerHTML={{ __html: formatCardText(card.front) }}
                             />
                           </div>
                           <div className="border-t-2 border-border pt-2">
                             <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                               Back
                             </span>
-                            <div
+                            <FormattedCardText
+                              text={card.back}
                               className="text-sm mt-0.5 prose prose-sm max-w-none"
-                              dangerouslySetInnerHTML={{ __html: formatCardText(card.back) }}
                             />
                           </div>
                         </div>

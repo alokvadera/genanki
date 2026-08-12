@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import type { AnkiCard } from "@/lib/anki";
-import { formatCardText } from "@/lib/formatter";
+import { FormattedCardText } from "@/components/FormattedCardText";
 
 interface DeckDetailCardItemProps {
   card: AnkiCard;
@@ -75,13 +75,13 @@ export default function DeckDetailCardItem({
             {index + 1}
           </span>
           <div className="flex-1 min-w-0">
-            <div 
+            <FormattedCardText 
+              text={card.front}
               className="text-sm font-semibold truncate prose prose-sm max-w-none"
-              dangerouslySetInnerHTML={{ __html: formatCardText(card.front) }}
             />
-            <div 
+            <FormattedCardText 
+              text={card.back}
               className="text-xs text-muted-foreground truncate font-medium mt-0.5 prose prose-sm max-w-none"
-              dangerouslySetInnerHTML={{ __html: formatCardText(card.back) }}
             />
           </div>
           <div

@@ -1,4 +1,5 @@
 import { type ActionCtx } from "./_generated/server";
+import { type FunctionArgs } from "convex/server";
 import { api, internal } from "./_generated/api";
 import { type Id } from "./_generated/dataModel";
 import {
@@ -343,7 +344,7 @@ export async function attemptWithProviderFallback<T>(
 
       if (err instanceof ProviderRequestError) {
         const retryAfter = err.retryAfterSeconds;
-        const mutationArgs: Record<string, unknown> = {
+        const mutationArgs: FunctionArgs<typeof api.rateLimits.reportProviderResult> = {
           provider: candidate.provider,
           model: candidate.modelId,
           status: err.status,
@@ -358,7 +359,7 @@ export async function attemptWithProviderFallback<T>(
           mutationArgs.cooldownSeconds = computeBackoffCooldown(attempt, deadlineAt);
         }
 
-        await ctx.runMutation(api.rateLimits.reportProviderResult, mutationArgs as unknown as Parameters<typeof api.rateLimits.reportProviderResult>[0]);
+        await ctx.runMutation(api.rateLimits.reportProviderResult, mutationArgs);
       }
 
       if (isTimeoutError(err)) {

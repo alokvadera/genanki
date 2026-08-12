@@ -1,7 +1,8 @@
 import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import type { AnkiCard } from "@/lib/anki";
-import { formatCardText } from "@/lib/formatter";
+import { FormattedCardText } from "@/components/FormattedCardText";
 
 interface PreviewModalProps {
   previewCard: AnkiCard | null;
@@ -9,6 +10,18 @@ interface PreviewModalProps {
 }
 
 export default function PreviewModal({ previewCard, onClose }: PreviewModalProps) {
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+    if (!previewCard) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onCloseRef.current();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [previewCard, onClose]);
+
   return (
     <AnimatePresence>
       {previewCard && (
@@ -31,9 +44,9 @@ export default function PreviewModal({ previewCard, onClose }: PreviewModalProps
                 Front
               </p>
               <div className="nb-border-2 bg-secondary p-4 min-h-[80px] flex items-center justify-center">
-                <div 
+                <FormattedCardText
+                  text={previewCard.front}
                   className="text-base font-bold w-full text-left md:text-center prose prose-sm max-w-none"
-                  dangerouslySetInnerHTML={{ __html: formatCardText(previewCard.front) }}
                 />
               </div>
             </div>
@@ -42,9 +55,9 @@ export default function PreviewModal({ previewCard, onClose }: PreviewModalProps
                 Back
               </p>
               <div className="nb-border-2 bg-card p-4 min-h-[80px] flex items-center justify-center">
-                <div 
+                <FormattedCardText
+                  text={previewCard.back}
                   className="text-base w-full text-left md:text-center prose prose-sm max-w-none"
-                  dangerouslySetInnerHTML={{ __html: formatCardText(previewCard.back) }}
                 />
               </div>
             </div>

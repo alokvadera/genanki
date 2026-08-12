@@ -5,6 +5,11 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/** Format a number with commas (e.g. 1,234,567). Clamps to >= 0. */
+export function formatTokens(value: number): string {
+  return new Intl.NumberFormat("en-US").format(Math.max(0, Math.round(value)));
+}
+
 /**
  * Show a recovery toast notification via sonner (dynamically imported).
  * Safe to call outside React render cycles — sonner is loaded on demand.

@@ -11,6 +11,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
     "typecheck": "tsc -b --noEmit",
     "check": "npm run lint && npm run typecheck",
     "coverage:report": "python3 scripts/coverage-report.py",

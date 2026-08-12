@@ -1,11 +1,20 @@
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
-import { Activity, ArrowLeft, BarChart3, Clock3, Layers, Search, X } from "lucide-react";
+import { AnimatePresence, MotionConfig, motion } from "framer-motion";
+import {
+  Activity,
+  ArrowLeft,
+  BarChart3,
+  Clock3,
+  Layers,
+  Search,
+  X,
+} from "lucide-react";
 import { useNavigate, useParams, Link } from "react-router";
 import { useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ArchivedRunViewer } from "@/components/ArchivedRunViewer";
 import { useDeckStore } from "@/hooks/use-deck-store";
@@ -24,7 +33,9 @@ function formatDuration(seconds: number): string {
   const safe = Math.max(0, Math.ceil(seconds));
   const minutes = Math.floor(safe / 60);
   const remainder = safe % 60;
-  return minutes > 0 ? `${minutes}m ${String(remainder).padStart(2, "0")}s` : `${remainder}s`;
+  return minutes > 0
+    ? `${minutes}m ${String(remainder).padStart(2, "0")}s`
+    : `${remainder}s`;
 }
 
 export default function History() {
@@ -33,7 +44,9 @@ export default function History() {
   const deckStore = useDeckStore();
   const { activeDeckId, createDeckWithCards, addCards } = deckStore;
   const [now, setNow] = useState(() => Date.now());
-  const [selectedLiveJobId, setSelectedLiveJobId] = useState<string | null>(null);
+  const [selectedLiveJobId, setSelectedLiveJobId] = useState<string | null>(
+    null,
+  );
   const cancelGenerationJob = useMutation(api.generationJobs.cancel);
   const listActiveRuns = useAction(api.decryptActions.listActiveRunsAction);
   const listArchivedRuns = useAction(api.decryptActions.listArchivedRunsAction);
@@ -43,7 +56,7 @@ export default function History() {
 
   const [activeJobs, setActiveJobs] = useState<Doc<"generationJobs">[]>([]);
   const [jobs, setJobs] = useState<Doc<"generationJobs">[]>([]);
-  const [, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   const fetchRuns = async () => {
     try {
@@ -81,16 +94,23 @@ export default function History() {
     }
   }, [firstJobId, jobId, navigate]);
 
-  const selectedJob = jobs.find((job) => job._id === (jobId ?? jobs[0]?._id)) ?? null;
-  const selectedLiveJob = activeJobs.find((job) => job._id === selectedLiveJobId) ?? null;
+  const selectedJob =
+    jobs.find((job) => job._id === (jobId ?? jobs[0]?._id)) ?? null;
+  const selectedLiveJob =
+    activeJobs.find((job) => job._id === selectedLiveJobId) ?? null;
 
   return (
-    <div className="min-h-screen bg-background">
+    <MotionConfig reducedMotion="user">
+      <div className="min-h-screen bg-background">
       <header className="border-b-[3px] border-border bg-card text-card-foreground">
-        <div className="w-full px-6 lg:px-10 py-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="w-full px-4 sm:px-6 lg:px-10 py-3 sm:py-4 flex flex-wrap items-center gap-3 sm:justify-between">
           <div className="flex items-center gap-3 min-w-0">
-            <Button asChild variant="outline" className="nb-border nb-shadow-sm nb-hover-shadow font-bold text-sm px-3 h-9">
-              <Link to="/app">
+            <Button
+              asChild
+              variant="outline"
+              className="nb-border nb-shadow-sm nb-hover-shadow font-bold text-sm px-3 h-9"
+            >
+              <Link to="/app" aria-label="Back to deck creator">
                 <ArrowLeft className="w-4 h-4" />
               </Link>
             </Button>
@@ -105,303 +125,459 @@ export default function History() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 justify-end">
             <ThemeToggle />
-            <Button asChild variant="outline" className="nb-border nb-shadow-sm nb-hover-shadow font-bold text-sm px-4 h-9">
-              <Link to="/usage">
+            <Button
+              asChild
+              variant="outline"
+              className="nb-border nb-shadow-sm nb-hover-shadow font-bold text-sm px-4 h-9"
+            >
+              <Link to="/usage" aria-label="View provider usage">
                 <BarChart3 className="w-4 h-4" />
-                Usage
+                <span className="hidden sm:inline">Usage</span>
               </Link>
             </Button>
-            <Button asChild variant="outline" className="nb-border nb-shadow-sm nb-hover-shadow font-bold text-sm px-4 h-9">
-              <Link to="/app">
+            <Button
+              asChild
+              variant="outline"
+              className="nb-border nb-shadow-sm nb-hover-shadow font-bold text-sm px-4 h-9"
+            >
+              <Link to="/app" aria-label="Open deck creator">
                 <Layers className="w-4 h-4" />
-                Deck creator
+                <span className="hidden sm:inline">Deck creator</span>
               </Link>
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="w-full px-6 lg:px-10 py-6">
-        <section className="nb-border-2 bg-foreground text-background nb-shadow-amber p-4 sm:p-5 mb-6 dark:bg-card dark:text-foreground">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-start gap-3">
-              <div className="border-2 border-border bg-primary p-2">
-                <Activity className="w-5 h-5" />
+      <main className="w-full px-4 sm:px-6 lg:px-10 py-5 sm:py-6">
+        <div className="mx-auto max-w-7xl">
+          <section className="nb-border bg-foreground text-background nb-shadow-amber p-5 sm:p-6 mb-6 dark:bg-card dark:text-foreground">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-3">
+                <div className="border-2 border-border bg-primary p-2">
+                  <Activity className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                    Run control center
+                  </p>
+                  <h2 className="text-lg font-bold tracking-tight mt-1">
+                    {activeJobs.length > 0
+                      ? `${activeJobs.length} run${activeJobs.length !== 1 ? "s" : ""} in progress`
+                      : "No runs in progress"}
+                  </h2>
+                  <p className="text-xs text-muted-foreground font-medium mt-1">
+                    This page updates live while providers, models, and document
+                    sections change.
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Run control center</p>
-                <h2 className="text-lg font-bold tracking-tight mt-1">
-                  {activeJobs.length > 0
-                    ? `${activeJobs.length} run${activeJobs.length !== 1 ? "s" : ""} in progress`
-                    : "No runs in progress"}
-                </h2>
-                <p className="text-xs text-muted-foreground font-medium mt-1">
-                  This page updates live while providers, models, and document sections change.
-                </p>
-              </div>
-            </div>
-            <Link to="/app" className="nb-border bg-secondary text-secondary-foreground px-3 py-2 text-xs font-bold nb-hover-shadow">
-              Start another run
-            </Link>
-          </div>
-        </section>
-
-        {activeJobs.length > 0 && (
-          <section className="nb-border bg-card nb-shadow-rose p-4 sm:p-5 mb-6">
-            <div className="flex items-end justify-between gap-3 mb-4">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary mb-1">Live now</p>
-                <h2 className="text-lg font-bold tracking-tight">Active generation runs</h2>
-              </div>
-              <span className="text-xs text-muted-foreground font-medium">Updates automatically</span>
-            </div>
-            <div className="grid gap-3">
-              {activeJobs.map((job) => {
-                const progress = Math.max(0, Math.min(1, job.progress));
-                const timeLeft = Math.max(0, Math.ceil((job.deadlineAt - now) / 1000));
-                const statusLabel = job.status === "running" ? "Running" : "Queued";
-                return (
-                  <div key={job._id} className="nb-border-2 bg-muted/20 p-4">
-                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2 mb-2">
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300">
-                            <Activity className="w-3 h-3" /> {statusLabel}
-                          </span>
-                          <span className="text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 bg-card dark:bg-card nb-border">
-                            {job.kind}
-                          </span>
-                          <span className="text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 bg-card dark:bg-card nb-border">
-                            {job.requestedCount} cards
-                          </span>
-                        </div>
-                        <p className="text-sm font-bold tracking-tight break-words">{job.message}</p>
-                        <p className="text-xs text-muted-foreground font-medium mt-1 break-words">
-                          {job.provider || "Selecting provider"} / {job.model || "Selecting model"}
-                        </p>
-                        <p className="text-xs text-muted-foreground font-medium mt-2">
-                          Section {Math.min(job.sectionIndex + 1, Math.max(1, job.totalSections))} / {Math.max(1, job.totalSections)}
-                          {job.totalProviders > 0 ? ` · Provider ${Math.min(job.providerIndex + 1, job.totalProviders)} / ${job.totalProviders}` : ""}
-                          {job.totalModels > 0 ? ` · Model ${Math.min(job.modelIndex + 1, job.totalModels)} / ${job.totalModels}` : ""}
-                        </p>
-                      </div>
-                      <div className="grid grid-cols-3 gap-3 lg:min-w-[360px]">
-                        <div>
-                          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Progress</p>
-                          <p className="text-xl font-bold mt-1">{Math.round(progress * 100)}%</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">ETA</p>
-                          <p className="text-xl font-bold mt-1">{formatDuration(job.etaSeconds)}</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Time left</p>
-                          <p className="text-xl font-bold mt-1">{formatDuration(timeLeft)}</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-4 flex items-center gap-3">
-                      <div className="h-2 flex-1 bg-card overflow-hidden nb-border-2">
-                        <motion.div
-                          className="h-full bg-primary"
-                          initial={false}
-                          animate={{ width: `${Math.max(4, progress * 100)}%` }}
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => cancelGenerationJob({ jobId: job._id })}
-                        className="inline-flex items-center gap-1 nb-border bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700 nb-hover-shadow dark:bg-red-950/30 dark:text-red-300"
-                      >
-                        <X className="w-3.5 h-3.5" /> Cancel
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedLiveJobId(job._id)}
-                        className="nb-border bg-secondary px-3 py-1.5 text-xs font-bold nb-hover-shadow"
-                      >
-                        View available cards ({job.resultCards?.length ?? 0})
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
+              <Link
+                to="/app"
+                className="self-start sm:self-auto nb-border bg-secondary text-secondary-foreground px-3 py-2 text-xs font-bold nb-hover-shadow"
+              >
+                Start another run
+              </Link>
             </div>
           </section>
-        )}
 
-        {selectedLiveJob && (
-          <section className="mb-6">
-            <ArchivedRunViewer
-              job={selectedLiveJob}
-              historyHref={`/runs/${selectedLiveJob._id}`}
-              onClose={() => setSelectedLiveJobId(null)}
-              closeLabel="Close live cards"
-            />
-          </section>
-        )}
-
-        <div className="nb-border bg-card nb-shadow-teal p-4 sm:p-5 mb-6">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-1">
-                Archived runs
-              </p>
-              <h2 className="text-lg font-bold tracking-tight">Completed, failed, and canceled runs</h2>
-            </div>
-            <p className="text-xs text-muted-foreground font-medium">
-              {jobs.length > 0
-                ? `Showing ${jobs.length} archived run${jobs.length !== 1 ? "s" : ""}`
-                : "No archived runs yet"}
-            </p>
-          </div>
-        </div>
-
-        <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-          <aside className="nb-border bg-card nb-shadow-indigo p-4">
-            <div className="flex items-center justify-between gap-3 mb-4">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-                  Run list
-                </p>
-                <h3 className="text-base font-bold tracking-tight mt-1">Recent archives</h3>
+          <AnimatePresence initial={false}>
+            {activeJobs.length > 0 && (
+              <motion.section
+                key="active-runs"
+                layout
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.22, ease: "easeOut" }}
+                className="nb-border bg-card nb-shadow-rose p-4 sm:p-5 mb-6"
+              >
+              <div className="flex items-end justify-between gap-3 mb-4">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary mb-1">
+                    Live now
+                  </p>
+                  <h2 className="text-lg font-bold tracking-tight">
+                    Active generation runs
+                  </h2>
+                </div>
+                <span className="text-xs text-muted-foreground font-medium">
+                  Updates automatically
+                </span>
               </div>
-              <Search className="w-4 h-4 text-muted-foreground" />
-            </div>
-
-            <div className="space-y-2 max-h-[780px] overflow-auto pr-1">
-              {jobs.length === 0 ? (
-                <p className="text-sm text-muted-foreground font-medium">
-                  Archived runs will appear here after generation completes.
-                </p>
-              ) : (
-                 jobs.map((job, index) => {
-                  const isSelected = selectedJob?._id === job._id;
-                  const tone =
-                    job.status === "succeeded"                        ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300"
-                      : job.status === "failed"
-                        ? "bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-300"
-                        : "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300";
-                  const runLabel = `${job.status} ${job.kind} run${
-                    job.resultDeckName ? `: ${job.resultDeckName}` : ""
-                  }${job.resultCards?.length ? `, ${job.resultCards.length} cards` : ""}`;
+              <div className="grid gap-3">
+                {activeJobs.map((job) => {
+                  const progress = Math.max(0, Math.min(1, job.progress));
+                  const timeLeft = Math.max(
+                    0,
+                    Math.ceil((job.deadlineAt - now) / 1000),
+                  );
+                  const statusLabel =
+                    job.status === "running" ? "Running" : "Queued";
                   return (
-                    <motion.button
-                      key={job._id}
-                      type="button"
-                      data-testid="run-list-item"
-                      data-job-id={job._id}
-                      aria-label={runLabel}
-                      onClick={() => navigate(`/runs/${job._id}`)}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.03 }}
-                      className={`w-full text-left nb-border-2 p-3 transition-all nb-hover-shadow ${
-                        isSelected ? "bg-secondary nb-shadow-sm" : "bg-muted/20 hover:bg-muted/30"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
+                    <div key={job._id} className="nb-border-2 bg-muted/20 p-4">
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2 mb-2">
-                            <span className={`text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 ${tone}`}>
-                              {job.status}
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300">
+                              <Activity className="w-3 h-3" /> {statusLabel}
                             </span>
                             <span className="text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 bg-card dark:bg-card nb-border">
                               {job.kind}
                             </span>
+                            <span className="text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 bg-card dark:bg-card nb-border">
+                              {job.requestedCount} cards
+                            </span>
                           </div>
-                          <p className="text-sm font-bold tracking-tight truncate">
-                            {job.resultDeckName || job.message}
+                          <p className="text-sm font-bold tracking-tight break-words">
+                            {job.message}
                           </p>
-                          <p className="text-xs text-muted-foreground font-medium mt-0.5 truncate">
-                            {job.provider || "Provider pending"} / {job.model || "Model pending"}
+                          <p className="text-xs text-muted-foreground font-medium mt-1 break-words">
+                            {job.provider || "Selecting provider"} /{" "}
+                            {job.model || "Selecting model"}
+                          </p>
+                          <p className="text-xs text-muted-foreground font-medium mt-2">
+                            Section{" "}
+                            {Math.min(
+                              job.sectionIndex + 1,
+                              Math.max(1, job.totalSections),
+                            )}{" "}
+                            / {Math.max(1, job.totalSections)}
+                            {job.totalProviders > 0
+                              ? ` · Provider ${Math.min(job.providerIndex + 1, job.totalProviders)} / ${job.totalProviders}`
+                              : ""}
+                            {job.totalModels > 0
+                              ? ` · Model ${Math.min(job.modelIndex + 1, job.totalModels)} / ${job.totalModels}`
+                              : ""}
                           </p>
                         </div>
-                        <div className="text-right shrink-0">
-                          <p className="text-sm font-bold">{job.resultCards?.length ?? 0}</p>
-                          <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                            cards
-                          </p>
+                        <div className="grid grid-cols-3 gap-3 lg:min-w-[360px]">
+                          <div>
+                            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                              Progress
+                            </p>
+                            <p className="text-xl font-bold mt-1">
+                              {Math.round(progress * 100)}%
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                              ETA
+                            </p>
+                            <p className="text-xl font-bold mt-1">
+                              {formatDuration(job.etaSeconds)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                              Time left
+                            </p>
+                            <p className="text-xl font-bold mt-1">
+                              {formatDuration(timeLeft)}
+                            </p>
+                          </div>
                         </div>
                       </div>
-                      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground font-medium">
-                        <span>{formatTime(job.createdAt)}</span>
-                        <span>{job.resultPartial ? "partial result" : "finalized"}</span>
-                      </div>
-                    </motion.button>
-                  );
-                })
-              )}
-            </div>
-          </aside>
-
-          <section className="min-w-0">
-            {selectedJob ? (
-              <ArchivedRunViewer
-                job={selectedJob}
-                historyHref={`/runs/${selectedJob._id}`}
-                onCreateDeck={() => {
-                  const deckName =
-                    selectedJob.resultDeckName?.trim() ||
-                    selectedJob.message ||
-                    "Archived Deck";
-                  createDeckWithCards(deckName, selectedJob.resultCards ?? []);
-                }}
-                onAddToCurrent={() => {
-                  addCards(activeDeckId, selectedJob.resultCards ?? []);
-                }}
-                onClose={() => navigate("/app")}
-                closeLabel="Back to app"
-                footer={
-                  <div className="nb-border-2 bg-muted/20 p-4">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-                      Run details
-                    </p>
-                    <div className="mt-3 grid gap-3 grid-cols-2 sm:grid-cols-5">
-                      <div className="nb-border bg-card p-3">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Status</p>
-                        <p className="text-sm font-bold tracking-tight mt-1">{selectedJob.status}</p>
-                      </div>
-                      <div className="nb-border bg-card p-3">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Progress</p>
-                        <p className="text-sm font-bold tracking-tight mt-1">
-                          {selectedJob.status === "succeeded" ? "100%" : `${Math.round((selectedJob.progress ?? 0) * 100)}%`}
-                        </p>
-                      </div>
-                      <div className="nb-border bg-card p-3">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">ETA</p>
-                        <p className="text-sm font-bold tracking-tight mt-1">
-                          {selectedJob.status === "succeeded" ? "0s" : formatDuration(selectedJob.etaSeconds ?? 0)}
-                        </p>
-                      </div>
-                      <div className="nb-border bg-card p-3">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Budget</p>
-                        <p className="text-sm font-bold tracking-tight mt-1">
-                          {formatTokens(selectedJob.timeoutSeconds)}
-                          <span className="ml-1 text-xs font-medium text-muted-foreground">seconds</span>
-                        </p>
-                      </div>
-                      <div className="nb-border bg-card p-3">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Archived</p>
-                        <p className="text-sm font-bold tracking-tight mt-1">{formatTime(selectedJob.updatedAt)}</p>
+                      <div className="mt-4 flex items-center gap-3">
+                        <div className="h-2 flex-1 bg-card overflow-hidden nb-border-2">
+                          <motion.div
+                            className="h-full bg-primary"
+                            initial={false}
+                            animate={{
+                              width: `${Math.max(4, progress * 100)}%`,
+                            }}
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            cancelGenerationJob({ jobId: job._id })
+                          }
+                          className="inline-flex items-center gap-1 nb-border bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700 nb-hover-shadow dark:bg-red-950/30 dark:text-red-300"
+                        >
+                          <X className="w-3.5 h-3.5" /> Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedLiveJobId(job._id)}
+                          className="nb-border bg-secondary px-3 py-1.5 text-xs font-bold nb-hover-shadow"
+                        >
+                          View available cards ({job.resultCards?.length ?? 0})
+                        </button>
                       </div>
                     </div>
-                  </div>
-                }
-              />
-            ) : (
-              <div className="nb-border bg-card nb-shadow-indigo p-6">
-                <p className="text-sm font-bold">No archived run selected</p>
-                <p className="mt-2 text-sm text-muted-foreground font-medium">
-                  Finish a generation first, then come back here to inspect the archived run.
-                </p>
+                  );
+                })}
               </div>
+              </motion.section>
             )}
-          </section>
+          </AnimatePresence>
+
+          <AnimatePresence initial={false} mode="wait">
+            {selectedLiveJob && (
+              <motion.section
+                key={`live-viewer-${selectedLiveJob._id}`}
+                layout
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                className="mb-6"
+              >
+              <ArchivedRunViewer
+                job={selectedLiveJob}
+                historyHref={`/runs/${selectedLiveJob._id}`}
+                onClose={() => setSelectedLiveJobId(null)}
+                closeLabel="Close live cards"
+              />
+              </motion.section>
+            )}
+          </AnimatePresence>
+
+          <div className="nb-border bg-card nb-shadow-teal p-4 sm:p-5 mb-6">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-1">
+                  Archived runs
+                </p>
+                <h2 className="text-lg font-bold tracking-tight">
+                  Completed, failed, and canceled runs
+                </h2>
+              </div>
+              <p className="text-xs text-muted-foreground font-medium">
+                {jobs.length > 0
+                  ? `Showing ${jobs.length} archived run${jobs.length !== 1 ? "s" : ""}`
+                  : "No archived runs yet"}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+            <aside className="nb-border bg-card nb-shadow-indigo p-4 xl:sticky xl:top-6 xl:self-start">
+              <div className="flex items-center justify-between gap-3 mb-4">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                    Run list
+                  </p>
+                  <h3 className="text-base font-bold tracking-tight mt-1">
+                    Recent archives
+                  </h3>
+                </div>
+                <Search className="w-4 h-4 text-muted-foreground" />
+              </div>
+
+              <div className="space-y-2 max-h-[780px] overflow-auto pr-1">
+                {loading ? (
+                  Array.from({ length: 4 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="nb-border-2 bg-muted/20 p-3 space-y-2"
+                    >
+                      <div className="flex gap-2 mb-2">
+                        <Skeleton className="h-4 w-16" />
+                        <Skeleton className="h-4 w-12" />
+                      </div>
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-3 w-1/2" />
+                      <div className="flex justify-between mt-2">
+                        <Skeleton className="h-3 w-20" />
+                        <Skeleton className="h-4 w-8" />
+                      </div>
+                    </div>
+                  ))
+                ) : jobs.length === 0 ? (
+                  <p className="text-sm text-muted-foreground font-medium">
+                    Archived runs will appear here after generation completes.
+                  </p>
+                ) : (
+                  jobs.map((job, index) => {
+                    const isSelected = selectedJob?._id === job._id;
+                    const tone =
+                      job.status === "succeeded"
+                        ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300"
+                        : job.status === "failed"
+                          ? "bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-300"
+                          : "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300";
+                    const runLabel = `${job.status} ${job.kind} run${
+                      job.resultDeckName ? `: ${job.resultDeckName}` : ""
+                    }${job.resultCards?.length ? `, ${job.resultCards.length} cards` : ""}`;
+                    return (
+                      <motion.button
+                        key={job._id}
+                        type="button"
+                        data-testid="run-list-item"
+                        data-job-id={job._id}
+                        aria-label={runLabel}
+                        onClick={() => navigate(`/runs/${job._id}`)}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.03 }}
+                        className={`w-full text-left nb-border-2 p-3 transition-all nb-hover-shadow ${
+                          isSelected
+                            ? "bg-secondary nb-shadow-sm"
+                            : "bg-muted/20 hover:bg-muted/30"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2 mb-2">
+                              <span
+                                className={`text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 ${tone}`}
+                              >
+                                {job.status}
+                              </span>
+                              <span className="text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 bg-card dark:bg-card nb-border">
+                                {job.kind}
+                              </span>
+                            </div>
+                            <p className="text-sm font-bold tracking-tight truncate">
+                              {job.resultDeckName || job.message}
+                            </p>
+                            <p className="text-xs text-muted-foreground font-medium mt-0.5 truncate">
+                              {job.provider || "Provider pending"} /{" "}
+                              {job.model || "Model pending"}
+                            </p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="text-sm font-bold">
+                              {job.resultCards?.length ?? 0}
+                            </p>
+                            <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                              cards
+                            </p>
+                          </div>
+                        </div>
+                        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground font-medium">
+                          <span>{formatTime(job.createdAt)}</span>
+                          <span>
+                            {job.resultPartial ? "partial result" : "finalized"}
+                          </span>
+                        </div>
+                      </motion.button>
+                    );
+                  })
+                )}
+              </div>
+            </aside>
+
+            <section className="min-w-0">
+              <AnimatePresence initial={false} mode="wait">
+                {selectedJob ? (
+                  <motion.div
+                    key={`archived-viewer-${selectedJob._id}`}
+                    layout
+                    initial={{ opacity: 0, x: 14 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -14 }}
+                    transition={{ duration: 0.24, ease: "easeOut" }}
+                  >
+                  <ArchivedRunViewer
+                  job={selectedJob}
+                  historyHref={`/runs/${selectedJob._id}`}
+                  onCreateDeck={() => {
+                    const deckName =
+                      selectedJob.resultDeckName?.trim() ||
+                      selectedJob.message ||
+                      "Archived Deck";
+                    createDeckWithCards(
+                      deckName,
+                      selectedJob.resultCards ?? [],
+                    );
+                  }}
+                  onAddToCurrent={() => {
+                    addCards(activeDeckId, selectedJob.resultCards ?? []);
+                  }}
+                  onClose={() => navigate("/app")}
+                  closeLabel="Back to app"
+                  footer={
+                    <div className="nb-border-2 bg-muted/20 p-4">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                        Run details
+                      </p>
+                      <div className="mt-3 grid gap-3 grid-cols-2 sm:grid-cols-5">
+                        <div className="nb-border bg-card p-3">
+                          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                            Status
+                          </p>
+                          <p className="text-sm font-bold tracking-tight mt-1">
+                            {selectedJob.status}
+                          </p>
+                        </div>
+                        <div className="nb-border bg-card p-3">
+                          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                            Progress
+                          </p>
+                          <p className="text-sm font-bold tracking-tight mt-1">
+                            {selectedJob.status === "succeeded"
+                              ? "100%"
+                              : `${Math.round((selectedJob.progress ?? 0) * 100)}%`}
+                          </p>
+                        </div>
+                        <div className="nb-border bg-card p-3">
+                          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                            ETA
+                          </p>
+                          <p className="text-sm font-bold tracking-tight mt-1">
+                            {selectedJob.status === "succeeded"
+                              ? "0s"
+                              : formatDuration(selectedJob.etaSeconds ?? 0)}
+                          </p>
+                        </div>
+                        <div className="nb-border bg-card p-3">
+                          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                            Budget
+                          </p>
+                          <p className="text-sm font-bold tracking-tight mt-1">
+                            {formatTokens(selectedJob.timeoutSeconds)}
+                            <span className="ml-1 text-xs font-medium text-muted-foreground">
+                              seconds
+                            </span>
+                          </p>
+                        </div>
+                        <div className="nb-border bg-card p-3">
+                          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                            Archived
+                          </p>
+                          <p className="text-sm font-bold tracking-tight mt-1">
+                            {formatTime(selectedJob.updatedAt)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  }
+                  />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="archived-empty"
+                    layout
+                    initial={{ opacity: 0, x: -14 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 14 }}
+                    transition={{ duration: 0.24, ease: "easeOut" }}
+                  >
+                <div className="nb-border bg-foreground text-background nb-shadow-indigo dark:bg-card dark:text-foreground p-6">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-secondary">
+                    Run details
+                  </p>
+                  <p className="text-xl font-bold tracking-tight mt-2">
+                    Nothing selected yet.
+                  </p>
+                  <p className="mt-2 text-sm text-background/70 dark:text-muted-foreground font-medium leading-relaxed">
+                    Finish a generation first, then choose an archived run to
+                    inspect its cards, provider trail, and usage.
+                  </p>
+                </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </section>
+          </div>
         </div>
       </main>
-    </div>
+      </div>
+    </MotionConfig>
   );
 }
