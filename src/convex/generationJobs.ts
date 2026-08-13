@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internalQuery, mutation } from "./_generated/server";
 
 export const create = mutation({
   args: {
@@ -141,14 +141,14 @@ export const cancel = mutation({
   },
 });
 
-export const get = query({
+export const get = internalQuery({
   args: { jobId: v.id("generationJobs") },
   handler: async (ctx, args) => {
     return await ctx.db.get(args.jobId);
   },
 });
 
-export const listRecent = query({
+export const listRecent = internalQuery({
   args: {
     limit: v.optional(v.number()),
   },
@@ -162,7 +162,7 @@ export const listRecent = query({
   },
 });
 
-export const listActive = query({
+export const listActive = internalQuery({
   args: {
     limit: v.optional(v.number()),
   },
@@ -180,7 +180,7 @@ export const listActive = query({
   },
 });
 
-export const listArchived = query({
+export const listArchived = internalQuery({
   args: {
     limit: v.optional(v.number()),
   },
