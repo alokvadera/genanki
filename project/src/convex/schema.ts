@@ -228,6 +228,14 @@ const schema = defineSchema(
     })
       .index("by_ip", ["ip"])
       .index("by_deviceIdHash", ["deviceIdHash"]),
+
+    // Server-issued admin sessions. Only the SHA-256 hash of the session token
+    // is stored — the raw token is returned to the client exactly once at login.
+    adminSessions: defineTable({
+      tokenHash: v.string(),
+      createdAt: v.number(),
+      expiresAt: v.number(),
+    }).index("by_tokenHash", ["tokenHash"]),
   },
   {
     schemaValidation: false,

@@ -1,10 +1,70 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { MutationCtx } from "./_generated/server";
 import {
   getDayWindowStart,
   checkAndLogIpHandler,
   deductIpTokensHandler,
+  timingSafeEqual,
+  generateSessionToken,
+  verifyAdminPassphrase,
 } from "./ipRateLimiter";
+
+const REAL_ADMIN_SECRET = process.env.ADMIN_SECRET;
+
+describe("Admin session auth", () => {
+  beforeEach(() => {
+    process.env.ADMIN_SECRET = "correct-horse-battery-staple";
+  });
+
+  afterEach(() => {
+    if (REAL_ADMIN_SECRET === undefined) {
+      delete process.env.ADMIN_SECRET;
+    } else {
+      process.env.ADMIN_SECRET = REAL_ADMIN_SECRET;
+    }
+  });
+
+  describe("timingSafeEqual", () => {
+    it("returns true for identical secrets", async () => {
+      expect(await timingSafeEqual("secret-value", "secret-value")).toBe(true);
+    });
+
+    it("returns false for different secrets of the same length", async () => {
+      expect(await timingSafeEqual("secret-value", "secret-valueX")).toBe(false);
+    });
+
+    it("returns false for different-length inputs", async () => {
+      expect(await timingSafeEqual("short", "a-much-longer-secret")).toBe(false);
+    });
+  });
+
+  describe("generateSessionToken", () => {
+    it("produces a 64-char hex token", () => {
+      const token = generateSessionToken();
+      expect(token).toMatch(/^[0-9a-f]{64}$/);
+    });
+
+    it("produces unique tokens across calls", () => {
+      const tokens = new Set(Array.from({ length: 50 }, () => generateSessionToken()));
+      expect(tokens.size).toBe(50);
+    });
+  });
+
+  describe("verifyAdminPassphrase", () => {
+    it("accepts the correct passphrase", async () => {
+      expect(await verifyAdminPassphrase("correct-horse-battery-staple")).toBe(true);
+    });
+
+    it("rejects an incorrect passphrase", async () => {
+      expect(await verifyAdminPassphrase("wrong-passphrase")).toBe(false);
+    });
+
+    it("fails closed when ADMIN_SECRET is not configured", async () => {
+      delete process.env.ADMIN_SECRET;
+      expect(await verifyAdminPassphrase("anything")).toBe(false);
+    });
+  });
+});
 
 describe("IP Rate Limiter & Budgeting", () => {
   describe("getDayWindowStart", () => {
