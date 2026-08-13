@@ -1,5 +1,11 @@
 import { v } from "convex/values";
-import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
+import {
+  internalQuery,
+  mutation,
+  query,
+  type MutationCtx,
+  type QueryCtx,
+} from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
 import { GenError } from "./errors";
 
@@ -425,9 +431,11 @@ export const adminResetIpTokens = mutation({
 });
 
 /**
- * Internal Queries used by Actions
+ * Internal Queries used by Actions — deliberately NOT client-callable.
+ * Exposing these publicly would let anyone enumerate another visitor's
+ * generation jobs by hashing known IPs (IDOR).
  */
-export const listActiveJobsByHash = query({
+export const listActiveJobsByHash = internalQuery({
   args: { 
     creatorIpHash: v.string(),
     creatorDeviceIdHash: v.optional(v.string()),
@@ -459,7 +467,7 @@ export const listActiveJobsByHash = query({
   },
 });
 
-export const listArchivedJobsByHash = query({
+export const listArchivedJobsByHash = internalQuery({
   args: { 
     creatorIpHash: v.string(), 
     creatorDeviceIdHash: v.optional(v.string()),
@@ -495,7 +503,7 @@ export const listArchivedJobsByHash = query({
   },
 });
 
-export const getJobById = query({
+export const getJobById = internalQuery({
   args: { jobId: v.id("generationJobs") },
   handler: async (ctx, args) => {
     return await ctx.db.get(args.jobId);

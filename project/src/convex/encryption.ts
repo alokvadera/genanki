@@ -2,11 +2,28 @@
 
 import crypto from "crypto";
 
-const pepper = process.env.ENCRYPTION_PEPPER || "fallback-pepper-static-string-12345";
+/**
+ * Returns the server-side pepper used for key derivation.
+ *
+ * Fails closed: if ENCRYPTION_PEPPER is not configured we refuse to derive
+ * keys rather than silently falling back to a publicly-known constant (a
+ * hardcoded fallback would let anyone with the source decrypt every user's
+ * history). Set ENCRYPTION_PEPPER in the Convex environment to a long random
+ * string.
+ */
+function getPepper(): string {
+  const pepper = process.env.ENCRYPTION_PEPPER;
+  if (!pepper) {
+    throw new Error(
+      "ENCRYPTION_PEPPER is not configured. Set it in the Convex environment to a long random string.",
+    );
+  }
+  return pepper;
+}
 
 // Helper to derive a stable 256-bit key from the IP address + server pepper
 function getIpKey(ip: string): Buffer {
-  return crypto.scryptSync(ip, pepper, 32);
+  return crypto.scryptSync(ip, getPepper(), 32);
 }
 
 // Encrypt string with AES-256-GCM
@@ -40,5 +57,5 @@ export function decrypt(encryptedText: string, ip: string): string {
 
 // SHA-256 hash of IP + Pepper for index queries without storing raw IP in index fields
 export function hashIp(ip: string): string {
-  return crypto.createHash("sha256").update(ip + pepper).digest("hex");
+  return crypto.createHash("sha256").update(ip + getPepper()).digest("hex");
 }

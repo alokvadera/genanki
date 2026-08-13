@@ -1,8 +1,22 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { hashIp, encrypt, decrypt } from "./encryption";
+
+const REAL_PEPPER = process.env.ENCRYPTION_PEPPER;
 
 describe("Zero-Knowledge Encryption Module", () => {
   const testIp = "192.168.1.100";
+
+  beforeEach(() => {
+    process.env.ENCRYPTION_PEPPER = "test-pepper-0123456789abcdef";
+  });
+
+  afterEach(() => {
+    if (REAL_PEPPER === undefined) {
+      delete process.env.ENCRYPTION_PEPPER;
+    } else {
+      process.env.ENCRYPTION_PEPPER = REAL_PEPPER;
+    }
+  });
   const testPayload = JSON.stringify({
     deckName: "Test Biology Deck",
     cards: [
@@ -49,6 +63,14 @@ describe("Zero-Knowledge Encryption Module", () => {
     it("returns invalid fallback notice for non-encrypted strings", () => {
       const decrypted = decrypt("plain-text", testIp);
       expect(decrypted).toBe("[Encrypted - Invalid Payload]");
+    });
+  });
+
+  describe("fail-closed pepper", () => {
+    it("throws when ENCRYPTION_PEPPER is not configured", () => {
+      delete process.env.ENCRYPTION_PEPPER;
+      expect(() => hashIp(testIp)).toThrow(/ENCRYPTION_PEPPER is not configured/);
+      expect(() => encrypt(testPayload, testIp)).toThrow(/ENCRYPTION_PEPPER is not configured/);
     });
   });
 });

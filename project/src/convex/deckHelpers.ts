@@ -2,7 +2,7 @@
 
 import { type ActionCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import { buildModelCandidates, type AiModelCandidate } from "./aiProviders";
 import { prioritizeCandidates } from "../lib/routing";
 import { type OrchestrationPatch } from "./providerOrchestrator";
@@ -172,7 +172,7 @@ export async function appendFallbackTrail(
   keySeed?: string,
 ): Promise<void> {
   if (!jobId || !fallbackTrail.length) return;
-  const job = await ctx.runQuery(api.generationJobs.get, { jobId });
+  const job = await ctx.runQuery(internal.generationJobs.get, { jobId });
   if (!job) return;
   const merged = mergeFallbackTrail(job.fallbackTrail, fallbackTrail);
   if (merged) {
@@ -204,7 +204,7 @@ export async function enforceIpRateLimit(
 // ---------------------------------------------------------------------------
 export async function assertJobActive(ctx: ActionCtx, jobId: Id<"generationJobs"> | undefined): Promise<void> {
   if (!jobId) return;
-  const job = await ctx.runQuery(api.generationJobs.get, { jobId });
+  const job = await ctx.runQuery(internal.generationJobs.get, { jobId });
   if (job?.status === "canceled") {
     throw new GenError("canceled", "Generation canceled");
   }

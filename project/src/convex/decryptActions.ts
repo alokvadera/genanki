@@ -2,7 +2,7 @@
 
 import { v } from "convex/values";
 import { action } from "./_generated/server";
-import { api } from "./_generated/api";
+import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import { decrypt, hashIp } from "./encryption";
 
@@ -20,7 +20,7 @@ export const listActiveRunsAction = action({
     const creatorDeviceIdHash = args.deviceToken ? hashIp(args.deviceToken) : undefined;
 
     // Call internal query to list matching active jobs
-    const jobs = await ctx.runQuery(api.ipRateLimiter.listActiveJobsByHash, {
+    const jobs = await ctx.runQuery(internal.ipRateLimiter.listActiveJobsByHash, {
       creatorIpHash,
       creatorDeviceIdHash,
     });
@@ -56,7 +56,7 @@ export const listArchivedRunsAction = action({
     const creatorIpHash = hashIp(ip);
     const creatorDeviceIdHash = args.deviceToken ? hashIp(args.deviceToken) : undefined;
 
-    const jobs = await ctx.runQuery(api.ipRateLimiter.listArchivedJobsByHash, {
+    const jobs = await ctx.runQuery(internal.ipRateLimiter.listArchivedJobsByHash, {
       creatorIpHash,
       creatorDeviceIdHash,
       limit: args.limit,
@@ -92,7 +92,7 @@ export const getRunDetailAction = action({
     const creatorIpHash = hashIp(ip);
     const creatorDeviceIdHash = args.deviceToken ? hashIp(args.deviceToken) : undefined;
 
-    const job = await ctx.runQuery(api.ipRateLimiter.getJobById, { jobId: args.jobId });
+    const job = await ctx.runQuery(internal.ipRateLimiter.getJobById, { jobId: args.jobId });
     if (!job) return null;
 
     const isIpCreator = job.creatorIpHash === creatorIpHash;
