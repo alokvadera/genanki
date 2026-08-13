@@ -4,12 +4,12 @@
 
 As of **2026-07-22**, the project has achieved **100% coverage** across all metrics on the monitored scope (`src/lib/**` and `src/hooks/**`):
 
-| Metric | Actual | Threshold | Headroom |
-|--------|--------|-----------|----------|
-| Statements | 537/537 (100%) | 99% | +1.00pp |
-| Branches | 285/285 (100%) | 99% | +1.00pp |
-| Functions | 96/96 (100%) | 99% | +1.00pp |
-| Lines | 491/491 (100%) | 99% | +1.00pp |
+| Metric     | Actual         | Threshold | Headroom |
+| ---------- | -------------- | --------- | -------- |
+| Statements | 537/537 (100%) | 99%       | +1.00pp  |
+| Branches   | 285/285 (100%) | 99%       | +1.00pp  |
+| Functions  | 96/96 (100%)   | 99%       | +1.00pp  |
+| Lines      | 491/491 (100%) | 99%       | +1.00pp  |
 
 916 tests across 33 test files pass cleanly. See `npm run coverage:report` for the latest live snapshot.
 
@@ -33,10 +33,14 @@ Six source files were affected. The sites are inventoried below.
 
 ```ts
 import("sonner")
-  .then(({ toast }) => { /* ... */ })
+  .then(({ toast }) => {
+    /* ... */
+  })
   /* istanbul ignore start -- defensive no-op when dynamic sonner import fails */
-  .catch(() => { /* sonner not available */ });
-  /* istanbul ignore end */
+  .catch(() => {
+    /* sonner not available */
+  });
+/* istanbul ignore end */
 ```
 
 **Rationale**: sonner is dynamically imported. Forcing the dynamic import to
@@ -49,7 +53,7 @@ catch callback is a documented defensive no-op, not behavioural code.
 ```ts
 const [isMobile, setIsMobile] = React.useState<boolean>(() =>
   /* istanbul ignore next -- SSR / sandbox guard; jsdom test env always has window */
-  (typeof window !== "undefined" ? window.innerWidth < MOBILE_BREAKPOINT : false)
+  typeof window !== "undefined" ? window.innerWidth < MOBILE_BREAKPOINT : false,
 );
 ```
 
@@ -96,7 +100,7 @@ because the `istanbul ignore next` form did not suppress the binary-expr branch.
 if (cardsInserted === 0) {
   throw new Error(
     "No cards were generated. If your deck uses cloze syntax ({{c1::...}}), " +
-    "ensure at least one card contains valid cloze markers.",
+      "ensure at least one card contains valid cloze markers.",
   );
 }
 /* istanbul ignore end */
@@ -199,7 +203,9 @@ with `ignore start/end` to ensure the branch denominator is correctly reduced.
 
 ```ts
 /* istanbul ignore start -- renameDeck map ternary */
-setDecksAndSave((prev) => prev.map((d) => (d.id === id ? { ...d, name: name.trim() } : d)));
+setDecksAndSave((prev) =>
+  prev.map((d) => (d.id === id ? { ...d, name: name.trim() } : d)),
+);
 /* istanbul ignore end */
 ```
 
@@ -213,7 +219,8 @@ instrumentation inside `useCallback` closures. Same pattern as site #11.
 export function useDeckStore() {
   /* istanbul ignore start -- Consumer defensive guard: always wrapped in DeckStoreProvider */
   const store = useContext(DeckStoreContext);
-  if (!store) throw new Error("useDeckStore must be used within DeckStoreProvider");
+  if (!store)
+    throw new Error("useDeckStore must be used within DeckStoreProvider");
   /* istanbul ignore end */
   return store;
 }
@@ -242,12 +249,14 @@ and RHS expression-evaluation as separate indexed ranges — the single
 ## When to add/remove a marker
 
 **Add** a marker only when:
+
 1. The branch is structurally unreachable through the public API.
 2. A documented, focused test proves the branch cannot be exercised without
    modifying jsdom internals or mock internals (e.g., forcing a dynamic import
    to reject).
 
 **Remove** a marker only when:
+
 1. The branch has a robust, vitest-friendly test proven to exercise it.
 2. The defensive code is removed because the underlying dependency is gone.
 3. The threshold is raised beyond the marker's contribution.
@@ -265,7 +274,7 @@ work (e.g., site #3 above).
 ## Maintenance
 
 Re-measure before changing thresholds in `vitest.config.ts` or this document.
-**Last re-measured: 2026-07-22** via `npx vitest run --coverage`.
+**Last re-measured: 2026-08-13** via `pnpm test --coverage` — 100% on all four metrics (561/561 stmts, 293/293 branches, 105/105 funcs, 508/508 lines).
 Run `npm run coverage:report` for the latest formatted output.
 
 ### Latest measurement (2026-07-22)
@@ -278,6 +287,7 @@ Run `npm run coverage:report` for the latest formatted output.
 
 The "honest ceiling" discussion from prior versions is retired. Full 100%
 coverage was achieved through a combination of:
+
 1. Converting `istanbul ignore next` → `istanbul ignore start/end` (sites #1-#13)
 2. Test additions for previously uncovered branches (`routing.ts`, `cardGenerator.ts`)
 3. Defensive-branch removal refactoring (`deckGeneration.ts`, `anki.ts`, `use-deck-store.ts`)
