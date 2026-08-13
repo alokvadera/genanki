@@ -42,6 +42,15 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* Fonts — plain @theme so the CSS variables are emitted to :root
+   (Tailwind's preflight applies --font-sans to html via --default-font-family). */
+@theme {
+  --font-sans:
+    "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display:
+    "Space Grotesk", "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
 /* Neobrutalism Minimalism Theme */
 :root {
   --radius: 0px;
@@ -53,7 +62,7 @@
   --popover-foreground: #18181b;
   --primary: #4f46e5; /* elegant indigo */
   --primary-foreground: #ffffff;
-  --secondary: #fbbf24; /* warm honey yellow */
+  --secondary: #f59e0b; /* richer warm amber — holds up better against cream */
   --secondary-foreground: #18181b;
   --muted: #f4f4f5; /* zinc 100 */
   --muted-foreground: #71717a; /* zinc 500 */
@@ -88,48 +97,84 @@
   --popover-foreground: #e4e4e7;
   --primary: #6366f1; /* electric indigo */
   --primary-foreground: #ffffff;
-  --secondary: #fbbf24; /* cyber amber yellow */
+  --secondary: #f59e0b; /* warm amber */
   --secondary-foreground: #09090b;
   --muted: #27272a; /* zinc 800 */
   --muted-foreground: #a1a1aa; /* zinc 400 */
-  --accent: #f43f5e; /* vibrant neon rose */
-  --accent-foreground: #ffffff;
+  --accent: #fb7185; /* rose-400 — brighter on dark surfaces, keeps white text legible */
+  --accent-foreground: #1a1a1f;
   --destructive: #ef4444;
   --border: #3f3f46; /* zinc 700 clean border */
   --input: #27272a;
   --ring: #6366f1;
-  --grid-color: rgba(255, 255, 255, 0.05);
+  --grid-color: rgba(255, 255, 255, 0.04);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
   body {
     @apply bg-background text-foreground;
-    background-image: radial-gradient(var(--grid-color) 1.5px, transparent 1.5px);
+    font-family: var(--font-sans);
+    background-image: radial-gradient(
+      var(--grid-color) 1.5px,
+      transparent 1.5px
+    );
     background-size: 20px 20px;
+  }
+  /* Space Grotesk display headings — tighter, confident, neo-brutalist */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    line-height: 1.1;
   }
   button:not([disabled]),
   [role="button"]:not([disabled]) {
     cursor: pointer;
   }
   /* Style inputs and select boxes with custom focus styling for neobrutalist look */
-  input:focus, select:focus, textarea:focus {
+  input:focus,
+  select:focus,
+  textarea:focus {
     @apply outline-none ring-0;
     box-shadow: 2px 2px 0px var(--border);
     transform: translate(-1px, -1px);
-    transition: transform 0.1s ease, box-shadow 0.1s ease;
+    transition:
+      transform 0.1s ease,
+      box-shadow 0.1s ease;
   }
   /* Dark mode: brighter headings, controlled placeholders, card depth cue */
-  .dark h1, .dark h2, .dark h3, .dark h4 {
+  .dark h1,
+  .dark h2,
+  .dark h3,
+  .dark h4,
+  .dark h5,
+  .dark h6 {
     color: #f4f4f5; /* zinc 100 — headings stay crisp white */
   }
-  .dark input::placeholder, .dark textarea::placeholder {
+  .dark input::placeholder,
+  .dark textarea::placeholder {
     color: #71717a; /* zinc 500 — visible but dim */
   }
   .dark .nb-border {
-    border-top-color: rgba(255, 255, 255, 0.06); /* subtle top highlight for card depth */
+    border-top-color: rgba(
+      255,
+      255,
+      255,
+      0.06
+    ); /* subtle top highlight for card depth */
   }
 }
 
@@ -179,7 +224,9 @@
 }
 
 .nb-hover-shadow {
-  transition: box-shadow 0.15s ease, transform 0.15s ease;
+  transition:
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
 }
 .nb-hover-shadow:hover:not(:disabled) {
   box-shadow: 6px 6px 0px var(--border);
@@ -217,4 +264,3 @@ select {
 .dark select {
   background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%23f5f0e8' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
 }
-

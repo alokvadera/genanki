@@ -95,10 +95,10 @@ export default function Landing() {
               <div className="inline-block nb-border nb-shadow-sm bg-secondary px-3 py-1 text-xs font-bold mb-6 uppercase tracking-widest">
                 100% Free · Browser-Based
               </div>
-              <h1 className="text-4xl sm:text-6xl font-bold tracking-tight leading-[1.05] mb-5">
+              <h1 className="text-4xl sm:text-6xl font-bold tracking-tight leading-[1.02] mb-6">
                 Build Anki decks
                 <br />
-                <span className="bg-accent text-accent-foreground px-2 -rotate-1 inline-block mt-1">
+                <span className="bg-accent text-accent-foreground px-2.5 -rotate-1 inline-block mt-2">
                   in seconds
                 </span>
               </h1>
@@ -182,7 +182,7 @@ export default function Landing() {
       >
         <div className="w-full px-6 lg:px-10 py-16 sm:py-20">
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">
+            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-3">
               Everything you need
             </h2>
             <p className="text-muted-foreground font-medium max-w-md">
@@ -191,7 +191,7 @@ export default function Landing() {
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-10">
             {features.map((f, i) => (
               <motion.div
                 key={f.title}
@@ -222,7 +222,7 @@ export default function Landing() {
       <section className="border-t-[3px] border-border bg-muted/30 dark:bg-muted/10">
         <div className="w-full px-6 lg:px-10 py-16 sm:py-20">
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">
+            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-3">
               Three steps
             </h2>
             <p className="text-muted-foreground font-medium max-w-md">
