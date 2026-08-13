@@ -79,18 +79,18 @@ npx convex env set CEREBRAS_API_KEY "csk_xxx"
 
 Set via `npx convex env set KEY value` or the Convex dashboard:
 
-| Variable                 | Required        | Purpose                              |
-| ------------------------ | --------------- | ------------------------------------ |
-| `GROQ_API_KEY`           | Yes (primary)   | Groq AI provider                     |
-| `CEREBRAS_API_KEY`       | No (fallback)   | Cerebras AI provider                 |
-| `OPENROUTER_API_KEY`     | No (fallback)   | OpenRouter free models               |
-| `KILO_API_KEY`           | No (fallback)   | Kilo AI provider                     |
-| `KILO_BASE_URL`          | If Kilo enabled | Kilo API base                        |
-| `KILO_MODEL_IDS`         | If Kilo enabled | Comma-separated model IDs            |
-| `CLOUDFLARE_ACCOUNT_ID`  | No              | Cloudflare Workers AI account        |
-| `CLOUDFLARE_API_TOKEN`   | No              | Cloudflare Workers AI token          |
-| `CLOUDFLARE_MODEL_IDS`   | No              | Comma-separated model IDs            |
-| `VLY_CONVEX_AUTH_ISSUER` | Yes             | Auth issuer URL (`.convex.site` URL) |
+| Variable                 | Required        | Purpose                                                                                                                                            |
+| ------------------------ | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | --- | ---------------------- | --- | ------------------------- |
+| `GROQ_API_KEY`           | Yes (primary)   | Groq AI provider                                                                                                                                   |
+| `CEREBRAS_API_KEY`       | No (fallback)   | Cerebras AI provider                                                                                                                               |
+| `OPENROUTER_API_KEY`     | No (fallback)   | OpenRouter free models                                                                                                                             |
+| `KILO_API_KEY`           | No (fallback)   | Kilo AI provider                                                                                                                                   |
+| `KILO_BASE_URL`          | If Kilo enabled | Kilo API base                                                                                                                                      |
+| `KILO_MODEL_IDS`         | If Kilo enabled | Comma-separated model IDs                                                                                                                          |
+| `CLOUDFLARE_ACCOUNT_ID`  | No              | Cloudflare Workers AI account                                                                                                                      |
+| `CLOUDFLARE_API_TOKEN`   | No              | Cloudflare Workers AI token                                                                                                                        |     | `CLOUDFLARE_MODEL_IDS` | No  | Comma-separated model IDs |
+| `VLY_CONVEX_AUTH_ISSUER` | Yes             | Auth issuer URL (`.convex.site` URL)                                                                                                               |
+| `ADMIN_SECRET`           | Yes             | Server-only admin passphrase for the IP admin console. **Never expose via `VITE_*`** — it must only exist in Convex env. Use a long random string. |
 
 ### Frontend Environment
 

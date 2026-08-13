@@ -27,13 +27,16 @@ import { Toaster, toast } from "sonner";
 
 const DEFAULT_DAILY_LIMIT = 50000;
 
-function getInitialAuth(): { isAuthenticated: boolean; secretKey: string } {
-  const savedSecret = sessionStorage.getItem("admin_secret");
-  const envSecret = import.meta.env.VITE_ADMIN_SECRET || "";
-  if (savedSecret && savedSecret === envSecret) {
-    return { isAuthenticated: true, secretKey: savedSecret };
+// Server-issued admin session token. Never the passphrase itself — the
+// passphrase is verified server-side via api.ipRateLimiter.adminLogin.
+const SESSION_STORAGE_KEY = "admin_token";
+
+function getInitialAuth(): { isAuthenticated: boolean; token: string } {
+  const savedToken = sessionStorage.getItem(SESSION_STORAGE_KEY);
+  if (savedToken) {
+    return { isAuthenticated: true, token: savedToken };
   }
-  return { isAuthenticated: false, secretKey: "" };
+  return { isAuthenticated: false, token: "" };
 }
 
 function formatTokens(value: number): string {
@@ -47,7 +50,21 @@ function formatTime(value: number): string {
 export default function IpAdmin() {
   const [passphrase, setPassphrase] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(() => getInitialAuth().isAuthenticated);
-  const [secretKey, setSecretKey] = useState(() => getInitialAuth().secretKey);
+  const [token, setToken] = useState(() => getInitialAuth().token);
+
+  const login = useMutation(api.ipRateLimiter.adminLogin);
+  const logout = useMutation(api.ipRateLimiter.adminLogout);
+
+  // If we restored a token from sessionStorage, confirm it's still valid.
+  const sessionValid = useQuery(
+    api.ipRateLimiter.adminValidateSession,
+    token ? { adminToken: token } : "skip",
+  );
+  if (token && sessionValid === false) {
+    sessionStorage.removeItem(SESSION_STORAGE_KEY);
+    setToken("");
+    setIsAuthenticated(false);
+  }
 
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedIp, setExpandedIp] = useState<string | null>(null);
@@ -58,21 +75,32 @@ export default function IpAdmin() {
   const [editingNoteIp, setEditingNoteIp] = useState<string | null>(null);
   const [customNoteVal, setCustomNoteVal] = useState("");
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const envSecret = import.meta.env.VITE_ADMIN_SECRET || "";
-    if (passphrase === envSecret) {
-      sessionStorage.setItem("admin_secret", passphrase);
-      setSecretKey(passphrase);
+    try {
+      const result = await login({ passphrase });
+      sessionStorage.setItem(SESSION_STORAGE_KEY, result.token);
+      setToken(result.token);
       setIsAuthenticated(true);
+      setPassphrase("");
       toast.success("Authenticated successfully");
-    } else {
+    } catch {
       toast.error("Incorrect administrator passphrase");
     }
   };
 
-  // Queries (authenticated via secretKey parameter)
-  const ips = useQuery(api.ipRateLimiter.adminListIps, isAuthenticated ? { adminSecret: secretKey } : "skip");
+  const handleLogout = async () => {
+    try {
+      if (token) await logout({ adminToken: token });
+    } finally {
+      sessionStorage.removeItem(SESSION_STORAGE_KEY);
+      setToken("");
+      setIsAuthenticated(false);
+    }
+  };
+
+  // Queries (authenticated via session token)
+  const ips = useQuery(api.ipRateLimiter.adminListIps, isAuthenticated ? { adminToken: token } : "skip");
   const summary = useQuery(api.providerUsage.summary, { daysBack: 30 });
 
   // Mutations
@@ -83,7 +111,7 @@ export default function IpAdmin() {
     try {
       const state = ips?.find((x) => x.ip === ip || (deviceIdHash && x.deviceIdHash === deviceIdHash));
       await setRule({
-        adminSecret: secretKey,
+        adminToken: token,
         ip,
         ...(deviceIdHash !== undefined && { deviceIdHash }),
         isBlocked: !currentBlocked,
@@ -101,7 +129,7 @@ export default function IpAdmin() {
       const limit = customLimitVal.trim() ? parseInt(customLimitVal, 10) : undefined;
       const state = ips?.find((x) => x.ip === ip || (deviceIdHash && x.deviceIdHash === deviceIdHash));
       await setRule({
-        adminSecret: secretKey,
+        adminToken: token,
         ip,
         ...(deviceIdHash !== undefined && { deviceIdHash }),
         isBlocked: state?.isBlocked ?? false,
@@ -119,7 +147,7 @@ export default function IpAdmin() {
     try {
       const state = ips?.find((x) => x.ip === ip || (deviceIdHash && x.deviceIdHash === deviceIdHash));
       await setRule({
-        adminSecret: secretKey,
+        adminToken: token,
         ip,
         ...(deviceIdHash !== undefined && { deviceIdHash }),
         isBlocked: state?.isBlocked ?? false,
@@ -136,7 +164,7 @@ export default function IpAdmin() {
   const handleResetTokens = async (ip: string, deviceIdHash: string | undefined) => {
     if (!window.confirm(`Are you sure you want to reset today's token usage for this visitor?`)) return;
     try {
-      await resetIpTokens({ adminSecret: secretKey, ip, ...(deviceIdHash !== undefined && { deviceIdHash }) });
+      await resetIpTokens({ adminToken: token, ip, ...(deviceIdHash !== undefined && { deviceIdHash }) });
       toast.success(`Today's token usage reset to 0`);
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Failed to reset tokens");
@@ -224,6 +252,9 @@ export default function IpAdmin() {
             <span className="nb-border bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 px-2.5 py-1 flex items-center gap-1.5">
               <CheckCircle2 className="w-3.5 h-3.5" /> IP limit active
             </span>
+            <Button variant="outline" onClick={handleLogout} className="h-9 px-3 nb-border nb-shadow-sm font-bold text-sm">
+              Sign out
+            </Button>
           </div>
         </div>
       </header>

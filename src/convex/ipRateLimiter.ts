@@ -1,9 +1,129 @@
 import { v } from "convex/values";
-import { mutation, query, type MutationCtx } from "./_generated/server";
+import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
 import { GenError } from "./errors";
 
 const DEFAULT_DAILY_LIMIT = 50_000;
+
+// ---------------------------------------------------------------------------
+// Admin session auth
+//
+// The admin passphrase is NEVER shipped to the client. Login verifies it
+// server-side (timing-safe) against process.env.ADMIN_SECRET and issues a
+// random session token; only the SHA-256 hash of that token is stored in
+// Convex. All admin functions then authenticate via the token, not the
+// passphrase, so the passphrase never leaves the login call.
+// ---------------------------------------------------------------------------
+
+const ADMIN_SESSION_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
+
+async function sha256Hex(input: string): Promise<string> {
+  const data = new TextEncoder().encode(input);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+/**
+ * Timing-safe comparison of two secrets: hashes both sides with SHA-256
+ * (equalizing length) then XOR-compares the digests in constant time.
+ */
+export async function timingSafeEqual(a: string, b: string): Promise<boolean> {
+  const [ha, hb] = await Promise.all([sha256Hex(a), sha256Hex(b)]);
+  if (ha.length !== hb.length) return false;
+  let diff = 0;
+  for (let i = 0; i < ha.length; i++) {
+    diff |= ha.charCodeAt(i) ^ hb.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
+export function generateSessionToken(): string {
+  const bytes = new Uint32Array(8); // 256 bits
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes).map((b) => b.toString(16).padStart(8, "0")).join("");
+}
+
+export async function verifyAdminPassphrase(passphrase: string): Promise<boolean> {
+  const expected = process.env.ADMIN_SECRET;
+  if (!expected) return false; // fail closed if the secret is not configured
+  return timingSafeEqual(passphrase, expected);
+}
+
+async function findAdminSession(
+  ctx: QueryCtx | MutationCtx,
+  token: string,
+): Promise<Doc<"adminSessions"> | null> {
+  const tokenHash = await sha256Hex(token);
+  const session = await ctx.db
+    .query("adminSessions")
+    .withIndex("by_tokenHash", (q) => q.eq("tokenHash", tokenHash))
+    .unique();
+  if (!session) return null;
+  if (session.expiresAt <= Date.now()) return null; // expired — treated as missing
+  return session;
+}
+
+async function requireAdminSession(ctx: QueryCtx | MutationCtx, token: string): Promise<void> {
+  const session = await findAdminSession(ctx, token);
+  if (!session) {
+    throw new GenError("forbidden", "Unauthorized: Invalid or expired admin session");
+  }
+}
+
+/**
+ * Admin: Verify the passphrase and issue a short-lived session token.
+ * The token is returned once; only its hash is persisted.
+ */
+export const adminLogin = mutation({
+  args: { passphrase: v.string() },
+  handler: async (ctx, args) => {
+    const valid = await verifyAdminPassphrase(args.passphrase);
+    if (!valid) {
+      throw new GenError("forbidden", "Unauthorized: Invalid admin passphrase");
+    }
+    const token = generateSessionToken();
+    const tokenHash = await sha256Hex(token);
+    const now = Date.now();
+    await ctx.db.insert("adminSessions", {
+      tokenHash,
+      createdAt: now,
+      expiresAt: now + ADMIN_SESSION_TTL_MS,
+    });
+    // Opportunistic cleanup of expired sessions so the table doesn't grow unbounded.
+    const expired = await ctx.db.query("adminSessions").collect();
+    for (const session of expired) {
+      if (session.expiresAt <= now) {
+        await ctx.db.delete(session._id);
+      }
+    }
+    return { token, expiresAt: now + ADMIN_SESSION_TTL_MS };
+  },
+});
+
+/** Admin: Invalidate a session token (logout). */
+export const adminLogout = mutation({
+  args: { adminToken: v.string() },
+  handler: async (ctx, args) => {
+    const tokenHash = await sha256Hex(args.adminToken);
+    const session = await ctx.db
+      .query("adminSessions")
+      .withIndex("by_tokenHash", (q) => q.eq("tokenHash", tokenHash))
+      .unique();
+    if (session) {
+      await ctx.db.delete(session._id);
+    }
+  },
+});
+
+/** Admin: Check whether a session token is still valid. */
+export const adminValidateSession = query({
+  args: { adminToken: v.string() },
+  handler: async (ctx, args) => {
+    return (await findAdminSession(ctx, args.adminToken)) !== null;
+  },
+});
 
 export function getDayWindowStart(now: number): number {
   const d = new Date(now);
@@ -159,11 +279,9 @@ export const deductIpTokens = mutation({
  * Admin: List all IPs with rate limits, rules, and aggregated provider/model usage.
  */
 export const adminListIps = query({
-  args: { adminSecret: v.string() },
+  args: { adminToken: v.string() },
   handler: async (ctx, args) => {
-    if (args.adminSecret !== process.env.ADMIN_SECRET) {
-      throw new GenError("forbidden", "Unauthorized: Invalid admin secret");
-    }
+    await requireAdminSession(ctx, args.adminToken);
 
     const states = await ctx.db.query("ipRateState").collect();
     const rules = await ctx.db.query("ipRules").collect();
@@ -234,7 +352,7 @@ export const adminListIps = query({
  */
 export const adminSetRule = mutation({
   args: {
-    adminSecret: v.string(),
+    adminToken: v.string(),
     ip: v.string(),
     deviceIdHash: v.optional(v.string()),
     isBlocked: v.boolean(),
@@ -242,9 +360,7 @@ export const adminSetRule = mutation({
     note: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    if (args.adminSecret !== process.env.ADMIN_SECRET) {
-      throw new GenError("forbidden", "Unauthorized: Invalid admin secret");
-    }
+    await requireAdminSession(ctx, args.adminToken);
 
     const existing = args.deviceIdHash
       ? await ctx.db
@@ -282,14 +398,12 @@ export const adminSetRule = mutation({
  */
 export const adminResetIpTokens = mutation({
   args: {
-    adminSecret: v.string(),
+    adminToken: v.string(),
     ip: v.string(),
     deviceIdHash: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    if (args.adminSecret !== process.env.ADMIN_SECRET) {
-      throw new GenError("forbidden", "Unauthorized: Invalid admin secret");
-    }
+    await requireAdminSession(ctx, args.adminToken);
 
     const state = args.deviceIdHash
       ? await ctx.db
