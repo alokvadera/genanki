@@ -6,17 +6,17 @@
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | React 19, Vite, Tailwind v4, shadcn/ui, Framer Motion |
-| Routing | React Router v7 (`react-router`, not `react-router-dom`) |
-| Backend | Convex (realtime DB + serverless functions) |
-| Auth | Convex Auth (backend-only; frontend auth is removed) |
-| AI | Groq (primary), Cerebras, OpenRouter, Kilo, Cloudflare Workers AI |
-| Package Manager | **pnpm** (not npm) |
-| Testing | Vitest + @testing-library/react |
-| Coverage | Istanbul (via @vitest/coverage-istanbul) |
-| Linting | ESLint 9 flat config + typescript-eslint |
+| Layer           | Technology                                                        |
+| --------------- | ----------------------------------------------------------------- |
+| Frontend        | React 19, Vite, Tailwind v4, shadcn/ui, Framer Motion             |
+| Routing         | React Router v7 (`react-router`, not `react-router-dom`)          |
+| Backend         | Convex (realtime DB + serverless functions)                       |
+| Auth            | Convex Auth (backend-only; frontend auth is removed)              |
+| AI              | Groq (primary), Cerebras, OpenRouter, Kilo, Cloudflare Workers AI |
+| Package Manager | **pnpm** (not npm)                                                |
+| Testing         | Vitest + @testing-library/react                                   |
+| Coverage        | Istanbul (via @vitest/coverage-istanbul)                          |
+| Linting         | ESLint 9 flat config + typescript-eslint                          |
 
 ---
 
@@ -36,7 +36,7 @@ pnpm test:watch           # Watch mode (vitest)
 pnpm test -- src/path     # Run specific test file(s)
 
 # Coverage
-pnpm test -- --coverage   # Generate coverage data
+pnpm test --coverage       # Generate coverage data (single dash; pnpm test -- --coverage breaks flag parsing)
 pnpm coverage:report      # Python script: detailed per-file report with threshold checks
 
 # TypeScript & Linting
@@ -79,18 +79,18 @@ npx convex env set CEREBRAS_API_KEY "csk_xxx"
 
 Set via `npx convex env set KEY value` or the Convex dashboard:
 
-| Variable | Required | Purpose |
-|----------|----------|---------|
-| `GROQ_API_KEY` | Yes (primary) | Groq AI provider |
-| `CEREBRAS_API_KEY` | No (fallback) | Cerebras AI provider |
-| `OPENROUTER_API_KEY` | No (fallback) | OpenRouter free models |
-| `KILO_API_KEY` | No (fallback) | Kilo AI provider |
-| `KILO_BASE_URL` | If Kilo enabled | Kilo API base |
-| `KILO_MODEL_IDS` | If Kilo enabled | Comma-separated model IDs |
-| `CLOUDFLARE_ACCOUNT_ID` | No | Cloudflare Workers AI account |
-| `CLOUDFLARE_API_TOKEN` | No | Cloudflare Workers AI token |
-| `CLOUDFLARE_MODEL_IDS` | No | Comma-separated model IDs |
-| `VLY_CONVEX_AUTH_ISSUER` | Yes | Auth issuer URL (`.convex.site` URL) |
+| Variable                 | Required        | Purpose                              |
+| ------------------------ | --------------- | ------------------------------------ |
+| `GROQ_API_KEY`           | Yes (primary)   | Groq AI provider                     |
+| `CEREBRAS_API_KEY`       | No (fallback)   | Cerebras AI provider                 |
+| `OPENROUTER_API_KEY`     | No (fallback)   | OpenRouter free models               |
+| `KILO_API_KEY`           | No (fallback)   | Kilo AI provider                     |
+| `KILO_BASE_URL`          | If Kilo enabled | Kilo API base                        |
+| `KILO_MODEL_IDS`         | If Kilo enabled | Comma-separated model IDs            |
+| `CLOUDFLARE_ACCOUNT_ID`  | No              | Cloudflare Workers AI account        |
+| `CLOUDFLARE_API_TOKEN`   | No              | Cloudflare Workers AI token          |
+| `CLOUDFLARE_MODEL_IDS`   | No              | Comma-separated model IDs            |
+| `VLY_CONVEX_AUTH_ISSUER` | Yes             | Auth issuer URL (`.convex.site` URL) |
 
 ### Frontend Environment
 
@@ -227,7 +227,7 @@ Before deploying to production:
 
 ```bash
 # 1. Full test suite with coverage
-pnpm test -- --coverage
+pnpm test --coverage
 
 # 2. Coverage report — all thresholds must pass
 pnpm coverage:report
@@ -261,7 +261,7 @@ npx convex deploy
 1. Understand existing code patterns in the relevant directory
 2. Write/update tests first (TDD where practical)
 3. Implement with pure functions where possible (testability)
-4. Run `pnpm test -- --coverage` — ensure 100% maintained
+4. Run `pnpm test --coverage` — ensure 100% maintained
 5. Run `pnpm check` — ensure no lint/type errors
 6. Run `pnpm coverage:report` — verify thresholds
 

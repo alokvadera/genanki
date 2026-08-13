@@ -6,6 +6,8 @@
 # Dependencies & Build Output
 node_modules/
 dist/
+# pnpm is the canonical package manager — ignore the npm lockfile
+package-lock.json
 
 # Tooling and IDE caches
 .commandcode/
@@ -19,6 +21,11 @@ chrome-profile-debug/
 *.png
 
 # Test coverage
-coverage/
-
 testsprite_tests/tmp/config.json
+coverage/
+coverage-data/
+coverage-targeted/
+
+# Playwright e2e artifacts
+playwright-report/
+test-results/
