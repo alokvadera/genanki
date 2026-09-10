@@ -1,6 +1,7 @@
 ## Overview
 
 This project uses the following tech stack:
+
 - Vite
 - Typescript
 - React Router v7 (all imports from `react-router` instead of `react-router-dom`)
@@ -8,39 +9,51 @@ This project uses the following tech stack:
 - Tailwind v4 (for styling)
 - Shadcn UI (for UI components library)
 - Lucide Icons (for icons)
-- Convex (for backend & database)
-- Convex Auth (for authentication, backend-only — frontend auth is removed)
+- Neon (backend: Lakebase Postgres + Neon Functions + Neon Auth) — migrated from Convex
 - Framer Motion (for animations)
 
-All relevant files live in the 'src' directory.
+Frontend files live in the `src` directory of this project; the backend lives in the sibling `server/` directory at the repository root.
 
 Use pnpm for the package manager.
 
 ## Setup
 
-This project is set up already and running on a cloud environment, as well as a convex development in the sandbox.
+The backend is a Neon Function (Hono REST API) deployed with `neon deploy` from the repository root. See `neon.ts` for the infrastructure definition (Postgres + Neon Auth + Function).
+
+```bash
+# Backend (from repo root)
+neon deploy                 # deploy function + provision infra
+
+# Database migrations (from server/)
+pnpm drizzle-kit generate   # generate migration from schema changes
+pnpm drizzle-kit migrate    # apply migrations to the database
+
+# Frontend (from project/)
+pnpm dev                    # Vite dev server
+```
 
 ## Environment Variables
 
-Copy `.env.example` to `.env.local` and fill in the values. The frontend only needs `VITE_CONVEX_URL`. The Convex backend uses its own env vars for AI providers.
+### Client-side (`project/.env.local`):
 
-### Client-side (`.env.local`):
-- `VITE_CONVEX_URL` — Convex deployment URL (required)
+- `VITE_API_URL` — Neon Function base URL, e.g. `https://<function-host>` (required)
 
-### Convex backend environment:
+### Neon backend environment (managed via `neon.ts` / `neon env pull`):
+
+- `DATABASE_URL` — pooled Postgres connection string (injected by Neon)
+- `ENCRYPTION_PEPPER` — pepper for hashing visitor identity
+- `ADMIN_SECRET` — admin passphrase for the IP admin console endpoints
 - `GROQ_API_KEY` — primary AI provider (required for generation)
 - `CEREBRAS_API_KEY` — fallback provider (optional)
 - `OPENROUTER_API_KEY` — fallback provider for free models (optional)
-- `OPENROUTER_APP_NAME` — OpenRouter header (optional)
-- `OPENROUTER_APP_URL` — OpenRouter header (optional)
 - `KILO_API_KEY` — fallback provider (optional)
 - `KILO_BASE_URL` — required if Kilo is enabled
 - `KILO_MODEL_IDS` — comma-separated model IDs for Kilo
-- `VLY_CONVEX_AUTH_ISSUER` — auth issuer URL (set to your deployment's `.convex.site` URL)
+- `CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_API_TOKEN` — Workers AI fallback (optional)
 
 ## Authentication
 
-Authentication has been removed from the current app flow. The deck creator runs without the auth page or auth-gated routes.
+The app has no frontend login. Neon Auth is enabled server-side (JWT verification for `/api/me`) but the deck creator runs without auth-gated routes; visitors are identified by device token + peppered IP hash.
 
 # Frontend Conventions
 
@@ -59,6 +72,7 @@ When adding a page, update the react router configuration in `src/main.tsx` to i
 ## Shad CN conventions
 
 Follow these conventions when using Shad CN components, which you should use by default.
+
 - Remember to use "cursor-pointer" to make the element clickable
 - For title text, use the "tracking-tight font-bold" class to make the text more readable
 - Always make apps MOBILE RESPONSIVE. This is important
@@ -66,10 +80,10 @@ Follow these conventions when using Shad CN components, which you should use by 
 - AVOID SHADOWS. Avoid adding any shadows to components. stick with a thin border without the shadow.
 - Avoid skeletons; instead, use the loader2 component to show a spinning loading state when loading data.
 
-
 ## Landing Pages
 
-You must always create good-looking designer-level styles to your application. 
+You must always create good-looking designer-level styles to your application.
+
 - Make it well animated and fit a certain "theme", ie neo brutalist, retro, neumorphism, glass morphism, etc
 
 Use known images and emojis from online.
@@ -92,8 +106,8 @@ You must add animations to components using Framer Motion. It is already install
 
 To use it, import the `motion` component from `framer-motion` and use it to wrap the component you want to animate.
 
-
 ### Other Items to animate
+
 - Fade in and Fade Out
 - Slide in and Slide Out animations
 - Rendering animations
@@ -104,7 +118,6 @@ Animate for all components, including on landing page and app pages.
 ## Three JS Graphics
 
 Your app comes with three js by default. You can use it to create 3D graphics for landing pages, games, etc.
-
 
 ## Colors
 
@@ -164,59 +177,35 @@ Remember to import { toast } from "sonner". Usage: `toast("Event has been create
 
 Always ensure your larger dialogs have a scroll in its content to ensure that its content fits the screen size. Make sure that the content is not cut off from the screen.
 
-Ideally, instead of using a new page, use a Dialog instead. 
+Ideally, instead of using a new page, use a Dialog instead.
 
-# Using the Convex backend
+# Using the Neon backend
 
-You will be implementing the convex backend. Follow your knowledge of convex and the documentation to implement the backend.
+The backend is a Hono REST API running as a Neon Function over Lakebase Postgres (Drizzle ORM). It lives in the sibling `server/` directory at the repository root, not in this project.
 
-## The Convex Schema
+## Schema
 
-You must correctly follow the convex schema implementation.
+The database schema is defined in `server/db/schema.ts` (Drizzle). To change it:
 
-The schema is defined in `src/convex/schema.ts`.
-
-Do not include the `_id` and `_creationTime` fields in your queries (it is included by default for each table).
-Do not index `_creationTime` as it is indexed for you. Never have duplicate indexes.
-
-
-## Convex Actions: Using CRUD operations
-
-When running anything that involves external connections, you must use a convex action with "use node" at the top of the file.
-
-You cannot have queries or mutations in the same file as a "use node" action file. Thus, you must use pre-built queries and mutations in other files.
-
-You can also use the pre-installed internal crud functions for the database:
-
-```ts
-// in convex/users.ts
-import { crud } from "convex-helpers/server/crud";
-import schema from "./schema.ts";
-
-export const { create, read, update, destroy } = crud(schema, "users");
-
-// in some file, in an action:
-const user = await ctx.runQuery(internal.users.read, { id: userId });
-
-await ctx.runMutation(internal.users.update, {
-  id: userId,
-  patch: {
-    status: "inactive",
-  },
-});
+```bash
+cd server
+./node_modules/.bin/drizzle-kit generate   # emit SQL migration into server/drizzle/
+./node_modules/.bin/drizzle-kit migrate    # apply it
 ```
 
+All tables use `uuid` primary keys and `timestamptz` timestamps; the REST boundary uses epoch-millisecond numbers to keep the API shape stable.
 
-## Common Convex Mistakes To Avoid
+## Adding an endpoint
 
-When using convex, make sure:
-- Document IDs are referenced as `_id` field, not `id`.
-- Document ID types are referenced as `Id<"TableName">`, not `string`.
-- Document object types are referenced as `Doc<"TableName">`.
-- Keep schemaValidation to false in the schema file.
-- You must correctly type your code so that it passes the type checker.
-- You must handle null / undefined cases of your convex queries for both frontend and backend, or else it will throw an error that your data could be null or undefined.
-- Always use the `@/folder` path, with `@/convex/folder/file.ts` syntax for importing convex files.
-- This includes importing generated files like `@/convex/_generated/server`, `@/convex/_generated/api`
-- Remember to import functions like useQuery, useMutation, useAction, etc. from `convex/react`
-- NEVER have return type validators.
+1. Add/extend a data service in `server/services/` (all SQL lives there).
+2. Register the route in `server/app.ts`.
+3. Add a typed client function in `project/src/lib/api.ts`.
+4. Consume it with `useApiQuery` (polling) or `useApiMutation` from `project/src/hooks/use-api-query.ts`.
+
+## Common Mistakes To Avoid
+
+- Don't import `server/` code from the frontend — everything crosses the REST boundary via `src/lib/api.ts`.
+- Don't put SQL in `app.ts` route handlers; keep it in services.
+- Handle `undefined` (loading) vs `null` (server returned null) in `useApiQuery` consumers, same as the old useQuery contract.
+- Always use the `@/folder` path alias for frontend imports.
+- Server-only secrets (`ADMIN_SECRET`, `ENCRYPTION_PEPPER`, provider keys) never get `VITE_` prefixes.

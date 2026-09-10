@@ -1,5 +1,5 @@
-import { useQuery } from "convex/react";
-import { api } from "../convex/_generated/api";
+import { api } from "@/lib/api";
+import { useApiQuery } from "@/hooks/use-api-query";
 import { ShieldAlert, Activity, ShieldCheck, BrainCircuit, ChevronDown, ChevronUp } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useState } from "react";
@@ -7,9 +7,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collap
 
 export function OptimusDashboard() {
   const [isOpen, setIsOpen] = useState(false);
-  const healthData = useQuery(api.optimus.getNetworkHealth);
-  const adaptiveSettings = useQuery(api.rateLimits.adaptiveSettings, {});
-  const latestInsight = useQuery(api.rateLimits.latestInsight, {});
+  const healthData = useApiQuery(() => api.networkHealth());
+  const adaptiveSettings = useApiQuery(() => api.adaptiveSettings(), { intervalMs: 5000 });
+  const latestInsight = useApiQuery(() => api.latestInsight(), { intervalMs: 5000 });
 
   if (healthData === undefined) {
     return (

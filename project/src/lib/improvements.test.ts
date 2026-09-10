@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
 import { formatCardText, formatMathForAnki } from "./formatter";
-import { buildSystemPrompt } from "../convex/promptBuilder";
+import { buildSystemPrompt } from "@/lib/prompt-copy";
 
 describe("New Improvements Test Suite", () => {
   describe("Rich Text & LaTeX Formatter", () => {

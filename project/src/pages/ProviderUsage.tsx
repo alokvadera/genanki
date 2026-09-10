@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { BarChart3, ArrowLeft, Clock3, Layers } from "lucide-react";
-import { useQuery } from "convex/react";
 import { Link } from "react-router";
-import { api } from "@/convex/_generated/api";
+import { api } from "@/lib/api";
+import { useApiQuery } from "@/hooks/use-api-query";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
 import { OptimusDashboard } from "@/components/OptimusDashboard";
@@ -25,13 +25,11 @@ function formatTime(value: number): string {
 // ---------------------------------------------------------------------------
 
 export default function ProviderUsage() {
-  const summary = useQuery(api.providerUsage.summary, { daysBack: 30 });
-  const recent = useQuery(api.providerUsage.recent, { limit: 20 }) ?? [];
-  const providerStates = useQuery(api.rateLimits.providerStates, {}) ?? [];
-  const cloudflareBudget = useQuery(api.rateLimits.cloudflareBudget, {});
-  const telemetrySummary = useQuery(api.generationTelemetry.summary, {
-    daysBack: 30,
-  });
+  const summary = useApiQuery(() => api.usageSummary(30), { intervalMs: 5000 });
+  const recent = useApiQuery(() => api.usageRecent(20), { intervalMs: 5000 }) ?? [];
+  const providerStates = useApiQuery(() => api.providerStates(), { intervalMs: 5000 }) ?? [];
+  const cloudflareBudget = useApiQuery(() => api.cloudflareBudget(), { intervalMs: 5000 });
+  const telemetrySummary = useApiQuery(() => api.telemetrySummary(30), { intervalMs: 5000 });
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -367,7 +365,7 @@ export default function ProviderUsage() {
               ) : (
                 recent.map((row) => (
                   <div
-                    key={row._id}
+                    key={row.id}
                     className={`nb-border-2 p-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between ${getProviderColor(row.provider).bg}`}
                   >
                     <div className="min-w-0">

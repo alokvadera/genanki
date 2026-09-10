@@ -1,12 +1,10 @@
 import { Toaster } from "@/components/ui/sonner";
-import { ConvexProvider, ConvexReactClient } from "convex/react";
 import React, { StrictMode, useEffect, lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router";
 import { DeckStoreProvider } from "@/hooks/use-deck-store";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import "./index.css";
-import "katex/dist/katex.min.css";
 
 // Lazy load route components for better code splitting
 const Landing = lazy(() => import("./pages/Landing.tsx"));
@@ -86,14 +84,6 @@ class RootErrorBoundary extends React.Component<
   }
 }
 
-const convexUrl = import.meta.env.VITE_CONVEX_URL as string;
-if (!convexUrl) {
-  throw new Error(
-    "VITE_CONVEX_URL is not set. Please configure it in .env.local with your Convex deployment URL."
-  );
-}
-const convex = new ConvexReactClient(convexUrl);
-
 
 function RouteSyncer() {
   const location = useLocation();
@@ -130,7 +120,6 @@ createRoot(document.getElementById("root")!).render(
         </Suspense>
       )}
       <ThemeProvider defaultTheme="system">
-        <ConvexProvider client={convex}>
           <DeckStoreProvider>
           <BrowserRouter>
             <RouteSyncer />
@@ -149,7 +138,6 @@ createRoot(document.getElementById("root")!).render(
             </Suspense>
           </BrowserRouter>
           </DeckStoreProvider>
-        </ConvexProvider>
       </ThemeProvider>
       <Toaster />
     </RootErrorBoundary>

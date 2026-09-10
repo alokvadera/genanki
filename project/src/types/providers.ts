@@ -1,7 +1,7 @@
 /**
  * Shared types for AI provider selection across components.
- * Mirrors the backend AvailableProvider shape from convex/availableProviders.ts
- * and the catalog query shape from convex/providerCatalog.ts.
+ * Mirrors the backend AvailableProvider shape from server/services/availableProviders.ts
+ * and the catalog shape from server/services/catalog.ts.
  */
 
 /**

@@ -13,35 +13,31 @@ The following environment variables are automatically set during project creatio
 
 The `@vly-ai/integrations` package is already included in package.json.
 
-## Usage in Convex Actions
+## Usage in Neon Function
 
 ```typescript
-"use node";
+import { vly } from "../lib/vly-integrations";
 
-import { vly } from '../lib/vly-integrations';
-import { action } from "./_generated/server";
+export async function generateAIResponse() {
+  // AI Completions
+  const completion = await freebuff.com.completion({
+    model: "gpt-4o-mini",
+    messages: [
+      { role: "system", content: "You are a helpful assistant." },
+      { role: "user", content: "Hello!" },
+    ],
+    temperature: 0.7,
+    maxTokens: 150,
+  });
 
-export const generateAIResponse = action({
-  handler: async (ctx, args) => {
-    // AI Completions
-    const completion = await freebuff.com.completion({
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: 'You are a helpful assistant.' },
-        { role: 'user', content: 'Hello!' }
-      ],
-      temperature: 0.7,
-      maxTokens: 150
-    });
-    
-    return completion;
-  }
-});
+  return completion;
+}
 ```
 
 ## Available Features
 
 ### AI Integration
+
 ```typescript
 // Create completion
 const completion = await freebuff.com.completion({
@@ -62,13 +58,14 @@ const embeddings = await freebuff.com.embeddings("Your text here");
 ```
 
 ### Email Integration
+
 ```typescript
 // Send email
 const emailResult = await vly.email.send({
-  to: 'user@example.com',
-  subject: 'Welcome!',
-  html: '<h1>Welcome to our service!</h1>',
-  text: 'Welcome to our service!'
+  to: "user@example.com",
+  subject: "Welcome!",
+  html: "<h1>Welcome to our service!</h1>",
+  text: "Welcome to our service!",
 });
 
 // Send batch emails
@@ -76,6 +73,7 @@ const batchResult = await vly.email.sendBatch([...emails]);
 ```
 
 ### Payments Integration
+
 ```typescript
 // Create payment intent
 const paymentIntent = await vly.payments.createPaymentIntent({
@@ -127,7 +125,7 @@ if (result.success) {
 
 1. The integration key (`VLY_INTEGRATION_KEY`) is automatically injected during project creation
 2. All API calls are automatically billed to your deployment based on usage
-3. Must be used in Convex actions with `"use node"` directive
+3. If used, must run in the Neon Function (Node.js runtime), not the browser
 4. The integration key should never be exposed to the client
 
 ## Checking Integration Status

@@ -10,9 +10,8 @@ import {
   X,
 } from "lucide-react";
 import { useNavigate, useParams, Link } from "react-router";
-import { useMutation, useAction } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import type { Doc } from "@/convex/_generated/dataModel";
+import { api, type GenerationJob } from "@/lib/api";
+import { useApiMutation } from "@/hooks/use-api-query";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -47,22 +46,22 @@ export default function History() {
   const [selectedLiveJobId, setSelectedLiveJobId] = useState<string | null>(
     null,
   );
-  const cancelGenerationJob = useMutation(api.generationJobs.cancel);
-  const listActiveRuns = useAction(api.decryptActions.listActiveRunsAction);
-  const listArchivedRuns = useAction(api.decryptActions.listArchivedRunsAction);
+  const cancelGenerationJob = useApiMutation(api.cancelJob);
+  const listActiveRuns = useApiMutation(api.listActiveRuns);
+  const listArchivedRuns = useApiMutation(api.listArchivedRuns);
 
   // Stable browser device token
   const deviceToken = useDeviceToken();
 
-  const [activeJobs, setActiveJobs] = useState<Doc<"generationJobs">[]>([]);
-  const [jobs, setJobs] = useState<Doc<"generationJobs">[]>([]);
+  const [activeJobs, setActiveJobs] = useState<GenerationJob[]>([]);
+  const [jobs, setJobs] = useState<GenerationJob[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchRuns = async () => {
     try {
       const [active, archived] = await Promise.all([
-        listActiveRuns({ deviceToken }),
-        listArchivedRuns({ limit: 100, deviceToken }),
+        listActiveRuns(deviceToken),
+        listArchivedRuns(100, deviceToken),
       ]);
       setActiveJobs(active);
       setJobs(archived);
@@ -86,7 +85,7 @@ export default function History() {
     return () => clearInterval(timer);
   }, []);
 
-  const firstJobId = jobs[0]?._id;
+  const firstJobId = jobs[0]?.id;
 
   useEffect(() => {
     if (!jobId && firstJobId) {
@@ -95,9 +94,9 @@ export default function History() {
   }, [firstJobId, jobId, navigate]);
 
   const selectedJob =
-    jobs.find((job) => job._id === (jobId ?? jobs[0]?._id)) ?? null;
+    jobs.find((job) => job.id === (jobId ?? jobs[0]?.id)) ?? null;
   const selectedLiveJob =
-    activeJobs.find((job) => job._id === selectedLiveJobId) ?? null;
+    activeJobs.find((job) => job.id === selectedLiveJobId) ?? null;
 
   return (
     <MotionConfig reducedMotion="user">
@@ -217,7 +216,7 @@ export default function History() {
                   const statusLabel =
                     job.status === "running" ? "Running" : "Queued";
                   return (
-                    <div key={job._id} className="nb-border-2 bg-muted/20 p-4">
+                    <div key={job.id} className="nb-border-2 bg-muted/20 p-4">
                       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2 mb-2">
@@ -293,7 +292,7 @@ export default function History() {
                         <button
                           type="button"
                           onClick={() =>
-                            cancelGenerationJob({ jobId: job._id })
+                            cancelGenerationJob(job.id)
                           }
                           className="inline-flex items-center gap-1 nb-border bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700 nb-hover-shadow dark:bg-red-950/30 dark:text-red-300"
                         >
@@ -301,7 +300,7 @@ export default function History() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => setSelectedLiveJobId(job._id)}
+                          onClick={() => setSelectedLiveJobId(job.id)}
                           className="nb-border bg-secondary px-3 py-1.5 text-xs font-bold nb-hover-shadow"
                         >
                           View available cards ({job.resultCards?.length ?? 0})
@@ -318,7 +317,7 @@ export default function History() {
           <AnimatePresence initial={false} mode="wait">
             {selectedLiveJob && (
               <motion.section
-                key={`live-viewer-${selectedLiveJob._id}`}
+                key={`live-viewer-${selectedLiveJob.id}`}
                 layout
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -326,9 +325,8 @@ export default function History() {
                 transition={{ duration: 0.2, ease: "easeOut" }}
                 className="mb-6"
               >
-              <ArchivedRunViewer
-                job={selectedLiveJob}
-                historyHref={`/runs/${selectedLiveJob._id}`}
+              <ArchivedRunViewer                  job={selectedLiveJob}
+                  historyHref={`/runs/${selectedLiveJob.id}`}
                 onClose={() => setSelectedLiveJobId(null)}
                 closeLabel="Close live cards"
               />
@@ -393,7 +391,7 @@ export default function History() {
                   </p>
                 ) : (
                   jobs.map((job, index) => {
-                    const isSelected = selectedJob?._id === job._id;
+                    const isSelected = selectedJob?.id === job.id;
                     const tone =
                       job.status === "succeeded"
                         ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300"
@@ -405,12 +403,12 @@ export default function History() {
                     }${job.resultCards?.length ? `, ${job.resultCards.length} cards` : ""}`;
                     return (
                       <motion.button
-                        key={job._id}
+                        key={job.id}
                         type="button"
                         data-testid="run-list-item"
-                        data-job-id={job._id}
+                        data-job-id={job.id}
                         aria-label={runLabel}
-                        onClick={() => navigate(`/runs/${job._id}`)}
+                        onClick={() => navigate(`/runs/${job.id}`)}
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.03 }}
@@ -466,7 +464,7 @@ export default function History() {
               <AnimatePresence initial={false} mode="wait">
                 {selectedJob ? (
                   <motion.div
-                    key={`archived-viewer-${selectedJob._id}`}
+                    key={`archived-viewer-${selectedJob.id}`}
                     layout
                     initial={{ opacity: 0, x: 14 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -475,7 +473,7 @@ export default function History() {
                   >
                   <ArchivedRunViewer
                   job={selectedJob}
-                  historyHref={`/runs/${selectedJob._id}`}
+                  historyHref={`/runs/${selectedJob.id}`}
                   onCreateDeck={() => {
                     const deckName =
                       selectedJob.resultDeckName?.trim() ||

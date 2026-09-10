@@ -1,4 +1,4 @@
-import { formatTimeUntilMidnight } from "@/convex/budget";
+import { formatTimeUntilMidnight } from "@/lib/budget-client";
 import { PROVIDERS, getKeyFromLabel } from "@/lib/providerConfig";
 import { getProviderColor } from "@/lib/providerColors";
 

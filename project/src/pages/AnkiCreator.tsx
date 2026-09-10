@@ -1,8 +1,8 @@
 import React, { useState, useCallback, useEffect, lazy, Suspense } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check } from "lucide-react";
-import { useAction, useMutation, useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { api } from "@/lib/api";
+import { useApiQuery, useApiMutation } from "@/hooks/use-api-query";
 import type { AnkiCard } from "@/lib/anki";
 import type { ProviderOption } from "@/types/providers";
 import {
@@ -52,8 +52,8 @@ export default function AnkiCreator() {
   const [cardType, setCardType] = useState<"basic" | "cloze">("basic");
 
   // Provider catalog
-  const providerCatalog = useQuery(api.providerCatalog.catalog);
-  const catalogUpdatedAt = useQuery(api.providerCatalog.latestUpdatedAt);
+  const providerCatalog = useApiQuery(() => api.providerCatalog(), { intervalMs: 10000 });
+  const catalogUpdatedAt = useApiQuery(() => api.providerCatalogUpdatedAt(), { intervalMs: 30000 });
 
   const [{ providers: cachedProviders, cacheRecoveryReason }] = useState(() => {
     try {
@@ -132,7 +132,7 @@ export default function AnkiCreator() {
   }, []);
 
   // Provider refresh
-  const refreshProviders = useAction(api.availableProviders.refresh);
+  const refreshProviders = useApiMutation(api.refreshProviders);
   const handleRefreshProviders = useCallback(() => {
     refreshProviders().catch(() => {});
   }, [refreshProviders]);
@@ -163,7 +163,7 @@ export default function AnkiCreator() {
   }, [editingDeckName, editNameValue, renameDeck]);
 
   // Export helpers
-  const recordTelemetry = useMutation(api.generationTelemetry.record);
+  const recordTelemetry = useApiMutation(api.recordTelemetry);
   const recordAppEvent = useCallback(
     (event: string, metric?: number) => {
       void recordTelemetry({ event, metric }).catch(() => {});

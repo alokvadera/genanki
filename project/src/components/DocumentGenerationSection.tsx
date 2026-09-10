@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef, lazy, Suspense } from "react";
-import { useAction, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { api } from "@/lib/api";
+import { useApiMutation } from "@/hooks/use-api-query";
 import type { AnkiCard } from "@/lib/anki";
 import { generateCardsFromText } from "@/lib/cardGenerator";
 import { detectChapters, sliceSelectedChapters, type DetectedChapter } from "@/lib/chapterDetection";
@@ -66,8 +66,8 @@ export default function DocumentGenerationSection({
   const [isScanned, setIsScanned] = useState(false);
   const [scannedFile, setScannedFile] = useState<File | null>(null);
 
-  const createGenerationJob = useMutation(api.generationJobs.create);
-  const generateDeckFromDocument = useAction(api.deckGeneration.generateDeckFromDocument);
+  const createGenerationJob = useApiMutation(api.createJob);
+  const generateDeckFromDocument = useApiMutation(api.generateFromDocument);
 
   const clearDocState = useCallback(() => {
     setDocPreviewCards(null);
@@ -281,7 +281,7 @@ export default function DocumentGenerationSection({
       const totalSections = Math.min(10, Math.max(1, Math.ceil(text.length / 9000)));
       const etaSeconds = Math.max(24, Math.round(12 + docCardCount * 1.4 + totalSections * 5));
       const timeoutSeconds = estimateDocumentTimeoutSeconds(docCardCount, totalSections);
-      const jobId = await createGenerationJob({
+      const { jobId } = await createGenerationJob({
         kind: "document", requestedCount: docCardCount,
         totalProviders: 0, totalModels: 0, totalSections,
         message: "Queued document generation", etaSeconds, timeoutSeconds,

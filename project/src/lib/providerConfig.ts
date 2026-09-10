@@ -4,7 +4,7 @@
  * Maps internal provider keys (used in DB/backend) to display labels and roles.
  * All frontend components should import from here instead of hardcoding provider names.
  *
- * Source of truth for `providerLabel` values: src/convex/aiProviders.ts
+ * Source of truth for `providerLabel` values: server/aiProviders.ts
  */
 
 export type ProviderRole = "primary" | "fallback";

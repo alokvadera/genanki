@@ -11,7 +11,7 @@ export default defineConfig({
     environment: "node",
     globals: true,
     setupFiles: ["./src/test-setup.ts"],
-    include: ["src/**/*.test.{ts,tsx}"],
+    include: ["src/**/*.test.{ts,tsx}", "../server/**/*.test.ts"],
     coverage: {
       provider: "istanbul",
       reporter: ["text", "json", "html"],
@@ -19,7 +19,7 @@ export default defineConfig({
       exclude: [
         "src/**/*.test.ts",
         "src/**/*.test.tsx",
-        "src/convex/**",
+        "src/server/**",
         "src/types/**",
         "src/components/ui/**",
         "src/components/**",

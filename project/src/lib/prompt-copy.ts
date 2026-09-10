@@ -47,4 +47,3 @@ export function buildDocumentSystemPrompt(
     "Do not include markdown fences, commentary, or additional keys.",
   ].join(" ");
 }
-

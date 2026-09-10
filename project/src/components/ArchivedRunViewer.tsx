@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
 import { motion } from "framer-motion";
-import { useQuery } from "convex/react";
 import { formatDistanceToNow } from "date-fns";
 import { ArrowUpRight, BarChart3, Clock3, Cpu, Layers, Sparkles } from "lucide-react";
 import { Link } from "react-router";
-import type { Doc } from "@/convex/_generated/dataModel";
-import { api } from "@/convex/_generated/api";
+import type { GenerationJob } from "@/lib/api";
+import { api } from "@/lib/api";
+import { useApiQuery } from "@/hooks/use-api-query";
 import { Button } from "@/components/ui/button";
 import { FormattedCardText } from "@/components/FormattedCardText";
 
@@ -24,8 +24,6 @@ function getProviderColor(provider: string) {
   }
   return { bar: "bg-primary", bg: "bg-muted/20", text: "text-foreground" };
 }
-
-type GenerationJob = Doc<"generationJobs">;
 
 type ArchivedRunViewerProps = {
   job: GenerationJob;
@@ -61,7 +59,7 @@ function getStatusTone(status: GenerationJob["status"]): string {
   return "bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300";
 }
 
-/** Validation error emitted by Convex/AI SDK validation failures. */
+/** Validation error emitted by AI SDK validation failures. */
 interface ValidationError {
   message?: string;
   path?: string[];
@@ -175,7 +173,7 @@ export function ArchivedRunViewer({
   closeLabel = "Close",
   footer,
 }: ArchivedRunViewerProps) {
-  const usage = useQuery(api.providerUsage.byJob, { jobId: job._id });
+  const usage = useApiQuery(() => api.usageByJob(job.id), { intervalMs: 5000 });
   const totalTokens = usage?.totalTokens ?? 0;
   const promptTokens = usage?.totalPromptTokens ?? 0;
   const completionTokens = usage?.totalCompletionTokens ?? 0;
@@ -408,7 +406,7 @@ export function ArchivedRunViewer({
                 <p className="text-sm text-muted-foreground font-medium">No calls recorded for this run.</p>
               ) : (
                 recentCalls.map((row) => (
-                  <div key={row._id} className={`nb-border p-3 ${getProviderColor(row.provider).bg}`}>
+                  <div key={row.id} className={`nb-border p-3 ${getProviderColor(row.provider).bg}`}>
                     <p className="text-sm font-bold tracking-tight truncate">
                       {row.providerLabel} / {row.model}
                     </p>
@@ -453,7 +451,7 @@ export function ArchivedRunViewer({
               </p>
               <div className="mt-3 grid gap-3 max-h-[520px] overflow-auto pr-1">
                 {job.resultCards.map((card, index) => (
-                  <div key={`${job._id}-${index}`} className="nb-border bg-card p-3">
+                  <div key={`${job.id}-${index}`} className="nb-border bg-card p-3">
                     <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-2">
                       Card {index + 1}
                     </p>

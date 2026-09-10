@@ -10,8 +10,8 @@
 | --------------- | ----------------------------------------------------------------- |
 | Frontend        | React 19, Vite, Tailwind v4, shadcn/ui, Framer Motion             |
 | Routing         | React Router v7 (`react-router`, not `react-router-dom`)          |
-| Backend         | Convex (realtime DB + serverless functions)                       |
-| Auth            | Convex Auth (backend-only; frontend auth is removed)              |
+| Backend         | Neon Functions (Hono REST API) + Drizzle ORM on Lakebase Postgres |
+| Auth            | Neon Auth (JWT verified server-side; no frontend auth)            |
 | AI              | Groq (primary), Cerebras, OpenRouter, Kilo, Cloudflare Workers AI |
 | Package Manager | **pnpm** (not npm)                                                |
 | Testing         | Vitest + @testing-library/react                                   |
@@ -51,53 +51,48 @@ pnpm format               # Prettier across all files
 
 ---
 
-## Convex Backend
+## Neon Backend
+
+The backend lives in the sibling `server/` directory (repo root) — a long-running Neon Function exposing a Hono REST API over Lakebase Postgres via Drizzle ORM. Infrastructure is declared in `neon.ts` (repo root): Postgres + Neon Auth + Function. Data flows over REST; the frontend polls via `useApiQuery` instead of Convex's live subscriptions.
 
 ### Development
 
 ```bash
-npx convex dev              # Start Convex dev deployment (watches files, pushes code, generates types)
-npx convex dashboard        # Open Convex dashboard in browser
+# From repo root:
+neon deploy --env .env.local  # deploy function (provisions infra on first run)
+neon logs query --source function  # tail function logs
+
+# From server/:
+./node_modules/.bin/drizzle-kit generate  # generate SQL migration from db/schema.ts
+./node_modules/.bin/drizzle-kit migrate   # apply migrations (uses DATABASE_URL_UNPOOLED)
+./node_modules/.bin/tsc -p tsconfig.json  # typecheck server
+./node_modules/.bin/vitest run            # server unit tests
 ```
 
-Convex config: `convex.json` — functions live in `src/convex/`. The generated files are at `src/convex/_generated/` (auto-generated; never edit manually).
+### Environment Variables (Neon Backend)
 
-### Deployment to Production
+Set in `.env.local` (repo root, `--env` file for `neon deploy`) — `DATABASE_URL` / `DATABASE_URL_UNPOOLED` / Neon Auth URLs are injected by Neon and refreshed via `neon env pull`:
 
-```bash
-# Push backend changes to production
-npx convex deploy
-
-# Deploy with specific env vars (set them in Convex dashboard or via CLI)
-npx convex env set GROQ_API_KEY "gsk_xxx"
-npx convex env set CEREBRAS_API_KEY "csk_xxx"
-```
-
-**Important:** `npx convex deploy` pushes your Convex functions to the production deployment. Do this after `pnpm test` passes with 100% coverage. Frontend is deployed separately (Cloudflare Pages, see below).
-
-### Environment Variables (Convex Backend)
-
-Set via `npx convex env set KEY value` or the Convex dashboard:
-
-| Variable                 | Required        | Purpose                                                                                                                                            |
-| ------------------------ | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | --- | ---------------------- | --- | ------------------------- |
-| `GROQ_API_KEY`           | Yes (primary)   | Groq AI provider                                                                                                                                   |
-| `CEREBRAS_API_KEY`       | No (fallback)   | Cerebras AI provider                                                                                                                               |
-| `OPENROUTER_API_KEY`     | No (fallback)   | OpenRouter free models                                                                                                                             |
-| `KILO_API_KEY`           | No (fallback)   | Kilo AI provider                                                                                                                                   |
-| `KILO_BASE_URL`          | If Kilo enabled | Kilo API base                                                                                                                                      |
-| `KILO_MODEL_IDS`         | If Kilo enabled | Comma-separated model IDs                                                                                                                          |
-| `CLOUDFLARE_ACCOUNT_ID`  | No              | Cloudflare Workers AI account                                                                                                                      |
-| `CLOUDFLARE_API_TOKEN`   | No              | Cloudflare Workers AI token                                                                                                                        |     | `CLOUDFLARE_MODEL_IDS` | No  | Comma-separated model IDs |
-| `VLY_CONVEX_AUTH_ISSUER` | Yes             | Auth issuer URL (`.convex.site` URL)                                                                                                               |
-| `ADMIN_SECRET`           | Yes             | Server-only admin passphrase for the IP admin console. **Never expose via `VITE_*`** — it must only exist in Convex env. Use a long random string. |
+| Variable                | Required        | Purpose                                                                                                                                                  |
+| ----------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GROQ_API_KEY`          | Yes (primary)   | Groq AI provider                                                                                                                                         |
+| `CEREBRAS_API_KEY`      | No (fallback)   | Cerebras AI provider                                                                                                                                     |
+| `OPENROUTER_API_KEY`    | No (fallback)   | OpenRouter free models                                                                                                                                   |
+| `KILO_API_KEY`          | No (fallback)   | Kilo AI provider                                                                                                                                         |
+| `KILO_BASE_URL`         | If Kilo enabled | Kilo API base                                                                                                                                            |
+| `KILO_MODEL_IDS`        | If Kilo enabled | Comma-separated model IDs                                                                                                                                |
+| `CLOUDFLARE_ACCOUNT_ID` | No              | Cloudflare Workers AI account                                                                                                                            |
+| `CLOUDFLARE_API_TOKEN`  | No              | Cloudflare Workers AI token                                                                                                                              |
+| `CLOUDFLARE_MODEL_IDS`  | No              | Comma-separated Cloudflare model IDs                                                                                                                     |
+| `ADMIN_SECRET`          | Yes             | Server-only admin passphrase for the IP admin console. **Never expose via `VITE_*`** — it must only exist in the function env. Use a long random string. |
+| `ENCRYPTION_PEPPER`     | Yes             | Pepper for hashing visitor identity (device token + IP). Server-only.                                                                                    |
 
 ### Frontend Environment
 
-Client-side env vars go in `.env.local`:
+Client-side env vars go in `project/.env.local`:
 
 ```
-VITE_CONVEX_URL=https://your-project.convex.cloud
+VITE_API_URL=https://<your-function-host>
 ```
 
 ---
@@ -107,25 +102,16 @@ VITE_CONVEX_URL=https://your-project.convex.cloud
 ```
 project/
 ├── src/
-│   ├── convex/           # Convex backend (schema, mutations, actions, queries)
-│   │   ├── _generated/   # Auto-generated Convex types (DO NOT EDIT)
-│   │   ├── schema.ts     # Database schema
-│   │   ├── auth.ts       # Auth configuration
-│   │   ├── deckGeneration.ts  # Main deck generation actions
-│   │   ├── deckHelpers.ts     # Extracted helper functions
-│   │   ├── deckChunking.ts    # Text chunking utilities
-│   │   ├── providerOrchestrator.ts  # AI provider fallback logic
-│   │   ├── aiProviders.ts     # AI provider API calls
-│   │   ├── logger.ts          # Structured JSON logger
-│   │   └── ...
 │   ├── lib/              # Pure utility functions (unit-tested, in coverage scope)
 │   │   ├── anki.ts       # Anki deck/apkg generation
 │   │   ├── cardGenerator.ts   # Card text parsing
 │   │   ├── deckGeneration.ts  # AI output parsing
 │   │   ├── routing.ts        # AI provider scoring/routing
+│   │   ├── api.ts        # REST client for the Neon Function (all endpoints)
 │   │   ├── docParser.ts      # Document parsing (PDF, DOCX)
 │   │   └── ...
 │   ├── hooks/            # React hooks (in coverage scope)
+│   │   ├── use-api-query.ts  # Polling replacement for convex/react (useApiQuery/useApiMutation)
 │   │   ├── use-deck-store.ts
 │   │   ├── use-mobile.ts
 │   │   └── ...
@@ -143,8 +129,20 @@ project/
 │   └── coverage-report.py    # Custom per-file coverage checker with thresholds
 ├── vitest.config.ts      # Test/coverage config + thresholds
 ├── eslint.config.js      # ESLint flat config
-├── convex.json           # Convex project config
 └── package.json          # Dependencies + scripts
+
+# Backend (sibling of project/, repo root):
+server/
+├── db/schema.ts          # Drizzle Postgres schema (13 tables)
+├── services/             # Data services (jobs, usage, rate limits, telemetry, catalog…)
+├── deckGeneration.ts     # Main deck generation pipeline
+├── providerOrchestrator.ts  # AI provider fallback logic
+├── aiProviders.ts        # AI provider API calls
+├── app.ts                # Hono REST API (all routes)
+├── auth.ts               # Neon Auth JWT verification
+├── drizzle/              # Generated SQL migrations
+└── tsconfig.json         # Server typecheck config
+neon.ts                   # Neon IaC: Postgres + Neon Auth + Function
 ```
 
 ---
@@ -211,13 +209,13 @@ When a branch genuinely cannot be covered (defensive code, edge-case guards), us
 - Use shadcn/ui `nb-border` for neobrutalist borders
 - No nested cards, no shadows by default
 
-### Convex Rules
+### Backend Rules
 
-- Actions (`"use node"`) cannot have queries/mutations in the same file
-- Document IDs: `_id` field, `Id<"TableName">` type, `Doc<"TableName">` object type
-- Keep `schemaValidation: false` in schema
-- No return type validators
-- Always handle `null | undefined` from queries
+- Data access goes through `server/services/*` — routes in `app.ts` stay thin
+- Timestamps cross the REST boundary as epoch milliseconds (numbers), matching the pre-migration API shape; convert to/from `Date` only at the DB layer
+- DB schema changes: edit `server/db/schema.ts`, then `drizzle-kit generate` + `drizzle-kit migrate`
+- `undefined` vs `null`: route handlers return `c.json(null)` explicitly where the old queries returned `null`
+- Rate limiting happens in Postgres transactions (see `services/rateLimits.ts`, `services/ipRateLimiter.ts`)
 
 ---
 
@@ -242,14 +240,14 @@ pnpm check
 #   - 0 ESLint errors, 0 warnings
 #   - TypeScript: clean (no errors)
 
-# 4. Deploy Convex backend
-npx convex deploy
+# 4. Deploy Neon backend (from repo root)
+neon deploy --env .env.local
 
 # 5. Deploy frontend (Cloudflare Pages)
 #    - Connect repo to Cloudflare Pages
 #    - Build command: pnpm build
 #    - Build output: dist/
-#    - Set VITE_CONVEX_URL in Cloudflare Pages env vars
+#    - Set VITE_API_URL in Cloudflare Pages env vars
 ```
 
 ---

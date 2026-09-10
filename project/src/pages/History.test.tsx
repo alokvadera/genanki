@@ -8,31 +8,28 @@ import History from "./History";
 const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
   params: { jobId: undefined as string | undefined },
-  activeRunsAction: vi.fn(),
-  archivedRunsAction: vi.fn(),
+  listActiveRuns: vi.fn(),
+  listArchivedRuns: vi.fn(),
   cancelMutation: vi.fn(),
   createDeckWithCards: vi.fn(),
   addCards: vi.fn(),
 }));
 
-vi.mock("convex/react", () => ({
-  useAction: (query: unknown) =>
-    query === "decryptActions.listActiveRunsAction"
-      ? mocks.activeRunsAction
-      : mocks.archivedRunsAction,
-  useMutation: () => mocks.cancelMutation,
+vi.mock("@/lib/api", () => ({
+  api: {
+    cancelJob: (...args: unknown[]) => mocks.cancelMutation(...args),
+    listActiveRuns: (...args: unknown[]) => mocks.listActiveRuns(...args),
+    listArchivedRuns: (...args: unknown[]) => mocks.listArchivedRuns(...args),
+  },
+  ApiError: class ApiError extends Error {},
 }));
 
-vi.mock("@/convex/_generated/api", () => ({
-  api: {
-    decryptActions: {
-      listActiveRunsAction: "decryptActions.listActiveRunsAction",
-      listArchivedRunsAction: "decryptActions.listArchivedRunsAction",
-    },
-    generationJobs: {
-      cancel: "generationJobs.cancel",
-    },
-  },
+vi.mock("@/hooks/use-api-query", () => ({
+  useApiMutation:
+    (fn: unknown) =>
+      (fn as (...args: unknown[]) => unknown) === undefined
+        ? vi.fn()
+        : fn,
 }));
 
 vi.mock("react-router", () => ({
@@ -163,7 +160,7 @@ const now = Date.now();
 
 function makeJob(overrides: Record<string, unknown> = {}) {
   return {
-    _id: "job-1",
+    id: "job-1",
     kind: "prompt",
     status: "succeeded",
     requestedCount: 3,
@@ -190,8 +187,8 @@ function makeJob(overrides: Record<string, unknown> = {}) {
 }
 
 function configureRuns(active: unknown[], archived: unknown[]) {
-  mocks.activeRunsAction.mockResolvedValue(active);
-  mocks.archivedRunsAction.mockResolvedValue(archived);
+  mocks.listActiveRuns.mockResolvedValue(active);
+  mocks.listArchivedRuns.mockResolvedValue(archived);
 }
 
 describe("History dashboard states", () => {
@@ -202,8 +199,8 @@ describe("History dashboard states", () => {
   });
 
   it("shows loading skeletons while runs are being fetched", () => {
-    mocks.activeRunsAction.mockReturnValue(new Promise(() => {}));
-    mocks.archivedRunsAction.mockReturnValue(new Promise(() => {}));
+    mocks.listActiveRuns.mockReturnValue(new Promise(() => {}));
+    mocks.listArchivedRuns.mockReturnValue(new Promise(() => {}));
 
     render(<History />);
 
@@ -228,7 +225,7 @@ describe("History dashboard states", () => {
 
   it("shows active generation progress and controls", async () => {
     const activeJob = makeJob({
-      _id: "active-1",
+      id: "active-1",
       status: "running",
       message: "Generating biology cards",
       resultDeckName: undefined,
@@ -253,7 +250,7 @@ describe("History dashboard states", () => {
   });
 
   it("shows an archived run in the list and selected detail viewer", async () => {
-    const archivedJob = makeJob({ _id: "archived-1" });
+    const archivedJob = makeJob({ id: "archived-1" });
     mocks.params.jobId = "archived-1";
     configureRuns([], [archivedJob]);
 

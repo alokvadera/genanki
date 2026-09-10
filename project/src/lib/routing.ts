@@ -101,7 +101,7 @@ export function prioritizeCandidates<T extends Candidate>(
 /**
  * Compute a routing score for a candidate (provider + model).
  * Higher = better. Called both from prioritizeCandidates (lib) and
- * optimus rankCandidates (convex internal query).
+ * optimus rankCandidates (server service).
  *
  * Score components:
  *   successRate — fraction of successful calls

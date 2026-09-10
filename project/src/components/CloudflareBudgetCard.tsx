@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Zap } from "lucide-react";
-import { CLOUDFLARE_DAILY_BUDGET, formatTimeUntilMidnight } from "@/convex/budget";
+import { CLOUDFLARE_DAILY_BUDGET, formatTimeUntilMidnight } from "@/lib/budget-client";
 import { formatTokens } from "@/lib/utils";
 
 export type CloudflareBudgetData = {

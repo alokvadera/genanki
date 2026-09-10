@@ -1,6 +1,6 @@
 import React, { useState, useCallback, lazy, Suspense } from "react";
-import { useAction, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { api } from "@/lib/api";
+import { useApiMutation } from "@/hooks/use-api-query";
 import type { AnkiCard } from "@/lib/anki";
 import { estimatePromptTimeoutSeconds } from "@/lib/generationTiming";
 import type { ProviderOption } from "@/types/providers";
@@ -47,8 +47,8 @@ export default function AiGenerationSection({
   const [aiPreviewSummary, setAiPreviewSummary] = useState("");
   const [aiGenerating, setAiGenerating] = useState(false);
 
-  const createGenerationJob = useMutation(api.generationJobs.create);
-  const generateDeckFromPrompt = useAction(api.deckGeneration.generateDeckFromPrompt);
+  const createGenerationJob = useApiMutation(api.createJob);
+  const generateDeckFromPrompt = useApiMutation(api.generateFromPrompt);
 
   const handleAiGenerate = useCallback(async () => {
     const prompt = aiPrompt.trim();
@@ -57,7 +57,7 @@ export default function AiGenerationSection({
     try {
       const timeoutSeconds = estimatePromptTimeoutSeconds(aiCardCount);
       const etaSeconds = Math.max(18, Math.round(8 + aiCardCount * 1.2));
-      const jobId = await createGenerationJob({
+      const { jobId } = await createGenerationJob({
         kind: "prompt", requestedCount: aiCardCount,
         totalProviders: 0, totalModels: 0, totalSections: 1,
         message: "Queued AI deck generation", etaSeconds, timeoutSeconds,

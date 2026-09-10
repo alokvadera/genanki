@@ -16,9 +16,9 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
-import { useQuery, useMutation } from "convex/react";
 import { Link } from "react-router";
-import { api } from "@/convex/_generated/api";
+import { api } from "@/lib/api";
+import { useApiQuery, useApiMutation } from "@/hooks/use-api-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -52,13 +52,13 @@ export default function IpAdmin() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => getInitialAuth().isAuthenticated);
   const [token, setToken] = useState(() => getInitialAuth().token);
 
-  const login = useMutation(api.ipRateLimiter.adminLogin);
-  const logout = useMutation(api.ipRateLimiter.adminLogout);
+  const login = useApiMutation(api.adminLogin);
+  const logout = useApiMutation(api.adminLogout);
 
   // If we restored a token from sessionStorage, confirm it's still valid.
-  const sessionValid = useQuery(
-    api.ipRateLimiter.adminValidateSession,
-    token ? { adminToken: token } : "skip",
+  const sessionValid = useApiQuery<boolean | null>(
+    token ? () => api.adminValidateSession(token) : null,
+    { intervalMs: 30000 },
   );
   if (token && sessionValid === false) {
     sessionStorage.removeItem(SESSION_STORAGE_KEY);
@@ -78,7 +78,7 @@ export default function IpAdmin() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const result = await login({ passphrase });
+      const result = await login(passphrase);
       sessionStorage.setItem(SESSION_STORAGE_KEY, result.token);
       setToken(result.token);
       setIsAuthenticated(true);
@@ -91,7 +91,7 @@ export default function IpAdmin() {
 
   const handleLogout = async () => {
     try {
-      if (token) await logout({ adminToken: token });
+      if (token) await logout(token);
     } finally {
       sessionStorage.removeItem(SESSION_STORAGE_KEY);
       setToken("");
@@ -100,12 +100,15 @@ export default function IpAdmin() {
   };
 
   // Queries (authenticated via session token)
-  const ips = useQuery(api.ipRateLimiter.adminListIps, isAuthenticated ? { adminToken: token } : "skip");
-  const summary = useQuery(api.providerUsage.summary, { daysBack: 30 });
+  const ips = useApiQuery(
+    isAuthenticated ? () => api.adminListIps(token) : null,
+    { intervalMs: 5000 },
+  );
+  const summary = useApiQuery(() => api.usageSummary(30), { intervalMs: 30000 });
 
   // Mutations
-  const setRule = useMutation(api.ipRateLimiter.adminSetRule);
-  const resetIpTokens = useMutation(api.ipRateLimiter.adminResetIpTokens);
+  const setRule = useApiMutation(api.adminSetRule);
+  const resetIpTokens = useApiMutation(api.adminResetIpTokens);
 
   const toggleBlock = async (ip: string, deviceIdHash: string | undefined, currentBlocked: boolean) => {
     try {
