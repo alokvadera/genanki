@@ -19,23 +19,51 @@ export type PerformanceRow = {
 // Cost per 1M tokens (prompt + completion blended rate).
 // Sources: provider pricing pages (accessed 2026-07-22).
 // Free-tier models get cost 0 for routing bonus purposes.
+// All models configured are free-tier or have generous free allowances.
 export const COST_TABLE: Record<string, number> = {
-  // Groq
-  "llama-3.1-8b-instant": 0.05,
-  "llama-3.3-70b-versatile": 0.59,
-  "openai/gpt-oss-20b": 0.07,
-  "openai/gpt-oss-120b": 0.39,
-  "qwen/qwen3-32b": 0.35,
-  "qwen/qwen1.5-14b-chat-awq": 0.00, // free tier
-  "meta-llama/llama-4-scout-17b-16e-instruct": 0.18,
-  // Cerebras
-  "gpt-oss-120b": 0.00, // free tier during beta
-  // Cloudflare Workers AI (all free-tier within daily neuron budget)
+  // Groq - all free tier
+  "llama-3.1-8b-instant": 0.00, // free: 14,400 req/day
+  "llama-3.3-70b-versatile": 0.00, // free: 1,000 req/day
+  "openai/gpt-oss-20b": 0.00, // free: 1,000 req/day
+  "openai/gpt-oss-120b": 0.00, // free: 1,000 req/day
+  "qwen/qwen3-32b": 0.00, // free: 1,000 req/day
+  "meta-llama/llama-4-scout-17b-16e-instruct": 0.00, // free: 1,000 req/day
+  // Cerebras - free tier (1M tokens/day)
+  "gpt-oss-120b": 0.00,
+  "gemma-4-31b": 0.00,
+  "qwen-3.8-27b": 0.00,
+  // Kilo Gateway - free models
+  "kilo-auto/free": 0.00,
+  "kilo/meta-llama/llama-3.1-8b-instruct": 0.00,
+  "kilo/deepseek/deepseek-chat": 0.00,
+  "kilo/google/gemini-2.5-flash": 0.00,
+  // Cloudflare Workers AI - all free within daily neuron budget
   "@cf/meta/llama-3.2-3b-instruct": 0.00,
   "@cf/qwen/qwen3-30b-a3b-fp8": 0.00,
   "@cf/meta/llama-3.1-8b-instruct-fp8-fast": 0.00,
-  // OpenRouter free
+  // OpenRouter free models
   "openrouter/free": 0.00,
+  "nvidia/nemotron-3-ultra-550b-a55b:free": 0.00,
+  "nvidia/nemotron-3-super-120b-a12b:free": 0.00,
+  "poolside/laguna-s-2.1:free": 0.00,
+  "poolside/laguna-xs-2.1:free": 0.00,
+  "cohere/north-mini-code:free": 0.00,
+  "google/gemma-4-31b-it:free": 0.00,
+  "google/gemma-4-26b-a4b-it:free": 0.00,
+  "inclusionai/ling-3.0-flash-sante:free": 0.00,
+  "inclusionai/ling-3.0-flash-fin:free": 0.00,
+  "liquid/lfm-2.5-2.6b:free": 0.00,
+  "nex-agi/nex-n2.5-mini:free": 0.00,
+  "nex-agi/nex-n2.5-pro:free": 0.00,
+  "thinkingmachines/inkling:free": 0.00,
+  "thinkingmachines/inkling-small:free": 0.00,
+  "dots-studio/dots-3-note-preview:free": 0.00,
+  "nvidia/nemotron-3.5-lightning:free": 0.00,
+  "nvidia/nemotron-3.5-content-safety:free": 0.00,
+  "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free": 0.00,
+  "nvidia/nemotron-3-nano-30b-a3b:free": 0.00,
+  "google/lyria-3-pro-preview": 0.00,
+  "google/lyria-3-clip-preview": 0.00,
 };
 
 const DEFAULT_COST = 0.50; // conservative fallback for unknown models

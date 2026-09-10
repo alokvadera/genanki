@@ -28,18 +28,49 @@ type ProviderPolicy = {
 };
 
 export function getProviderPolicy(provider: string, model: string): ProviderPolicy {
+  // Free tier limits based on 2026 provider documentation
+  // See: FREE_TIER_SUMMARY.md for details
+  
   if (provider === "groq") {
-    if (model === "qwen/qwen3-32b") return { requestsPerMinute: 50, tokensPerMinute: 5_000 };
-    if (model === "llama-3.3-70b-versatile") return { requestsPerMinute: 25, tokensPerMinute: 10_000 };
-    return { requestsPerMinute: 25, tokensPerMinute: 5_000 };
+    // Groq free tier (no credit card):
+    // - llama-3.1-8b-instant: 30 RPM, 6,000 TPM, 14,400 RPD
+    // - llama-3.3-70b: 30 RPM, 12,000 TPM, 1,000 RPD
+    // - llama-4-scout: 30 RPM, 30,000 TPM, 1,000 RPD
+    // - qwen3-32b: 60 RPM, 6,000 TPM, 1,000 RPD
+    // - gpt-oss models: 30 RPM, 8,000 TPM, 1,000 RPD
+    if (model === "qwen/qwen3-32b") return { requestsPerMinute: 50, tokensPerMinute: 5_000, requestsPerDay: 1000 };
+    if (model === "llama-3.3-70b-versatile") return { requestsPerMinute: 25, tokensPerMinute: 10_000, requestsPerDay: 1000 };
+    if (model === "meta-llama/llama-4-scout-17b-16e-instruct") return { requestsPerMinute: 25, tokensPerMinute: 25_000, requestsPerDay: 1000 };
+    if (model === "openai/gpt-oss-120b" || model === "openai/gpt-oss-20b") return { requestsPerMinute: 25, tokensPerMinute: 7_000, requestsPerDay: 1000 };
+    // Default: llama-3.1-8b-instant (most permissive)
+    return { requestsPerMinute: 25, tokensPerMinute: 5_000, requestsPerDay: 14000 };
   }
-  if (provider === "cerebras") return { requestsPerMinute: 25, tokensPerMinute: 50_000 };
-  if (provider === "kilo") return { requestsPerMinute: 3, tokensPerMinute: 20_000 };
+  
+  if (provider === "cerebras") {
+    // Cerebras free tier: 1M tokens/day, ~5 RPM, 30K TPM
+    // 8,192 token context cap on free tier
+    return { requestsPerMinute: 5, tokensPerMinute: 30_000, requestsPerDay: 1000 };
+  }
+  
+  if (provider === "kilo") {
+    // Kilo free tier: anonymous users get 200 req/hr per IP
+    // kilo-auto/free and :free models available
+    return { requestsPerMinute: 3, tokensPerMinute: 20_000, requestsPerDay: 50 };
+  }
+  
   if (provider === "cloudflare") {
-    // Cloudflare Workers AI free tier: 300 req/min text-generation cap and an
-    // account-wide 10,000 Neurons/day allocation shared across all models.
-    return { requestsPerMinute: 60, tokensPerMinute: 30_000, requestsPerDay: 60 };
+    // Cloudflare Workers AI free tier: 10,000 Neurons/day
+    // ~300 req/min text-generation cap
+    // Using conservative limits to stay well within budget
+    return { requestsPerMinute: 30, tokensPerMinute: 25_000, requestsPerDay: 60 };
   }
+  
+  // OpenRouter free tier: 20 RPM on :free models
+  // 50 free-model req/day (no credits) or 1,000/day (with $10+ credits)
+  if (provider === "openrouter") {
+    return { requestsPerMinute: 15, tokensPerMinute: 20_000, requestsPerDay: 50 };
+  }
+  
   return { requestsPerMinute: 15, tokensPerMinute: 20_000, requestsPerDay: 45 };
 }
 

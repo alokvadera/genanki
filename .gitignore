@@ -1,5 +1,7 @@
 .neon
 .env.local
+*.log
+dev-server.log
 node_modules/
 server/node_modules/
 server/.env
@@ -7,4 +9,3 @@ server/.env
 .claude/
 .commandcode/
 skills-lock.json
-project/
