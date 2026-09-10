@@ -1,0 +1,266 @@
+/* DO NOT CHANGE */
+@import "tailwindcss";
+@import "tw-animate-css";
+@custom-variant dark (&:is(.dark *), .dark &);
+
+/* DO NOT CHANGE */
+@theme inline {
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+/* Fonts — plain @theme so the CSS variables are emitted to :root
+   (Tailwind's preflight applies --font-sans to html via --default-font-family). */
+@theme {
+  --font-sans:
+    "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display:
+    "Space Grotesk", "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Neobrutalism Minimalism Theme */
+:root {
+  --radius: 0px;
+  --background: #fdfcf7; /* elegant warm cream */
+  --foreground: #18181b; /* zinc 900 */
+  --card: #ffffff;
+  --card-foreground: #18181b;
+  --popover: #ffffff;
+  --popover-foreground: #18181b;
+  --primary: #4f46e5; /* elegant indigo */
+  --primary-foreground: #ffffff;
+  --secondary: #f59e0b; /* richer warm amber — holds up better against cream */
+  --secondary-foreground: #18181b;
+  --muted: #f4f4f5; /* zinc 100 */
+  --muted-foreground: #71717a; /* zinc 500 */
+  --accent: #f43f5e; /* vibrant rose */
+  --accent-foreground: #ffffff;
+  --destructive: #ef4444;
+  --border: #18181b; /* zinc 900 border */
+  --input: #f4f4f5;
+  --ring: #4f46e5;
+  --grid-color: rgba(24, 24, 27, 0.04);
+  --chart-1: #4f46e5;
+  --chart-2: #0d9488;
+  --chart-3: #fbbf24;
+  --chart-4: #22c55e;
+  --chart-5: #a855f7;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #18181b;
+  --sidebar-primary: #4f46e5;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #fbbf24;
+  --sidebar-accent-foreground: #18181b;
+  --sidebar-border: #18181b;
+  --sidebar-ring: #4f46e5;
+}
+
+.dark {
+  --background: #09090b; /* deep midnight obsidian */
+  --foreground: #e4e4e7; /* zinc 200 — softer body text, less eye fatigue */
+  --card: #1a1a1f; /* lifted card surface — 10%+ luminance delta from bg */
+  --card-foreground: #e4e4e7;
+  --popover: #1a1a1f;
+  --popover-foreground: #e4e4e7;
+  --primary: #6366f1; /* electric indigo */
+  --primary-foreground: #ffffff;
+  --secondary: #f59e0b; /* warm amber */
+  --secondary-foreground: #09090b;
+  --muted: #27272a; /* zinc 800 */
+  --muted-foreground: #a1a1aa; /* zinc 400 */
+  --accent: #fb7185; /* rose-400 — brighter on dark surfaces, keeps white text legible */
+  --accent-foreground: #1a1a1f;
+  --destructive: #ef4444;
+  --border: #3f3f46; /* zinc 700 clean border */
+  --input: #27272a;
+  --ring: #6366f1;
+  --grid-color: rgba(255, 255, 255, 0.04);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+    background-image: radial-gradient(
+      var(--grid-color) 1.5px,
+      transparent 1.5px
+    );
+    background-size: 20px 20px;
+  }
+  /* Space Grotesk display headings — tighter, confident, neo-brutalist */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    line-height: 1.1;
+  }
+  button:not([disabled]),
+  [role="button"]:not([disabled]) {
+    cursor: pointer;
+  }
+  /* Style inputs and select boxes with custom focus styling for neobrutalist look */
+  input:focus,
+  select:focus,
+  textarea:focus {
+    @apply outline-none ring-0;
+    box-shadow: 2px 2px 0px var(--border);
+    transform: translate(-1px, -1px);
+    transition:
+      transform 0.1s ease,
+      box-shadow 0.1s ease;
+  }
+  /* Dark mode: brighter headings, controlled placeholders, card depth cue */
+  .dark h1,
+  .dark h2,
+  .dark h3,
+  .dark h4,
+  .dark h5,
+  .dark h6 {
+    color: #f4f4f5; /* zinc 100 — headings stay crisp white */
+  }
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    color: #71717a; /* zinc 500 — visible but dim */
+  }
+  .dark .nb-border {
+    border-top-color: rgba(
+      255,
+      255,
+      255,
+      0.06
+    ); /* subtle top highlight for card depth */
+  }
+}
+
+/* Neobrutalism utility classes with variables to look correct in dark mode */
+.nb-shadow {
+  box-shadow: 4px 4px 0px var(--border);
+}
+.nb-shadow-sm {
+  box-shadow: 2px 2px 0px var(--border);
+}
+.nb-shadow-lg {
+  box-shadow: 6px 6px 0px var(--border);
+}
+.nb-shadow-indigo {
+  box-shadow: 4px 4px 0px #4f46e5;
+}
+.nb-shadow-teal {
+  box-shadow: 4px 4px 0px #0d9488;
+}
+.nb-shadow-rose {
+  box-shadow: 4px 4px 0px #f43f5e;
+}
+.nb-shadow-amber {
+  box-shadow: 4px 4px 0px #d97706;
+}
+
+.dark .nb-shadow {
+  box-shadow: 4px 4px 0px #27272a; /* visible on dark bg, not invisible black */
+}
+.dark .nb-shadow-sm {
+  box-shadow: 2px 2px 0px #27272a;
+}
+.dark .nb-shadow-lg {
+  box-shadow: 6px 6px 0px #27272a;
+}
+.dark .nb-shadow-indigo {
+  box-shadow: 4px 4px 0px #6366f1;
+}
+.dark .nb-shadow-teal {
+  box-shadow: 4px 4px 0px #14b8a6;
+}
+.dark .nb-shadow-rose {
+  box-shadow: 4px 4px 0px #f43f5e;
+}
+.dark .nb-shadow-amber {
+  box-shadow: 4px 4px 0px #f59e0b;
+}
+
+.nb-hover-shadow {
+  transition:
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+.nb-hover-shadow:hover:not(:disabled) {
+  box-shadow: 6px 6px 0px var(--border);
+  transform: translate(-1.5px, -1.5px);
+}
+.dark .nb-hover-shadow:hover:not(:disabled) {
+  box-shadow: 6px 6px 0px #27272a;
+}
+.nb-active-shadow {
+  box-shadow: 2px 2px 0px var(--border);
+  transform: translate(1px, 1px);
+}
+.dark .nb-active-shadow {
+  box-shadow: 2px 2px 0px #27272a;
+}
+.nb-border {
+  border: 3px solid var(--border);
+}
+.nb-border-2 {
+  border: 2px solid var(--border);
+}
+
+/* Custom select styling for neobrutalist theme */
+select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%231a1a1a' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
+  background-position: right 0.5rem center;
+  background-repeat: no-repeat;
+  background-size: 1.25em 1.25em;
+  padding-right: 2rem !important;
+}
+
+.dark select {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%23f5f0e8' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
+}
