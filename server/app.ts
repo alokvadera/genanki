@@ -54,15 +54,38 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS ?? "")
   .map((o) => o.trim())
   .filter(Boolean);
 
+/**
+ * Match an Origin against the allowlist. An entry may contain one `*` standing
+ * for a single subdomain label, so `https://*.genanki.pages.dev` admits every
+ * Cloudflare Pages preview deployment without admitting unrelated hosts.
+ */
+function originAllowed(origin: string, allowlist: string[]): boolean {
+  for (const entry of allowlist) {
+    if (entry === origin) return true;
+    const star = entry.indexOf("*");
+    if (star === -1) continue;
+    const prefix = entry.slice(0, star);
+    const suffix = entry.slice(star + 1);
+    if (
+      origin.startsWith(prefix) &&
+      origin.endsWith(suffix) &&
+      origin.length > prefix.length + suffix.length
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
 app.use("*", (c, next) => {
   const origin = c.req.header("origin");
   // Default to permissive during migration; lock down via ALLOWED_ORIGINS.
   const allowOrigin =
     allowedOrigins.length === 0
       ? origin ?? "*"
-      : origin && allowedOrigins.includes(origin)
+      : origin && originAllowed(origin, allowedOrigins)
         ? origin
-        : allowedOrigins[0]!;
+        : (allowedOrigins.find((o) => !o.includes("*")) ?? allowedOrigins[0]!);
   return cors({ origin: allowOrigin, allowHeaders: ["Content-Type", "Authorization"], maxAge: 86400 })(c, next);
 });
 
