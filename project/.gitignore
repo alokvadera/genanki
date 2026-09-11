@@ -2,6 +2,10 @@
 .env
 .env.*
 !.env.example
+# Build-time default for production. Holds only the public Function URL, which
+# ships in the client bundle anyway, so it is safe to commit. Secrets stay in
+# the untracked .env.local and in the Function environment.
+!.env.production
 
 # Dependencies & Build Output
 node_modules/
