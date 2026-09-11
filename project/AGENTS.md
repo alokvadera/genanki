@@ -243,16 +243,22 @@ pnpm check
 pnpm deploy:api            # == neon deploy --env .env.local
 
 # 5. Deploy frontend (Cloudflare Pages)
-#    - Connect repo to Cloudflare Pages
-#    - Root directory: project
-#    - Build command: pnpm build
-#    - Build output: dist/
-#    - Set VITE_API_URL in Cloudflare Pages env vars
+#    - Production branch: master
+#    - Root directory: (blank — repo root; see root wrangler.jsonc)
+#    - Build command: pnpm install --frozen-lockfile && pnpm build
+#    - Build output: project/dist
+#    - VITE_API_URL: set in the Pages env, or rely on the committed
+#      project/.env.production default
 #    - Or deploy from the CLI: pnpm deploy:web
 ```
 
+> Any package needing a postinstall must be listed under `allowBuilds` in the
+> root `pnpm-workspace.yaml`. pnpm 11 exits non-zero on an unapproved build
+> script, which fails the whole Pages build.
+
 > Repo root is a pnpm workspace (`project/` + `server/`). Run `pnpm install`
-> once at the root. Pages config lives in `project/wrangler.jsonc`.
+> once at the root. Pages config lives in the root `wrangler.jsonc` (git build)
+> and `project/wrangler.jsonc` (CLI).
 
 ---
 

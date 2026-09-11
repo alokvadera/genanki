@@ -41,38 +41,59 @@ pnpm install
 
 ## 1. Frontend → Cloudflare Pages
 
-The Pages project is declared in `project/wrangler.jsonc`
-(`name: genanki`, `pages_build_output_dir: dist`). Cache headers live in
-`project/public/_headers` and the SPA fallback in `project/public/_redirects` —
-both are copied into `dist/` at build time, so no dashboard rewrite rules are
-needed.
+Two Wrangler configs, because the build root differs by path:
 
-### Option A — Git auto-deploy (recommended)
+- `wrangler.jsonc` (repo root) — used by the git-integrated build, whose root is
+  the repo root. Declares `pages_build_output_dir: project/dist` so Pages
+  validates the frontend's real output.
+- `project/wrangler.jsonc` — used by the CLI, whose cwd is `project/`.
 
-1. Push the monorepo to GitHub.
-2. Cloudflare dashboard → **Workers & Pages → Create → Pages → Connect to Git**.
-3. Configure the build:
-   - **Root directory:** `project`
-   - **Build command:** `pnpm build`
-   - **Build output directory:** `dist`
-   - **Environment variables (Production + Preview):**
-     - `VITE_API_URL` = your Neon Function URL, e.g.
-       `https://br-super-river-ayazioha-api.compute.c-5.us-east-2.aws.neon.tech`
-4. Save. Every push to the connected branch builds and deploys automatically.
+Without the root config, Pages falls back to a root `dist/`, which the monorepo
+never creates, and the build fails *after* a successful compile with
+`Output directory "dist" not found`.
 
-> `VITE_API_URL` is baked in at **build time** — changing it requires a new
-> build, not just a redeploy of assets.
+Cache headers live in `project/public/_headers` and the SPA fallback in
+`project/public/_redirects`; both are copied into `project/dist` at build time,
+so no dashboard rewrite rules are needed.
+
+### Option A — Git auto-deploy (this is how it is configured)
+
+The production branch is **`master`**. Every push to it builds and deploys.
+
+Verified dashboard settings:
+
+| Setting | Value |
+| --- | --- |
+| Production branch | `master` |
+| Root directory | *(blank — the repo root)* |
+| Build command | `pnpm install --frozen-lockfile && pnpm build` |
+| Build output directory | `project/dist` |
+| Production + Preview var | `VITE_API_URL` = the Neon Function URL |
+
+`VITE_API_URL` is baked in at **build time**, so changing it needs a new build,
+not a redeploy of assets. `project/.env.production` also carries the URL as a
+committed default, so a fresh project builds against a working backend without
+any dashboard variables.
+
+> **pnpm and build scripts.** pnpm 11 refuses to run dependency build scripts
+> unless they are approved, and exits non-zero when it skips one. Every package
+> that needs a postinstall must be listed under `allowBuilds` in the root
+> `pnpm-workspace.yaml`; a missing entry fails the whole Pages build with
+> `ERR_PNPM_IGNORED_BUILDS`. When pnpm detects an unapproved build it appends
+> its own entry containing the literal string `set this to true or false`,
+> which is not valid input — replace it with a real boolean.
 
 ### Option B — Wrangler CLI
 
 ```bash
 cd project
 pnpm build
-pnpm deploy          # wrangler pages deploy (uses wrangler.jsonc)
+pnpm deploy          # wrangler pages deploy (uses project/wrangler.jsonc)
 ```
 
 Requires `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` in the environment
-(or `wrangler login`).
+(or `wrangler login`). The token needs **Cloudflare Pages: Edit**; a read-only
+token fails with `Authentication error [code: 10000]`.
 
 ---
 
