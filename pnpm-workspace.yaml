@@ -3,6 +3,15 @@ packages:
   - server
 
 # Packages allowed to run install/postinstall build scripts (pnpm 11+).
+# pnpm blocks dependency build scripts by default and exits non-zero when one
+# is ignored, which fails the Cloudflare Pages build. Every package that needs
+# a postinstall must be listed here with a real boolean — pnpm writes a
+# "set this to true or false" placeholder when it appends one itself, and that
+# placeholder is not valid input.
+#   esbuild      - downloads/links the platform binary used by Vite
+#   tesseract.js - opencollective postinstall
+#   workerd      - wrangler's runtime, used by the Cloudflare deploy tooling
 allowBuilds:
   esbuild: true
   tesseract.js: true
+  workerd: true
