@@ -32,14 +32,16 @@ export default function DeckDetailCardItem({
           <Input
             value={editFront}
             onChange={(e) => setEditFront(e.target.value)}
-            className="nb-border-2 text-sm font-bold"
+            className="nb-border-2 text-base sm:text-sm font-bold"
             placeholder="Front"
+            aria-label="Card front"
           />
           <Textarea
             value={editBack}
             onChange={(e) => setEditBack(e.target.value)}
-            className="nb-border-2 text-sm min-h-[80px] resize-none"
+            className="nb-border-2 text-base sm:text-sm min-h-[80px] resize-none"
             placeholder="Back"
+            aria-label="Card back"
           />
           <div className="flex gap-2">
             <Button
@@ -67,42 +69,46 @@ export default function DeckDetailCardItem({
           </div>
         </div>
       ) : (
-        <div
-          className="p-4 flex items-start gap-3 hover:bg-muted/20 transition-colors cursor-pointer"
-          onClick={() => onPreview(card)}
-        >
-          <span className="nb-border bg-secondary text-xs font-bold px-2 py-0.5 shrink-0 mt-0.5">
+        <div className="p-4 flex items-start gap-3 hover:bg-muted/20 transition-colors">
+          <span
+            aria-hidden="true"
+            className="nb-border bg-secondary text-xs font-bold px-2 py-0.5 shrink-0 mt-0.5"
+          >
             {index + 1}
           </span>
-          <div className="flex-1 min-w-0">
-            <FormattedCardText 
+          <button
+            type="button"
+            onClick={() => onPreview(card)}
+            aria-label={`Preview card ${index + 1}`}
+            className="flex-1 min-w-0 text-left cursor-pointer"
+          >
+            <FormattedCardText
               text={card.front}
               className="text-sm font-semibold truncate prose prose-sm max-w-none"
             />
-            <FormattedCardText 
+            <FormattedCardText
               text={card.back}
               className="text-xs text-muted-foreground truncate font-medium mt-0.5 prose prose-sm max-w-none"
             />
-          </div>
-          <div
-            className="flex gap-1 shrink-0"
-            onClick={(e) => e.stopPropagation()}
-          >
+          </button>
+          <div className="flex gap-1 shrink-0">
             <button
               type="button"
               onClick={() => setEditing(true)}
-              className="p-1.5 nb-border-2 hover:bg-muted transition-colors"
+              aria-label={`Edit card ${index + 1}`}
               title="Edit"
+              className="p-1.5 nb-border-2 hover:bg-muted transition-colors"
             >
-              <Pencil className="w-3.5 h-3.5" />
+              <Pencil className="w-3.5 h-3.5" aria-hidden="true" />
             </button>
             <button
               type="button"
               onClick={onRemove}
-              className="p-1.5 nb-border-2 hover:bg-destructive/10 text-destructive transition-colors"
+              aria-label={`Delete card ${index + 1}`}
               title="Delete"
+              className="p-1.5 nb-border-2 hover:bg-destructive/10 text-destructive transition-colors"
             >
-              <Trash2 className="w-3.5 h-3.5" />
+              <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
             </button>
           </div>
         </div>

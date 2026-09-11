@@ -24,14 +24,16 @@ export default function DocCardItem({ card, index, onEdit, onRemove }: DocCardIt
           <Input
             value={editFront}
             onChange={(e) => setEditFront(e.target.value)}
-            className="nb-border-2 text-sm font-bold h-8"
+            className="nb-border-2 text-base sm:text-sm font-bold h-8"
             placeholder="Front"
+            aria-label="Card front"
           />
           <Textarea
             value={editBack}
             onChange={(e) => setEditBack(e.target.value)}
-            className="nb-border-2 text-sm min-h-[60px] resize-none"
+            className="nb-border-2 text-base sm:text-sm min-h-[60px] resize-none"
             placeholder="Back"
+            aria-label="Card back"
           />
           <div className="flex gap-2">
             <Button
@@ -56,7 +58,10 @@ export default function DocCardItem({ card, index, onEdit, onRemove }: DocCardIt
         </div>
       ) : (
         <div className="flex items-start gap-3">
-          <span className="nb-border bg-secondary text-xs font-bold px-2 py-0.5 shrink-0 mt-0.5">
+          <span
+            aria-hidden="true"
+            className="nb-border bg-secondary text-xs font-bold px-2 py-0.5 shrink-0 mt-0.5"
+          >
             {index + 1}
           </span>
           <div className="flex-1 min-w-0">
@@ -65,16 +70,22 @@ export default function DocCardItem({ card, index, onEdit, onRemove }: DocCardIt
           </div>
           <div className="flex gap-1 shrink-0">
             <button
+              type="button"
               onClick={() => setEditing(true)}
+              aria-label={`Edit card ${index + 1}`}
+              title="Edit"
               className="p-1.5 nb-border-2 hover:bg-muted transition-colors"
             >
-              <Pencil className="w-3 h-3" />
+              <Pencil className="w-3 h-3" aria-hidden="true" />
             </button>
             <button
+              type="button"
               onClick={onRemove}
+              aria-label={`Delete card ${index + 1}`}
+              title="Delete"
               className="p-1.5 nb-border-2 hover:bg-destructive/10 text-destructive transition-colors"
             >
-              <Trash2 className="w-3 h-3" />
+              <Trash2 className="w-3 h-3" aria-hidden="true" />
             </button>
           </div>
         </div>

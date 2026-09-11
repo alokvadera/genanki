@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { SkipLink } from "@/components/SkipLink";
 import { AnimatePresence, MotionConfig, motion } from "framer-motion";
 import {
   Activity,
@@ -101,6 +102,8 @@ export default function History() {
   return (
     <MotionConfig reducedMotion="user">
       <div className="min-h-screen bg-background">
+      <SkipLink />
+
       <header className="border-b-[3px] border-border bg-card text-card-foreground">
         <div className="w-full px-4 sm:px-6 lg:px-10 py-3 sm:py-4 flex flex-wrap items-center gap-3 sm:justify-between">
           <div className="flex items-center gap-3 min-w-0">
@@ -150,16 +153,16 @@ export default function History() {
         </div>
       </header>
 
-      <main className="w-full px-4 sm:px-6 lg:px-10 py-5 sm:py-6">
+      <main id="main-content" className="w-full px-4 sm:px-6 lg:px-10 py-5 sm:py-6 scroll-mt-4">
         <div className="mx-auto max-w-7xl">
-          <section className="nb-border bg-foreground text-background nb-shadow-amber p-5 sm:p-6 mb-6 dark:bg-card dark:text-foreground">
+          <section className="nb-border bg-foreground text-background nb-shadow p-5 sm:p-6 mb-6 dark:bg-card dark:text-foreground">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start gap-3">
                 <div className="border-2 border-border bg-primary p-2">
                   <Activity className="w-5 h-5" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                  <p className="nb-label text-background/70 dark:text-muted-foreground">
                     Run control center
                   </p>
                   <h2 className="text-lg font-bold tracking-tight mt-1">
@@ -167,7 +170,7 @@ export default function History() {
                       ? `${activeJobs.length} run${activeJobs.length !== 1 ? "s" : ""} in progress`
                       : "No runs in progress"}
                   </h2>
-                  <p className="text-xs text-muted-foreground font-medium mt-1">
+                  <p className="text-xs text-background/70 dark:text-muted-foreground font-medium mt-1">
                     This page updates live while providers, models, and document
                     sections change.
                   </p>
@@ -191,11 +194,11 @@ export default function History() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.22, ease: "easeOut" }}
-                className="nb-border bg-card nb-shadow-rose p-4 sm:p-5 mb-6"
+                className="nb-border bg-card nb-shadow p-4 sm:p-5 mb-6"
               >
               <div className="flex items-end justify-between gap-3 mb-4">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary mb-1">
+                  <p className="nb-label text-primary mb-1">
                     Live now
                   </p>
                   <h2 className="text-lg font-bold tracking-tight">
@@ -220,13 +223,13 @@ export default function History() {
                       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2 mb-2">
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300">
+                            <span className="inline-flex items-center gap-1 nb-label px-2 py-1 bg-status-info/15 text-status-info">
                               <Activity className="w-3 h-3" /> {statusLabel}
                             </span>
-                            <span className="text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 bg-card dark:bg-card nb-border">
+                            <span className="nb-label px-2 py-1 bg-card dark:bg-card nb-border">
                               {job.kind}
                             </span>
-                            <span className="text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 bg-card dark:bg-card nb-border">
+                            <span className="nb-label px-2 py-1 bg-card dark:bg-card nb-border">
                               {job.requestedCount} cards
                             </span>
                           </div>
@@ -254,7 +257,7 @@ export default function History() {
                         </div>
                         <div className="grid grid-cols-3 gap-3 lg:min-w-[360px]">
                           <div>
-                            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                            <p className="nb-label text-muted-foreground">
                               Progress
                             </p>
                             <p className="text-xl font-bold mt-1">
@@ -262,7 +265,7 @@ export default function History() {
                             </p>
                           </div>
                           <div>
-                            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                            <p className="nb-label text-muted-foreground">
                               ETA
                             </p>
                             <p className="text-xl font-bold mt-1">
@@ -270,7 +273,7 @@ export default function History() {
                             </p>
                           </div>
                           <div>
-                            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                            <p className="nb-label text-muted-foreground">
                               Time left
                             </p>
                             <p className="text-xl font-bold mt-1">
@@ -294,7 +297,7 @@ export default function History() {
                           onClick={() =>
                             cancelGenerationJob(job.id)
                           }
-                          className="inline-flex items-center gap-1 nb-border bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700 nb-hover-shadow dark:bg-red-950/30 dark:text-red-300"
+                          className="inline-flex items-center gap-1 nb-border bg-status-err/15 px-3 py-1.5 text-xs font-bold text-status-err nb-hover-shadow"
                         >
                           <X className="w-3.5 h-3.5" /> Cancel
                         </button>
@@ -334,10 +337,10 @@ export default function History() {
             )}
           </AnimatePresence>
 
-          <div className="nb-border bg-card nb-shadow-teal p-4 sm:p-5 mb-6">
+          <div className="nb-border bg-card nb-shadow p-4 sm:p-5 mb-6">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-1">
+                <p className="nb-label text-muted-foreground mb-1">
                   Archived runs
                 </p>
                 <h2 className="text-lg font-bold tracking-tight">
@@ -353,10 +356,10 @@ export default function History() {
           </div>
 
           <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-            <aside className="nb-border bg-card nb-shadow-indigo p-4 xl:sticky xl:top-6 xl:self-start">
+            <aside className="nb-border bg-card nb-shadow p-4 xl:sticky xl:top-6 xl:self-start">
               <div className="flex items-center justify-between gap-3 mb-4">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                  <p className="nb-label text-muted-foreground">
                     Run list
                   </p>
                   <h3 className="text-base font-bold tracking-tight mt-1">
@@ -394,10 +397,10 @@ export default function History() {
                     const isSelected = selectedJob?.id === job.id;
                     const tone =
                       job.status === "succeeded"
-                        ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300"
+                        ? "bg-status-ok/15 text-status-ok"
                         : job.status === "failed"
-                          ? "bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-300"
-                          : "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300";
+                          ? "bg-status-err/15 text-status-err"
+                          : "bg-muted text-muted-foreground";
                     const runLabel = `${job.status} ${job.kind} run${
                       job.resultDeckName ? `: ${job.resultDeckName}` : ""
                     }${job.resultCards?.length ? `, ${job.resultCards.length} cards` : ""}`;
@@ -422,11 +425,11 @@ export default function History() {
                           <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2 mb-2">
                               <span
-                                className={`text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 ${tone}`}
+                                className={`nb-label px-2 py-1 ${tone}`}
                               >
                                 {job.status}
                               </span>
-                              <span className="text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 bg-card dark:bg-card nb-border">
+                              <span className="nb-label px-2 py-1 bg-card dark:bg-card nb-border">
                                 {job.kind}
                               </span>
                             </div>
@@ -442,7 +445,7 @@ export default function History() {
                             <p className="text-sm font-bold">
                               {job.resultCards?.length ?? 0}
                             </p>
-                            <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                            <p className="nb-label text-muted-foreground">
                               cards
                             </p>
                           </div>
@@ -491,12 +494,12 @@ export default function History() {
                   closeLabel="Back to app"
                   footer={
                     <div className="nb-border-2 bg-muted/20 p-4">
-                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                      <p className="nb-label text-muted-foreground">
                         Run details
                       </p>
                       <div className="mt-3 grid gap-3 grid-cols-2 sm:grid-cols-5">
                         <div className="nb-border bg-card p-3">
-                          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                          <p className="nb-label text-muted-foreground">
                             Status
                           </p>
                           <p className="text-sm font-bold tracking-tight mt-1">
@@ -504,7 +507,7 @@ export default function History() {
                           </p>
                         </div>
                         <div className="nb-border bg-card p-3">
-                          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                          <p className="nb-label text-muted-foreground">
                             Progress
                           </p>
                           <p className="text-sm font-bold tracking-tight mt-1">
@@ -514,7 +517,7 @@ export default function History() {
                           </p>
                         </div>
                         <div className="nb-border bg-card p-3">
-                          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                          <p className="nb-label text-muted-foreground">
                             ETA
                           </p>
                           <p className="text-sm font-bold tracking-tight mt-1">
@@ -524,7 +527,7 @@ export default function History() {
                           </p>
                         </div>
                         <div className="nb-border bg-card p-3">
-                          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                          <p className="nb-label text-muted-foreground">
                             Budget
                           </p>
                           <p className="text-sm font-bold tracking-tight mt-1">
@@ -535,7 +538,7 @@ export default function History() {
                           </p>
                         </div>
                         <div className="nb-border bg-card p-3">
-                          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                          <p className="nb-label text-muted-foreground">
                             Archived
                           </p>
                           <p className="text-sm font-bold tracking-tight mt-1">
@@ -556,8 +559,8 @@ export default function History() {
                     exit={{ opacity: 0, x: 14 }}
                     transition={{ duration: 0.24, ease: "easeOut" }}
                   >
-                <div className="nb-border bg-foreground text-background nb-shadow-indigo dark:bg-card dark:text-foreground p-6">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-secondary">
+                <div className="nb-border bg-foreground text-background nb-shadow dark:bg-card dark:text-foreground p-6">
+                  <p className="nb-label text-secondary">
                     Run details
                   </p>
                   <p className="text-xl font-bold tracking-tight mt-2">

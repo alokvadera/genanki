@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { SkipLink } from "@/components/SkipLink";
 import { motion } from "framer-motion";
 import { BarChart3, ArrowLeft, Clock3, Layers } from "lucide-react";
 import { Link } from "react-router";
@@ -47,6 +48,8 @@ export default function ProviderUsage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <SkipLink />
+
       <header className="border-b-[3px] border-border bg-card text-card-foreground">
         <div className="w-full px-4 sm:px-6 lg:px-10 py-3 sm:py-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
@@ -103,12 +106,12 @@ export default function ProviderUsage() {
         </div>
       </header>
 
-      <main className="w-full px-4 sm:px-6 lg:px-10 py-5 sm:py-6">
+      <main id="main-content" className="w-full px-4 sm:px-6 lg:px-10 py-5 sm:py-6 scroll-mt-4">
         <div className="mx-auto max-w-7xl space-y-6">
-          <section className="nb-border bg-foreground text-background nb-shadow-indigo dark:bg-card dark:text-foreground p-5 sm:p-6">
+          <section className="nb-border bg-foreground text-background nb-shadow dark:bg-card dark:text-foreground p-5 sm:p-6">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
               <div className="max-w-2xl">
-                <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-secondary mb-1.5">
+                <p className="nb-label text-secondary mb-1.5">
                   Provider control room
                 </p>
                 <h2 className="text-2xl sm:text-3xl font-bold tracking-tight leading-tight">
@@ -121,7 +124,7 @@ export default function ProviderUsage() {
               </div>
               <div className="grid grid-cols-3 gap-2 sm:gap-3 lg:min-w-[360px]">
                 <div className="nb-border-2 border-background/30 dark:border-border bg-background/10 dark:bg-muted/30 p-3">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-background/60 dark:text-muted-foreground">
+                  <p className="nb-label text-background/60 dark:text-muted-foreground">
                     Window
                   </p>
                   <p className="text-lg font-bold mt-1">
@@ -129,7 +132,7 @@ export default function ProviderUsage() {
                   </p>
                 </div>
                 <div className="nb-border-2 border-background/30 dark:border-border bg-background/10 dark:bg-muted/30 p-3">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-background/60 dark:text-muted-foreground">
+                  <p className="nb-label text-background/60 dark:text-muted-foreground">
                     Requests
                   </p>
                   <p className="text-lg font-bold mt-1">
@@ -137,7 +140,7 @@ export default function ProviderUsage() {
                   </p>
                 </div>
                 <div className="nb-border-2 border-background/30 dark:border-border bg-background/10 dark:bg-muted/30 p-3">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-background/60 dark:text-muted-foreground">
+                  <p className="nb-label text-background/60 dark:text-muted-foreground">
                     Providers
                   </p>
                   <p className="text-lg font-bold mt-1">
@@ -166,10 +169,10 @@ export default function ProviderUsage() {
           />
 
           {/* Provider Order */}
-          <section className="nb-border bg-card nb-shadow-indigo p-5">
+          <section className="nb-border bg-card nb-shadow p-5">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between mb-4">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-600 mb-1">
+                <p className="nb-label text-muted-foreground mb-1">
                   Provider Order
                 </p>
                 <h2 className="text-lg font-bold tracking-tight">
@@ -191,7 +194,7 @@ export default function ProviderUsage() {
                     key={providerName}
                     className="nb-border-2 bg-muted/20 p-4"
                   >
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                    <p className="nb-label text-muted-foreground">
                       {providerKey === "groq" ? "Primary" : "Fallback"}
                     </p>
                     <h3 className="text-base font-bold tracking-tight mt-1">
@@ -218,10 +221,10 @@ export default function ProviderUsage() {
 
           {/* Provider & Model Breakdown */}
           <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-            <div className="nb-border bg-card nb-shadow-rose p-5">
+            <div className="nb-border bg-card nb-shadow p-5">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-rose-600 mb-1">
+                  <p className="nb-label text-muted-foreground mb-1">
                     Provider Breakdown
                   </p>
                   <h2 className="text-lg font-bold tracking-tight">
@@ -286,10 +289,10 @@ export default function ProviderUsage() {
               </div>
             </div>
 
-            <div className="nb-border bg-card nb-shadow-indigo p-5">
+            <div className="nb-border bg-card nb-shadow p-5">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-600 mb-1">
+                  <p className="nb-label text-muted-foreground mb-1">
                     Model Breakdown
                   </p>
                   <h2 className="text-lg font-bold tracking-tight">By model</h2>
@@ -319,7 +322,7 @@ export default function ProviderUsage() {
                           <p className="text-sm font-bold">
                             {formatTokens(stat.totalTokens)}
                           </p>
-                          <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                          <p className="nb-label text-muted-foreground">
                             tokens
                           </p>
                         </div>
@@ -346,10 +349,10 @@ export default function ProviderUsage() {
           </section>
 
           {/* Recent Calls */}
-          <section className="nb-border bg-card nb-shadow-amber p-5">
+          <section className="nb-border bg-card nb-shadow p-5">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-600 mb-1">
+                <p className="nb-label text-muted-foreground mb-1">
                   Recent Calls
                 </p>
                 <h2 className="text-lg font-bold tracking-tight">

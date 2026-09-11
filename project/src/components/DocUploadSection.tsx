@@ -105,9 +105,9 @@ export default function DocUploadSection({
   return (
     <>
       {/* Upload Section */}
-      <div className="nb-border bg-card text-card-foreground nb-shadow-teal p-5 mb-6">
+      <div className="nb-border bg-card text-card-foreground nb-shadow p-5 mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-bold text-xs uppercase tracking-[0.2em] flex items-center gap-2 text-teal-600 dark:text-teal-400">
+          <h2 className="font-bold text-xs uppercase tracking-[0.2em] flex items-center gap-2 text-muted-foreground">
             <Zap className="w-4 h-4" />
             AUTO-GENERATE FROM DOCUMENT
           </h2>
@@ -181,8 +181,8 @@ export default function DocUploadSection({
                       className="nb-border-2 h-9 text-sm font-medium"
                     />
                     {docCardCount === 0 && (
-                      <p className="text-[11px] text-amber-600 font-medium mt-1.5 flex items-center gap-1">
-                        <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                      <p className="text-[11px] text-muted-foreground font-medium mt-1.5 flex items-center gap-1">
+                        <span className="inline-block w-1.5 h-1.5 rounded-full bg-status-warn shrink-0" />
                         Card count is 0 — no cards will be generated. Set to 1 or more to create cards.
                       </p>
                     )}
@@ -215,7 +215,7 @@ export default function DocUploadSection({
                       className="nb-border-2 h-9 w-full bg-background px-3 text-sm font-medium outline-none"
                     >
                       <option value="basic">Standard Q&A</option>
-                      <option value="cloze">Cloze Deletion</option>
+                      <option value="cloze">Cloze deletion</option>
                     </select>
                   </div>
                   <div>
@@ -314,7 +314,7 @@ export default function DocUploadSection({
                           />
                           <span className="min-w-0 flex-1">
                             <span className="block text-xs font-bold truncate">{chapter.title}</span>
-                            <span className="block text-[10px] text-muted-foreground font-medium">
+                            <span className="block text-2xs text-muted-foreground font-medium">
                               ~{Math.round(chars / 1000)}k chars · {chapter.source}
                             </span>
                           </span>
@@ -323,8 +323,8 @@ export default function DocUploadSection({
                     })}
                   </div>
                   {selectedChapterIds.size === 0 && (
-                    <p className="text-[11px] text-amber-600 font-medium mt-2 flex items-center gap-1">
-                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                    <p className="text-[11px] text-muted-foreground font-medium mt-2 flex items-center gap-1">
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-status-warn shrink-0" />
                       Select at least one chapter to generate cards.
                     </p>
                   )}
@@ -341,16 +341,16 @@ export default function DocUploadSection({
               )}
 
               {docFileNames.length > 0 && isScanned && !processing && (
-                <div className="mb-4 nb-border-2 border-amber-600 bg-amber-50 p-4">
-                  <p className="text-xs font-bold text-amber-800 uppercase tracking-wide mb-1">
+                <div className="mb-4 nb-border-2 border-border bg-status-warn/10 p-4">
+                  <p className="text-xs font-bold text-status-warn uppercase tracking-wide mb-1">
                     ⚠️ Scanned PDF Detected
                   </p>
-                  <p className="text-xs text-amber-900 font-medium mb-3">
+                  <p className="text-xs text-status-warn font-medium mb-3">
                     This document appears to contain scanned pages or images (no text could be extracted directly). You can run OCR (Optical Character Recognition) to extract the text.
                   </p>
                   <Button
                     onClick={onRunOcr}
-                    className="nb-border nb-shadow-sm nb-hover-shadow bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs"
+                    className="nb-border nb-shadow-sm nb-hover-shadow bg-secondary text-secondary-foreground hover:bg-secondary/80 font-bold text-xs"
                   >
                     Run OCR Extraction
                   </Button>
@@ -447,7 +447,7 @@ export default function DocUploadSection({
                       {docMode === "ai" ? "Start document run" : "Extract cards"}
                     </Button>
                     {docMode === "ai" && docCardCount === 0 && (
-                      <p className="text-[11px] text-amber-600 font-medium text-right leading-tight">
+                      <p className="text-[11px] text-muted-foreground font-medium text-right leading-tight">
                         Set card count to 1 or more to generate
                       </p>
                     )}
@@ -508,7 +508,7 @@ export default function DocUploadSection({
 
               {docPreviewSummary && (
                 <div className="nb-border-2 bg-muted/30 p-3 mb-4">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">
+                  <p className="nb-label text-muted-foreground mb-1">
                     AI Summary
                   </p>
                   <p className="text-xs text-muted-foreground font-medium leading-relaxed">
@@ -518,11 +518,11 @@ export default function DocUploadSection({
               )}
 
               {docPreviewWarnings.length > 0 && (
-                <div className="nb-border-2 bg-amber-50 p-3 mb-4">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-amber-800 mb-1">
+                <div className="nb-border-2 bg-status-warn/10 p-3 mb-4">
+                  <p className="nb-label text-status-warn mb-1">
                     Run warnings
                   </p>
-                  <ul className="text-xs text-amber-900 font-medium space-y-1">
+                  <ul className="text-xs text-status-warn font-medium space-y-1">
                     {docPreviewWarnings.map((warning) => <li key={warning}>{warning}</li>)}
                   </ul>
                 </div>
@@ -530,7 +530,7 @@ export default function DocUploadSection({
 
                {docPreviewText && (
                  <div className="nb-border-2 bg-muted/30 p-3 mb-4" data-testid="extracted-text-preview">
-                   <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">
+                   <p className="nb-label text-muted-foreground mb-1">
                      Extracted Text Preview
                    </p>
                    <p className="text-xs text-muted-foreground font-medium leading-relaxed">

@@ -51,9 +51,9 @@ export default function CardsList({
   }, [activeDeckId, editFront, editBack, onEditCard]);
 
   return (
-    <div className="nb-border bg-card text-card-foreground nb-shadow-indigo">
+    <div className="nb-border bg-card text-card-foreground nb-shadow">
       <div className="p-4 border-b-[3px] border-border flex items-center justify-between">
-        <h2 className="font-bold text-xs uppercase tracking-[0.2em] flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
+        <h2 className="nb-label flex items-center gap-2 text-primary">
           <Layers className="w-4 h-4" />
           CARDS ({activeDeck?.cards.length ?? 0})
         </h2>
@@ -85,14 +85,16 @@ export default function CardsList({
                     <Input
                       value={editFront}
                       onChange={(e) => setEditFront(e.target.value)}
-                      className="nb-border-2 text-sm font-bold bg-card"
+                      className="nb-border-2 text-base sm:text-sm font-bold bg-card"
                       placeholder="Front"
+                      aria-label="Card front"
                     />
                     <Textarea
                       value={editBack}
                       onChange={(e) => setEditBack(e.target.value)}
-                      className="nb-border-2 text-sm min-h-[80px] resize-none bg-card"
+                      className="nb-border-2 text-base sm:text-sm min-h-[80px] resize-none bg-card"
                       placeholder="Back"
+                      aria-label="Card back"
                     />
                     <div className="flex gap-2">
                       <Button
@@ -121,9 +123,10 @@ export default function CardsList({
                     <span className="nb-border bg-secondary text-xs font-bold px-2 py-0.5 shrink-0 mt-0.5">
                       {idx + 1}
                     </span>
-                    <div
-                      className="flex-1 min-w-0 cursor-pointer"
+                    <button
+                      type="button"
                       onClick={() => startEditing(idx, card)}
+                      className="flex-1 min-w-0 text-left cursor-pointer"
                     >
                       <p className="text-sm font-semibold truncate">
                         {card.front}
@@ -131,7 +134,7 @@ export default function CardsList({
                       <p className="text-xs text-muted-foreground truncate font-medium">
                         {card.back}
                       </p>
-                    </div>
+                    </button>
                     <div className="flex gap-1 shrink-0">
                       <button
                         type="button"
@@ -190,7 +193,7 @@ export default function CardsList({
                       <div className="px-3 pb-3 pl-10">
                         <div className="nb-border-2 bg-muted/50 p-3">
                           <div className="mb-2">
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                            <span className="nb-label text-muted-foreground">
                               Front
                             </span>
                             <FormattedCardText
@@ -199,7 +202,7 @@ export default function CardsList({
                             />
                           </div>
                           <div className="border-t-2 border-border pt-2">
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                            <span className="nb-label text-muted-foreground">
                               Back
                             </span>
                             <FormattedCardText

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { SkipLink } from "@/components/SkipLink";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -194,13 +195,13 @@ export default function IpAdmin() {
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-md nb-border bg-card nb-shadow-rose p-6 sm:p-8"
+          className="w-full max-w-md nb-border bg-card nb-shadow p-6 sm:p-8"
         >
           <div className="flex flex-col items-center text-center">
-            <div className="nb-border bg-rose-50 p-4 mb-4">
-              <Lock className="w-8 h-8 text-rose-600" />
+            <div className="nb-border bg-muted p-4 mb-4">
+              <Lock className="w-8 h-8 text-muted-foreground" />
             </div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Protected Area</h1>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Protected area</h1>
             <p className="text-xs text-muted-foreground font-medium mt-1">
               Please enter the administrator passphrase to access the configuration panel.
             </p>
@@ -232,6 +233,8 @@ export default function IpAdmin() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <SkipLink />
+
       <header className="border-b-[3px] border-border bg-card text-card-foreground">
         <div className="w-full px-6 lg:px-10 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
@@ -252,7 +255,7 @@ export default function IpAdmin() {
           </div>
           <div className="flex items-center gap-2 uppercase tracking-[0.1em] text-xs font-bold shrink-0">
             <ThemeToggle />
-            <span className="nb-border bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 px-2.5 py-1 flex items-center gap-1.5">
+            <span className="nb-border bg-status-ok/15 text-status-ok px-2.5 py-1 flex items-center gap-1.5">
               <CheckCircle2 className="w-3.5 h-3.5" /> IP limit active
             </span>
             <Button variant="outline" onClick={handleLogout} className="h-9 px-3 nb-border nb-shadow-sm font-bold text-sm">
@@ -262,11 +265,11 @@ export default function IpAdmin() {
         </div>
       </header>
 
-      <main className="w-full px-6 lg:px-10 py-6 space-y-6">
+      <main id="main-content" className="w-full px-6 lg:px-10 py-6 space-y-6 scroll-mt-4">
         {/* Whole Resource Usage Overview */}
         <section className="space-y-4">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-rose-600 mb-1">
+            <p className="nb-label text-muted-foreground mb-1">
               System health and resources
             </p>
             <h2 className="text-lg font-bold tracking-tight">Whole resources usage (Last 30 Days)</h2>
@@ -274,17 +277,17 @@ export default function IpAdmin() {
 
           <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {[
-              { label: "Total tokens", value: formatTokens(totalTokens), icon: Cpu, shadow: "nb-shadow-indigo", tint: "bg-indigo-50", accent: "text-indigo-600" },
-              { label: "Prompt tokens", value: formatTokens(promptTokens), icon: Layers, shadow: "nb-shadow-teal", tint: "bg-teal-50", accent: "text-teal-600" },
-              { label: "Completion tokens", value: formatTokens(completionTokens), icon: Zap, shadow: "nb-shadow-rose", tint: "bg-rose-50", accent: "text-rose-600" },
-              { label: "Requests", value: formatTokens(requests), icon: BarChart3, shadow: "nb-shadow-amber", tint: "bg-amber-50", accent: "text-amber-600" },
+              { label: "Total tokens", value: formatTokens(totalTokens), icon: Cpu, shadow: "nb-shadow", tint: "bg-muted", accent: "text-muted-foreground" },
+              { label: "Prompt tokens", value: formatTokens(promptTokens), icon: Layers, shadow: "nb-shadow", tint: "bg-muted", accent: "text-muted-foreground" },
+              { label: "Completion tokens", value: formatTokens(completionTokens), icon: Zap, shadow: "nb-shadow", tint: "bg-muted", accent: "text-muted-foreground" },
+              { label: "Requests", value: formatTokens(requests), icon: BarChart3, shadow: "nb-shadow", tint: "bg-status-warn/10", accent: "text-muted-foreground" },
             ].map((item) => {
               const Icon = item.icon;
               return (
                 <div key={item.label} className={`nb-border p-4 ${item.shadow} ${item.tint}`}>
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className={`text-[10px] font-bold uppercase tracking-[0.2em] ${item.accent}`}>
+                      <p className={`nb-label ${item.accent}`}>
                         {item.label}
                       </p>
                       <p className="text-2xl font-bold tracking-tight mt-1">{item.value}</p>
@@ -303,7 +306,7 @@ export default function IpAdmin() {
         <section className="space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-600 mb-1">
+              <p className="nb-label text-muted-foreground mb-1">
                 Client directory
               </p>
               <h2 className="text-lg font-bold tracking-tight">IP budget control panel</h2>
@@ -320,7 +323,7 @@ export default function IpAdmin() {
             </div>
           </div>
 
-          <div className="nb-border bg-card nb-shadow-indigo overflow-hidden">
+          <div className="nb-border bg-card nb-shadow overflow-hidden">
             {ips === undefined ? (
               <div className="p-8 text-center text-muted-foreground font-semibold flex items-center justify-center gap-2">
                 <RefreshCw className="w-5 h-5 animate-spin" /> Loading client database...
@@ -349,10 +352,10 @@ export default function IpAdmin() {
                       const percent = Math.min(100, Math.max(0, (item.dayTokensUsed / limit) * 100));
                       const isExpanded = expandedIp === item.ip;
                       const statusTone = item.isBlocked
-                        ? "bg-red-100 text-red-800"
+                        ? "bg-status-err/15 text-status-err"
                         : percent >= 80
-                          ? "bg-amber-100 text-amber-800"
-                          : "bg-emerald-100 text-emerald-800";
+                          ? "bg-status-warn/15 text-status-warn"
+                          : "bg-status-ok/15 text-status-ok";
                       
                       const statusLabel = item.isBlocked
                         ? "Blocked"
@@ -371,20 +374,20 @@ export default function IpAdmin() {
                               <div className="flex flex-col">
                                 <span>{item.ip}</span>
                                 {item.associatedIps && item.associatedIps.length > 1 && (
-                                  <span className="text-[10px] font-semibold text-indigo-600 bg-indigo-50 border border-indigo-200 px-1 py-0.5 mt-1 rounded self-start font-sans">
+                                  <span className="nb-label text-muted-foreground bg-muted border border-border px-1 py-0.5 mt-1 rounded self-start font-sans">
                                     Groups {item.associatedIps.length} rotating IPs
                                   </span>
                                 )}
                               </div>
                             </button>
                             {item.note && (
-                              <p className="text-[10px] text-muted-foreground font-sans font-medium mt-1 max-w-[200px] truncate">
+                              <p className="text-2xs text-muted-foreground font-sans font-medium mt-1 max-w-[200px] truncate">
                                 Note: {item.note}
                               </p>
                             )}
                           </td>
                           <td className="p-4">
-                            <span className={`text-[10px] font-bold uppercase tracking-[0.15em] px-2 py-1 ${statusTone}`}>
+                            <span className={`nb-label px-2 py-1 ${statusTone}`}>
                               {statusLabel}
                             </span>
                           </td>
@@ -393,11 +396,11 @@ export default function IpAdmin() {
                               <span className="text-xs font-bold font-mono">
                                 {formatTokens(item.dayTokensUsed)}
                               </span>
-                              <span className="text-[10px] text-muted-foreground">({Math.round(percent)}%)</span>
+                              <span className="text-2xs text-muted-foreground">({Math.round(percent)}%)</span>
                             </div>
                             <div className="mt-1.5 h-1.5 w-full bg-muted overflow-hidden nb-border">
                               <div
-                                className={`h-full ${percent >= 80 ? "bg-amber-500" : "bg-primary"}`}
+                                className={`h-full ${percent >= 80 ? "bg-status-warn" : "bg-primary"}`}
                                 style={{ width: `${percent}%` }}
                               />
                             </div>
@@ -418,7 +421,7 @@ export default function IpAdmin() {
                                     value={customNoteVal}
                                     onChange={(e) => setCustomNoteVal(e.target.value)}
                                     placeholder="Add notes..."
-                                    className="h-8 py-1 text-xs w-[140px] nb-border-2"
+                                    className="h-8 py-1 text-base sm:text-xs w-[140px] nb-border-2"
                                   />
                                   <Button size="sm" onClick={() => handleSaveNote(item.ip, item.deviceIdHash)} className="h-8 px-2">
                                     Save
@@ -450,7 +453,7 @@ export default function IpAdmin() {
                                     value={customLimitVal}
                                     onChange={(e) => setCustomLimitVal(e.target.value)}
                                     placeholder="Daily limit..."
-                                    className="h-8 py-1 text-xs w-[100px] nb-border-2"
+                                    className="h-8 py-1 text-base sm:text-xs w-[100px] nb-border-2"
                                   />
                                   <Button size="sm" onClick={() => handleSaveLimit(item.ip, item.deviceIdHash)} className="h-8 px-2">
                                     Save
@@ -479,7 +482,7 @@ export default function IpAdmin() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleResetTokens(item.ip, item.deviceIdHash)}
-                                className="h-8 px-2 nb-border nb-shadow-sm text-amber-700 hover:text-amber-800"
+                                className="h-8 px-2 nb-border nb-shadow-sm text-status-warn hover:text-status-warn"
                                 title="Reset daily usage to 0"
                               >
                                 <RefreshCw className="w-3.5 h-3.5" />
@@ -490,8 +493,8 @@ export default function IpAdmin() {
                                 onClick={() => toggleBlock(item.ip, item.deviceIdHash, item.isBlocked)}
                                 className={`nb-border font-bold text-xs px-2.5 py-1.5 transition-all nb-hover-shadow ${
                                   item.isBlocked
-                                    ? "bg-emerald-50 text-emerald-800 border-emerald-950"
-                                    : "bg-red-50 text-red-700 border-red-950"
+                                    ? "bg-status-ok/15 text-status-ok border-border"
+                                    : "bg-status-err/15 text-status-err border-border"
                                 }`}
                               >
                                 {item.isBlocked ? "Unblock" : "Block"}
@@ -513,11 +516,11 @@ export default function IpAdmin() {
           <motion.section
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
-            className="nb-border bg-card nb-shadow-amber p-5 space-y-4"
+            className="nb-border bg-card nb-shadow p-5 space-y-4"
           >
             <div className="flex items-center justify-between border-b border-border pb-3">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-600">
+                <p className="nb-label text-muted-foreground">
                   Detailed analytics
                 </p>
                 <h3 className="text-base font-bold tracking-tight mt-1">
@@ -537,12 +540,12 @@ export default function IpAdmin() {
                 <div className="space-y-4">
                   {/* IP Addresses History */}
                   {item.associatedIps && item.associatedIps.length > 0 && (
-                    <div className="nb-border-2 bg-indigo-50/30 p-4 space-y-2">
-                      <h4 className="text-sm font-bold flex items-center gap-1.5 text-indigo-900">
-                        <Globe className="w-4 h-4 text-indigo-500" />
+                    <div className="nb-border-2 bg-muted/40 p-4 space-y-2">
+                      <h4 className="text-sm font-bold flex items-center gap-1.5 text-foreground">
+                        <Globe className="w-4 h-4 text-muted-foreground" />
                         Associated IP Addresses History ({item.associatedIps.length})
                       </h4>
-                      <p className="text-[10px] text-indigo-700/80 font-medium">
+                      <p className="text-2xs text-muted-foreground font-medium">
                         These dynamic IPs were identified as belonging to the same browser visitor. They share the same rate-limit quota and encrypted deck history.
                       </p>
                       <div className="flex flex-wrap gap-2 mt-1">
@@ -550,7 +553,7 @@ export default function IpAdmin() {
                           <span 
                             key={ipAddr} 
                             className={`font-mono text-xs font-bold px-2 py-1 nb-border bg-card ${
-                              ipAddr === item.ip ? "border-indigo-600 text-indigo-600 bg-indigo-50" : ""
+                              ipAddr === item.ip ? "border-primary bg-muted" : ""
                             }`}
                             title={ipAddr === item.ip ? "Last active IP" : "Historical dynamic IP"}
                           >
@@ -565,7 +568,7 @@ export default function IpAdmin() {
                   {/* Providers Used */}
                   <div className="space-y-3">
                     <h4 className="text-sm font-bold flex items-center gap-1.5">
-                      <Zap className="w-4 h-4 text-indigo-500" />
+                      <Zap className="w-4 h-4 text-muted-foreground" />
                       Providers Called
                     </h4>
                     <div className="space-y-2">
@@ -576,11 +579,11 @@ export default function IpAdmin() {
                           <div key={p.label} className="nb-border-2 bg-muted/20 p-3 flex justify-between items-center">
                             <div>
                               <p className="text-xs font-bold">{p.label}</p>
-                              <p className="text-[10px] text-muted-foreground">{p.requests} request(s)</p>
+                              <p className="text-2xs text-muted-foreground">{p.requests} request(s)</p>
                             </div>
                             <div className="text-right">
                               <p className="text-sm font-bold font-mono">{formatTokens(p.tokens)}</p>
-                              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">tokens</p>
+                              <p className="nb-label text-muted-foreground">tokens</p>
                             </div>
                           </div>
                         ))
@@ -591,7 +594,7 @@ export default function IpAdmin() {
                   {/* Models Used */}
                   <div className="space-y-3">
                     <h4 className="text-sm font-bold flex items-center gap-1.5">
-                      <Cpu className="w-4 h-4 text-teal-500" />
+                      <Cpu className="w-4 h-4 text-muted-foreground" />
                       Models Utilized
                     </h4>
                     <div className="space-y-2">
@@ -602,11 +605,11 @@ export default function IpAdmin() {
                           <div key={m.name} className="nb-border-2 bg-muted/20 p-3 flex justify-between items-center">
                             <div>
                               <p className="text-xs font-bold font-mono">{m.name}</p>
-                              <p className="text-[10px] text-muted-foreground">{m.requests} request(s)</p>
+                              <p className="text-2xs text-muted-foreground">{m.requests} request(s)</p>
                             </div>
                             <div className="text-right">
                               <p className="text-sm font-bold font-mono">{formatTokens(m.tokens)}</p>
-                              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">tokens</p>
+                              <p className="nb-label text-muted-foreground">tokens</p>
                             </div>
                           </div>
                         ))

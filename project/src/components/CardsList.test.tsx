@@ -103,9 +103,8 @@ describe("CardsList", () => {
   it("expands card details when expand button is clicked", () => {
     render(<CardsList {...defaultProps} />);
     const cardRow = getCardRow("What is 2+2?");
-    const buttons = within(cardRow).getAllByRole("button");
     // Click chevron to expand
-    fireEvent.click(buttons[2]);
+    fireEvent.click(within(cardRow).getByTestId("card-expand-button"));
     expect(screen.getByText("Front")).toBeInTheDocument();
     expect(screen.getByText("Back")).toBeInTheDocument();
   });
@@ -113,12 +112,12 @@ describe("CardsList", () => {
   it("collapses expanded card when expand button is clicked again", async () => {
     render(<CardsList {...defaultProps} />);
     const cardRow = getCardRow("What is 2+2?");
-    const buttons = within(cardRow).getAllByRole("button");
+    const expand = within(cardRow).getByTestId("card-expand-button");
     // Expand
-    fireEvent.click(buttons[2]);
+    fireEvent.click(expand);
     expect(screen.getByText("Front")).toBeInTheDocument();
     // Collapse
-    fireEvent.click(buttons[2]);
+    fireEvent.click(expand);
     // framer-motion AnimatePresence keeps the element briefly during exit animation
     await waitFor(() => {
       const frontLabels = screen.queryAllByText("Front");
@@ -130,11 +129,9 @@ describe("CardsList", () => {
     render(<CardsList {...defaultProps} />);
     const card0Row = getCardRow("What is 2+2?");
     const card1Row = getCardRow("Capital of France");
-    const card0Buttons = within(card0Row).getAllByRole("button");
-    const card1Buttons = within(card1Row).getAllByRole("button");
     // Expand both
-    fireEvent.click(card0Buttons[2]);
-    fireEvent.click(card1Buttons[2]);
+    fireEvent.click(within(card0Row).getByTestId("card-expand-button"));
+    fireEvent.click(within(card1Row).getByTestId("card-expand-button"));
     // Both should have Front/Back labels
     const frontLabels = screen.queryAllByText("Front");
     expect(frontLabels.length).toBe(2);
@@ -143,8 +140,7 @@ describe("CardsList", () => {
   it("shows card front and back in expanded detail view", () => {
     render(<CardsList {...defaultProps} />);
     const card0Row = getCardRow("What is 2+2?");
-    const buttons = within(card0Row).getAllByRole("button");
-    fireEvent.click(buttons[2]);
+    fireEvent.click(within(card0Row).getByTestId("card-expand-button"));
     expect(screen.getByText("Front")).toBeInTheDocument();
     expect(screen.getByText("Back")).toBeInTheDocument();
   });

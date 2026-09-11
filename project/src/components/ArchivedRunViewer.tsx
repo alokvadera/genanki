@@ -9,12 +9,16 @@ import { useApiQuery } from "@/hooks/use-api-query";
 import { Button } from "@/components/ui/button";
 import { FormattedCardText } from "@/components/FormattedCardText";
 
+/**
+ * Provider identity colours come from the data palette (chart tokens), not from
+ * brand decoration. These distinguish series in a chart; they are not styling.
+ */
 const PROVIDER_COLORS: Record<string, { bar: string; bg: string; text: string }> = {
-  groq: { bar: "bg-indigo-500", bg: "bg-indigo-50 dark:bg-indigo-950/30", text: "text-indigo-700 dark:text-indigo-300" },
-  cerebras: { bar: "bg-teal-500", bg: "bg-teal-50 dark:bg-teal-950/30", text: "text-teal-700 dark:text-teal-300" },
-  cloudflare: { bar: "bg-amber-500", bg: "bg-amber-50 dark:bg-amber-950/30", text: "text-amber-700 dark:text-amber-300" },
-  kilo: { bar: "bg-rose-500", bg: "bg-rose-50 dark:bg-rose-950/30", text: "text-rose-700 dark:text-rose-300" },
-  openrouter: { bar: "bg-purple-500", bg: "bg-purple-50 dark:bg-purple-950/30", text: "text-purple-700 dark:text-purple-300" },
+  groq: { bar: "bg-chart-2", bg: "bg-chart-2/10", text: "text-chart-2" },
+  cerebras: { bar: "bg-chart-4", bg: "bg-chart-4/10", text: "text-chart-4" },
+  cloudflare: { bar: "bg-chart-3", bg: "bg-chart-3/15", text: "text-foreground" },
+  kilo: { bar: "bg-chart-5", bg: "bg-chart-5/10", text: "text-chart-5" },
+  openrouter: { bar: "bg-chart-1", bg: "bg-chart-1/10", text: "text-chart-1" },
 };
 
 function getProviderColor(provider: string) {
@@ -52,11 +56,11 @@ function getStatusLabel(status: GenerationJob["status"]): string {
 }
 
 function getStatusTone(status: GenerationJob["status"]): string {
-  if (status === "succeeded") return "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300";
-  if (status === "canceled") return "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300";
-  if (status === "failed") return "bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-300";
-  if (status === "running") return "bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300";
-  return "bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300";
+  if (status === "succeeded") return "bg-status-ok/15 text-status-ok";
+  if (status === "canceled") return "bg-muted text-muted-foreground";
+  if (status === "failed") return "bg-status-err/15 text-status-err";
+  if (status === "running") return "bg-status-info/15 text-status-info";
+  return "bg-status-warn/15 text-status-warn";
 }
 
 /** Validation error emitted by AI SDK validation failures. */
@@ -80,9 +84,9 @@ function formatWarning(warning: string) {
               {parsed.map((err: ValidationError, idx: number) => {
                 const path = err.path ? ` (${err.path.join(".")})` : "";
                 return (
-                  <li key={idx} className="text-amber-800">
+                  <li key={idx} className="text-status-warn">
                     <span className="font-semibold">{err.message || "Validation error"}</span>
-                    <span className="text-amber-600/80 font-mono text-[10px]">{path}</span>
+                    <span className="text-status-warn/80 font-mono text-2xs">{path}</span>
                   </li>
                 );
               })}
@@ -109,16 +113,16 @@ function formatErrorReason(reason?: string) {
       if (Array.isArray(parsed) && parsed[0]?.code) {
         return (
           <details className="mt-1 cursor-pointer">
-            <summary className="text-xs text-amber-800 font-semibold hover:text-amber-950">
+            <summary className="text-xs text-status-warn font-semibold hover:opacity-80">
               {prefix || "Validation failed"} ({parsed.length} errors, click to expand)
             </summary>
-            <ul className="pl-6 mt-2 list-disc text-[10px] space-y-1 text-amber-900 dark:text-amber-200 nb-border bg-amber-50/50 dark:bg-amber-950/30 p-3 max-h-[160px] overflow-auto">
+            <ul className="pl-6 mt-2 list-disc text-2xs space-y-1 text-status-warn nb-border bg-status-warn/10 p-3 max-h-[160px] overflow-auto">
               {parsed.map((err: ValidationError, idx: number) => {
                 const path = err.path ? ` (${err.path.join(".")})` : "";
                 return (
                   <li key={idx}>
                     <span className="font-bold">{err.message || "Validation error"}</span>
-                    <span className="text-amber-700 font-mono ml-1">{path}</span>
+                    <span className="text-status-warn font-mono ml-1">{path}</span>
                   </li>
                 );
               })}
@@ -138,10 +142,10 @@ function formatErrorReason(reason?: string) {
     
     return (
       <details className="mt-1 cursor-pointer">
-        <summary className="text-xs text-amber-800 font-semibold hover:text-amber-950">
+        <summary className="text-xs text-status-warn font-semibold hover:opacity-80">
           {cleanPreview} (click to view HTML)
         </summary>
-        <pre className="mt-2 text-[10px] bg-muted/40 p-2 overflow-auto max-h-[160px] nb-border whitespace-pre-wrap font-mono break-all text-amber-800">
+        <pre className="mt-2 text-2xs bg-muted/40 p-2 overflow-auto max-h-[160px] nb-border whitespace-pre-wrap font-mono break-all text-status-warn">
           {reason}
         </pre>
       </details>
@@ -154,7 +158,7 @@ function formatErrorReason(reason?: string) {
         <summary className="text-xs text-muted-foreground font-semibold hover:text-foreground">
           {reason.slice(0, 150)}... (click to expand)
         </summary>
-        <pre className="mt-2 text-[10px] bg-muted/40 p-2 overflow-auto max-h-[160px] nb-border whitespace-pre-wrap font-mono break-all">
+        <pre className="mt-2 text-2xs bg-muted/40 p-2 overflow-auto max-h-[160px] nb-border whitespace-pre-wrap font-mono break-all">
           {reason}
         </pre>
       </details>
@@ -183,17 +187,17 @@ export function ArchivedRunViewer({
   const recentCalls = usage?.rows ?? [];
 
   return (
-    <section className="nb-border bg-card text-card-foreground nb-shadow-teal p-5">
+    <section className="nb-border bg-card text-card-foreground nb-shadow p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-2">
-            <span className={`text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 ${getStatusTone(job.status)}`}>
+            <span className={`nb-label px-2 py-1 ${getStatusTone(job.status)}`}>
               {getStatusLabel(job.status)}
             </span>
-            <span className="text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 bg-secondary nb-border">
+            <span className="nb-label px-2 py-1 bg-secondary nb-border">
               {job.kind}
             </span>
-            <span className="text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 bg-card nb-border">
+            <span className="nb-label px-2 py-1 bg-card nb-border">
               {job.requestedCount} cards
             </span>
           </div>
@@ -259,9 +263,9 @@ export function ArchivedRunViewer({
       ) : null}
 
       {job.resultWarnings?.length ? (
-        <div className="mt-4 nb-border-2 bg-amber-50 dark:bg-amber-950/30 p-3">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-800 dark:text-amber-200">Warnings</p>
-          <ul className="mt-2 space-y-2 text-sm text-amber-900 font-medium">
+        <div className="mt-4 nb-border-2 bg-status-warn/10 p-3">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-status-warn">Warnings</p>
+          <ul className="mt-2 space-y-2 text-sm text-status-warn font-medium">
             {job.resultWarnings.map((warning) => (
               <li key={warning} className="nb-border bg-card p-2.5">{formatWarning(warning)}</li>
             ))}
@@ -273,17 +277,17 @@ export function ArchivedRunViewer({
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
-              { label: "Total tokens", value: formatTokens(totalTokens), icon: Cpu, tint: "bg-indigo-50 dark:bg-indigo-950/30", accent: "text-indigo-600 dark:text-indigo-300" },
-              { label: "Prompt", value: formatTokens(promptTokens), icon: Layers, tint: "bg-teal-50 dark:bg-teal-950/30", accent: "text-teal-600 dark:text-teal-300" },
-              { label: "Completion", value: formatTokens(completionTokens), icon: Sparkles, tint: "bg-rose-50 dark:bg-rose-950/30", accent: "text-rose-600 dark:text-rose-300" },
-              { label: "Requests", value: formatTokens(requests), icon: BarChart3, tint: "bg-amber-50 dark:bg-amber-950/30", accent: "text-amber-600 dark:text-amber-300" },
+              { label: "Total tokens", value: formatTokens(totalTokens), icon: Cpu, tint: "bg-muted", accent: "text-muted-foreground" },
+              { label: "Prompt", value: formatTokens(promptTokens), icon: Layers, tint: "bg-muted", accent: "text-muted-foreground" },
+              { label: "Completion", value: formatTokens(completionTokens), icon: Sparkles, tint: "bg-muted", accent: "text-muted-foreground" },
+              { label: "Requests", value: formatTokens(requests), icon: BarChart3, tint: "bg-status-warn/10", accent: "text-muted-foreground dark:text-status-warn" },
             ].map((item) => {
               const Icon = item.icon;
               return (
                 <div key={item.label} className={`nb-border-2 p-3 ${item.tint}`}>
                   <div className="flex items-center justify-between gap-2">
                     <div>
-                      <p className={`text-[10px] font-bold uppercase tracking-[0.2em] ${item.accent}`}>
+                      <p className={`nb-label ${item.accent}`}>
                         {item.label}
                       </p>
                       <p className="text-lg font-bold tracking-tight mt-1">{item.value}</p>
@@ -300,7 +304,7 @@ export function ArchivedRunViewer({
           <div className="nb-border-2 bg-muted/20 p-4">
             <div className="flex items-center justify-between gap-3 mb-3">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-rose-600">
+                <p className="nb-label text-muted-foreground">
                   Provider breakdown
                 </p>
                 <h3 className="text-sm font-bold tracking-tight mt-1">Tokens by provider</h3>
@@ -327,7 +331,7 @@ export function ArchivedRunViewer({
                         </div>
                         <div className="text-right">
                           <p className="text-base font-bold tracking-tight">{formatTokens(row.totalTokens)}</p>
-                          <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">tokens</p>
+                          <p className="nb-label text-muted-foreground">tokens</p>
                         </div>
                       </div>
                       <div className="mt-2 h-2 w-full bg-muted overflow-hidden nb-border">
@@ -350,7 +354,7 @@ export function ArchivedRunViewer({
           <div className="nb-border-2 bg-muted/20 p-4">
             <div className="flex items-center justify-between gap-3 mb-3">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-600">
+                <p className="nb-label text-muted-foreground">
                   Model breakdown
                 </p>
                 <h3 className="text-sm font-bold tracking-tight mt-1">Tokens by model</h3>
@@ -372,7 +376,7 @@ export function ArchivedRunViewer({
                       </div>
                       <div className="text-right shrink-0">
                         <p className="text-sm font-bold">{formatTokens(row.totalTokens)}</p>
-                        <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">tokens</p>
+                        <p className="nb-label text-muted-foreground">tokens</p>
                       </div>
                     </div>
                     <p className="mt-2 text-xs font-medium text-muted-foreground">
@@ -392,7 +396,7 @@ export function ArchivedRunViewer({
           <div className="nb-border-2 bg-muted/20 p-4">
             <div className="flex items-center justify-between gap-3 mb-3">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-600">
+                <p className="nb-label text-muted-foreground">
                   Recent calls
                 </p>
                 <h3 className="text-sm font-bold tracking-tight mt-1">Per-run provider calls</h3>
@@ -413,7 +417,7 @@ export function ArchivedRunViewer({
                     <p className="text-xs text-muted-foreground font-medium mt-0.5">
                       {row.kind} · {formatTime(row.createdAt)}
                     </p>
-                    <div className="mt-2 grid grid-cols-3 gap-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                    <div className="mt-2 grid grid-cols-3 gap-2 nb-label text-muted-foreground">
                       <span>Prompt {formatTokens(row.promptTokens)}</span>
                       <span>Completion {formatTokens(row.completionTokens)}</span>
                       <span>Total {formatTokens(row.totalTokens)}</span>
@@ -426,14 +430,14 @@ export function ArchivedRunViewer({
 
           {job.fallbackTrail?.length ? (
             <div className="nb-border-2 bg-muted/20 p-4">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-rose-600">
+              <p className="nb-label text-muted-foreground">
                 Provider Fallback Trail
               </p>
               <div className="mt-3 grid gap-2 max-h-[320px] overflow-auto pr-1">
                 {job.fallbackTrail.map((record, index) => (
                   <div key={index} className="nb-border bg-card p-3 flex flex-col gap-1">
                     <div className="flex items-center justify-between">
-                      <p className="text-sm font-bold tracking-tight">{record.provider} / {record.model}</p>                        <span className={`text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 ${record.outcome === 'success' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300'}`}>
+                      <p className="text-sm font-bold tracking-tight">{record.provider} / {record.model}</p>                        <span className={`nb-label px-2 py-1 ${record.outcome === 'success' ? 'bg-status-ok/15 text-status-ok' : 'bg-status-warn/15 text-status-warn'}`}>
                         {record.outcome}
                       </span>
                     </div>
@@ -446,18 +450,18 @@ export function ArchivedRunViewer({
 
           {job.resultCards?.length ? (
             <div className="nb-border-2 bg-muted/20 p-4">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+              <p className="nb-label text-muted-foreground">
                 Archived cards
               </p>
               <div className="mt-3 grid gap-3 max-h-[520px] overflow-auto pr-1">
                 {job.resultCards.map((card, index) => (
                   <div key={`${job.id}-${index}`} className="nb-border bg-card p-3">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-2">
+                    <p className="nb-label text-muted-foreground mb-2">
                       Card {index + 1}
                     </p>
                     <div className="grid gap-2 sm:grid-cols-2">
                       <div className="nb-border bg-muted/20 p-3">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-1">
+                        <p className="nb-label text-muted-foreground mb-1">
                           Front
                         </p>
                         <FormattedCardText
@@ -466,7 +470,7 @@ export function ArchivedRunViewer({
                         />
                       </div>
                       <div className="nb-border bg-muted/20 p-3">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-1">
+                        <p className="nb-label text-muted-foreground mb-1">
                           Back
                         </p>
                         <FormattedCardText

@@ -1,6 +1,7 @@
 import { Toaster } from "@/components/ui/sonner";
-import React, { StrictMode, useEffect, lazy, Suspense } from "react";
+import React, { StrictMode, useEffect, useRef, lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
+import { MotionConfig } from "framer-motion";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router";
 import { DeckStoreProvider } from "@/hooks/use-deck-store";
 import { ThemeProvider } from "@/components/ThemeProvider";
@@ -72,7 +73,7 @@ class RootErrorBoundary extends React.Component<
               {this.state.message}
             </p>
             {this.state.stack && (
-              <pre className="mt-4 text-left text-[10px] leading-4 text-muted-foreground/80 max-h-40 overflow-auto nb-border-2 p-3">
+              <pre className="mt-4 text-left text-2xs leading-4 text-muted-foreground/80 max-h-40 overflow-auto nb-border-2 p-3">
                 {this.state.stack}
               </pre>
             )}
@@ -85,13 +86,43 @@ class RootErrorBoundary extends React.Component<
 }
 
 
+/** Document title per route, most specific first. */
+function titleFor(pathname: string): string {
+  if (pathname.startsWith("/app")) return "Deck creator · genanki";
+  if (pathname.startsWith("/runs") || pathname.startsWith("/history"))
+    return "Runs · genanki";
+  if (pathname.startsWith("/usage")) return "Provider usage · genanki";
+  if (pathname.startsWith("/admin")) return "IP admin · genanki";
+  if (pathname === "/") return "genanki — Anki deck builder";
+  return "Page not found · genanki";
+}
+
 function RouteSyncer() {
   const location = useLocation();
+  const firstRender = useRef(true);
+
   useEffect(() => {
     window.parent.postMessage(
       { type: "iframe-route-change", path: location.pathname },
       "*",
     );
+  }, [location.pathname]);
+
+  // Client-side navigation swaps the screen without telling anyone. Retitle the
+  // document and hand focus to the new view's heading so it is announced.
+  useEffect(() => {
+    document.title = titleFor(location.pathname);
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    const target =
+      document.querySelector<HTMLElement>("main h1") ??
+      document.querySelector<HTMLElement>("main") ??
+      document.querySelector<HTMLElement>("h1");
+    if (!target) return;
+    if (!target.hasAttribute("tabindex")) target.setAttribute("tabindex", "-1");
+    target.focus({ preventScroll: true });
   }, [location.pathname]);
 
   useEffect(() => {
@@ -112,34 +143,38 @@ function RouteSyncer() {
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <RootErrorBoundary>
-      {import.meta.env.DEV && window.location.hostname.endsWith(".vly.sh") && (
-        <Suspense fallback={null}>
-          <ToolbarErrorBoundary>
-            <VlyToolbar />
-          </ToolbarErrorBoundary>
-        </Suspense>
-      )}
-      <ThemeProvider defaultTheme="system">
-          <DeckStoreProvider>
-          <BrowserRouter>
-            <RouteSyncer />
-            <Suspense fallback={<RouteLoading />}>
-              <Routes>
-                <Route path="/" element={<Landing />} />
-                <Route path="/app" element={<AnkiCreator />} />
-                <Route path="/runs" element={<History />} />
-                <Route path="/runs/:jobId" element={<History />} />
-                <Route path="/history" element={<History />} />
-                <Route path="/history/:jobId" element={<History />} />
-                <Route path="/usage" element={<ProviderUsage />} />
-                <Route path="/admin" element={<IpAdmin />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Suspense>
-          </BrowserRouter>
-          </DeckStoreProvider>
-      </ThemeProvider>
-      <Toaster />
+      {/* reducedMotion="user" makes every framer-motion animation in the app
+          honour the OS-level prefers-reduced-motion setting. */}
+      <MotionConfig reducedMotion="user">
+        {import.meta.env.DEV && window.location.hostname.endsWith(".vly.sh") && (
+          <Suspense fallback={null}>
+            <ToolbarErrorBoundary>
+              <VlyToolbar />
+            </ToolbarErrorBoundary>
+          </Suspense>
+        )}
+        <ThemeProvider defaultTheme="system">
+            <DeckStoreProvider>
+            <BrowserRouter>
+              <RouteSyncer />
+              <Suspense fallback={<RouteLoading />}>
+                <Routes>
+                  <Route path="/" element={<Landing />} />
+                  <Route path="/app" element={<AnkiCreator />} />
+                  <Route path="/runs" element={<History />} />
+                  <Route path="/runs/:jobId" element={<History />} />
+                  <Route path="/history" element={<History />} />
+                  <Route path="/history/:jobId" element={<History />} />
+                  <Route path="/usage" element={<ProviderUsage />} />
+                  <Route path="/admin" element={<IpAdmin />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Suspense>
+            </BrowserRouter>
+            </DeckStoreProvider>
+        </ThemeProvider>
+        <Toaster />
+      </MotionConfig>
     </RootErrorBoundary>
   </StrictMode>,
 );

@@ -21,10 +21,10 @@ export function LiveCapacityGrid({
   const providerOrder = PROVIDERS.map((p) => p.label);
 
   return (
-    <section className="nb-border bg-card nb-shadow-teal p-5">
+    <section className="nb-border bg-card nb-shadow p-5">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between mb-4">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-teal-600 mb-1">
+          <p className="nb-label text-muted-foreground mb-1">
             Live Capacity
           </p>
           <h2 className="text-lg font-bold tracking-tight">Provider budget and cooldown state</h2>
@@ -43,7 +43,7 @@ export function LiveCapacityGrid({
             <div key={providerName} className={`nb-border-2 p-4 ${getProviderColor(providerName).bg}`}>
               <div className="flex items-center justify-between gap-2">
                 <h3 className="text-sm font-bold tracking-tight">{providerName}</h3>
-                <span className={`text-[10px] font-bold uppercase tracking-[0.15em] px-2 py-1 ${cooling ? "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300" : "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300"}`}>
+                <span className={`nb-label px-2 py-1 ${cooling ? "bg-status-warn/15 text-status-warn" : "bg-status-ok/15 text-status-ok"}`}>
                   {cooling ? "Cooling" : "Ready"}
                 </span>
               </div>
@@ -54,7 +54,7 @@ export function LiveCapacityGrid({
                     <p>Requests left {latest.remainingRequests ?? "tracked"}</p>
                     <p>Tokens left {latest.remainingTokens ?? "tracked"}</p>
                   </div>
-                  <p className="text-[10px] text-muted-foreground font-medium mt-2">
+                  <p className="text-2xs text-muted-foreground font-medium mt-2">
                     Last status: {latest.lastStatus ?? "not called"}
                   </p>
                 </>
@@ -63,7 +63,7 @@ export function LiveCapacityGrid({
               )}
               {providerKey === "cloudflare" && (
                 <div className="mt-4 pt-4 border-t border-border">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-1">
+                  <p className="nb-label text-muted-foreground mb-1">
                     Resets in {formatTimeUntilMidnight(now)}
                   </p>
                   <p className="text-xs font-medium text-muted-foreground">

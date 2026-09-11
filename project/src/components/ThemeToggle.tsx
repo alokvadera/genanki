@@ -41,8 +41,8 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
       title={`Current theme: ${theme}. Click to switch.`}
       aria-label="Toggle theme"
     >
-      {theme === "light" && <Sun className="w-4 h-4 text-amber-500" />}
-      {theme === "dark" && <Moon className="w-4 h-4 text-indigo-400" />}
+      {theme === "light" && <Sun className="w-4 h-4 text-status-warn" />}
+      {theme === "dark" && <Moon className="w-4 h-4 text-muted-foreground" />}
       {theme === "system" && <Laptop className="w-4 h-4 text-muted-foreground" />}
     </Button>
   );

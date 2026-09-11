@@ -69,9 +69,9 @@ export default function AiDeckBuilder({
   return (
     <>
       {/* AI Deck Builder */}
-      <div className="nb-border bg-card text-card-foreground nb-shadow-rose p-5 mb-6">
+      <div className="nb-border bg-card text-card-foreground nb-shadow p-5 mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-bold text-xs uppercase tracking-[0.2em] flex items-center gap-2 text-rose-600 dark:text-rose-400">
+          <h2 className="font-bold text-xs uppercase tracking-[0.2em] flex items-center gap-2 text-muted-foreground">
             <Sparkles className="w-4 h-4" />
             AI DECK BUILDER
           </h2>
@@ -106,7 +106,7 @@ export default function AiDeckBuilder({
                     value={aiDeckName}
                     onChange={(e) => onDeckNameChange(e.target.value)}
                     placeholder={activeDeckName || "AI generated deck"}
-                    className="nb-border-2 h-10 text-sm font-medium"
+                    className="nb-border-2 h-10 text-base sm:text-sm font-medium"
                   />
                 </div>
                 <div>
@@ -126,11 +126,11 @@ export default function AiDeckBuilder({
                       }
                       onCardCountChange(Math.max(0, Math.min(1000, Math.round(Number(val)))));
                     }}
-                    className="nb-border-2 h-10 text-sm font-medium"
+                    className="nb-border-2 h-10 text-base sm:text-sm font-medium"
                   />
                   {aiCardCount === 0 && (
-                    <p className="text-[11px] text-amber-600 font-medium mt-1.5 flex items-center gap-1">
-                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                    <p className="text-[11px] text-muted-foreground font-medium mt-1.5 flex items-center gap-1">
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-status-warn shrink-0" />
                       Card count is 0 — no cards will be generated. Set to 1 or more to create cards.
                     </p>
                   )}
@@ -144,7 +144,7 @@ export default function AiDeckBuilder({
                     onChange={(e) =>
                       onDifficultyChange(e.target.value as "beginner" | "intermediate" | "advanced")
                     }
-                    className="nb-border-2 h-10 w-full bg-background px-3 text-sm font-medium outline-none"
+                    className="nb-border-2 h-10 w-full bg-background px-3 text-base sm:text-sm font-medium outline-none"
                   >
                     <option value="beginner">Beginner</option>
                     <option value="intermediate">Intermediate</option>
@@ -160,10 +160,10 @@ export default function AiDeckBuilder({
                     onChange={(e) =>
                       onCardTypeChange(e.target.value as "basic" | "cloze")
                     }
-                    className="nb-border-2 h-10 w-full bg-background px-3 text-sm font-medium outline-none"
+                    className="nb-border-2 h-10 w-full bg-background px-3 text-base sm:text-sm font-medium outline-none"
                   >
                     <option value="basic">Standard Q&A</option>
-                    <option value="cloze">Cloze Deletion</option>
+                    <option value="cloze">Cloze deletion</option>
                   </select>
                 </div>
                 <div>
@@ -175,7 +175,7 @@ export default function AiDeckBuilder({
                       value={preferredProvider}
                       onChange={(e) => onProviderChange(e.target.value)}
                       disabled={loadingProviders}
-                      className="nb-border-2 h-10 flex-1 bg-background px-3 text-sm font-medium outline-none disabled:opacity-60"
+                      className="nb-border-2 h-10 flex-1 bg-background px-3 text-base sm:text-sm font-medium outline-none disabled:opacity-60"
                     >
                       {loadingProviders ? (
                         <option value="auto">Loading providers...</option>
@@ -219,7 +219,7 @@ export default function AiDeckBuilder({
                     )}
                   </Button>
                   {aiCardCount === 0 && (
-                    <p className="text-[11px] text-amber-600 font-medium text-center leading-tight">
+                    <p className="text-[11px] text-muted-foreground font-medium text-center leading-tight">
                       Set card count to 1 or more to generate
                     </p>
                   )}
@@ -234,7 +234,7 @@ export default function AiDeckBuilder({
                   value={aiPrompt}
                   onChange={(e) => onPromptChange(e.target.value)}
                   placeholder="Example: Create a deck on cell respiration for first-year biology students, focusing on core terms, stages, and key differences."
-                  className="nb-border-2 min-h-[130px] resize-none text-sm font-medium"
+                  className="nb-border-2 min-h-[130px] resize-none text-base sm:text-sm font-medium"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !aiGenerating && aiCardCount > 0) {
                       e.preventDefault();
@@ -299,7 +299,7 @@ export default function AiDeckBuilder({
 
               {aiPreviewSummary && (
                 <div className="nb-border-2 bg-muted/30 p-3 mb-4">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">
+                  <p className="nb-label text-muted-foreground mb-1">
                     AI Summary
                   </p>
                   <p className="text-xs text-muted-foreground font-medium leading-relaxed">

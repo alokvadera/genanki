@@ -24,8 +24,8 @@ export default function AddCardForm({
   fileInputRef,
 }: AddCardFormProps) {
   return (
-    <div className="nb-border bg-card text-card-foreground nb-shadow-amber p-5 mb-6">
-      <h2 className="font-bold text-xs uppercase tracking-[0.2em] mb-4 flex items-center gap-2 text-amber-600 dark:text-amber-400">
+    <div className="nb-border bg-card text-card-foreground nb-shadow p-5 mb-6">
+      <h2 className="font-bold text-xs uppercase tracking-[0.2em] mb-4 flex items-center gap-2 text-muted-foreground">
         <Plus className="w-4 h-4" />
         ADD NEW CARD
       </h2>
@@ -38,7 +38,7 @@ export default function AddCardForm({
             value={front}
             onChange={(e) => onFrontChange(e.target.value)}
             placeholder="Question or term..."
-            className="nb-border-2 min-h-[100px] resize-none text-sm font-medium"
+            className="nb-border-2 min-h-[100px] resize-none text-base sm:text-sm font-medium"
             onKeyDown={(e) => {
               if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) onAddCard();
             }}
@@ -52,7 +52,7 @@ export default function AddCardForm({
             value={back}
             onChange={(e) => onBackChange(e.target.value)}
             placeholder="Answer or definition..."
-            className="nb-border-2 min-h-[100px] resize-none text-sm font-medium"
+            className="nb-border-2 min-h-[100px] resize-none text-base sm:text-sm font-medium"
             onKeyDown={(e) => {
               if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) onAddCard();
             }}
@@ -88,7 +88,7 @@ export default function AddCardForm({
         </label>
       </div>
       <p className="text-xs text-muted-foreground mt-2 font-medium">
-        Tip: Press <kbd className="nb-border px-1 py-0.5 text-[10px] font-bold mx-0.5">Ctrl</kbd>+<kbd className="nb-border px-1 py-0.5 text-[10px] font-bold mx-0.5">Enter</kbd> to quickly add a card
+        Tip: Press <kbd className="nb-border px-1 py-0.5 text-2xs font-bold mx-0.5">Ctrl</kbd>+<kbd className="nb-border px-1 py-0.5 text-2xs font-bold mx-0.5">Enter</kbd> to quickly add a card
       </p>
     </div>
   );

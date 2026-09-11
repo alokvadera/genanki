@@ -24,7 +24,11 @@ test.describe("Deck creator", () => {
 
   test("has deck sidebar with starter decks", async ({ page }) => {
     await page.goto("/app");
-    await expect(page.getByText("My First Deck")).toBeVisible({ timeout: 10_000 });
+    // Scoped to the sidebar control: the deck name also appears in the
+    // workspace hero, so a bare text match resolves to two nodes.
+    await expect(
+      page.getByRole("button", { name: /^Open My First Deck$/ }),
+    ).toBeVisible({ timeout: 10_000 });
   });
 
   test("manual card form is visible", async ({ page }) => {
@@ -64,7 +68,10 @@ test.describe("Provider Usage page", () => {
 test.describe("History page", () => {
   test("loads at /runs", async ({ page }) => {
     await page.goto("/runs");
-    await expect(page.getByText("Runs")).toBeVisible({ timeout: 10_000 });
+    // The word "Runs" appears in the heading, nav link, and body copy.
+    await expect(
+      page.getByRole("heading", { name: "Runs", exact: true }),
+    ).toBeVisible({ timeout: 10_000 });
   });
 });
 

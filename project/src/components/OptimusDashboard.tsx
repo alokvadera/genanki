@@ -1,133 +1,164 @@
 import { api } from "@/lib/api";
 import { useApiQuery } from "@/hooks/use-api-query";
-import { ShieldAlert, Activity, ShieldCheck, BrainCircuit, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  ShieldAlert,
+  Activity,
+  ShieldCheck,
+  BrainCircuit,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useState } from "react";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "./ui/collapsible";
 
 export function OptimusDashboard() {
   const [isOpen, setIsOpen] = useState(false);
   const healthData = useApiQuery(() => api.networkHealth());
-  const adaptiveSettings = useApiQuery(() => api.adaptiveSettings(), { intervalMs: 5000 });
-  const latestInsight = useApiQuery(() => api.latestInsight(), { intervalMs: 5000 });
+  const adaptiveSettings = useApiQuery(() => api.adaptiveSettings(), {
+    intervalMs: 5000,
+  });
+  const latestInsight = useApiQuery(() => api.latestInsight(), {
+    intervalMs: 5000,
+  });
 
   if (healthData === undefined) {
     return (
       <div className="nb-border bg-card nb-shadow-sm p-3 animate-pulse">
         <div className="flex items-center gap-2 text-muted-foreground font-bold text-sm">
           <BrainCircuit className="h-4 w-4" />
-          <span>Optimus Loading...</span>
+          <span>Checking provider health</span>
         </div>
       </div>
     );
   }
 
-  const exhausted = healthData.filter(d => d.status === "exhausted").length;
-  const nearExhaustion = healthData.filter(d => d.status === "near-exhaustion").length;
-  
-  let overallStatus = "Healthy";
+  const exhausted = healthData.filter((d) => d.status === "exhausted").length;
+  const nearExhaustion = healthData.filter(
+    (d) => d.status === "near-exhaustion",
+  ).length;
+
+  // Status is carried by a word plus a tone, never by hue alone.
+  let overallStatus = "All routes healthy";
   let StatusIcon = ShieldCheck;
-  let statusColor = "text-emerald-600 dark:text-emerald-400";
-  let bgStatusColor = "bg-emerald-50 dark:bg-emerald-950/30";
-  let shadowColor = "nb-shadow-teal";
+  let statusTone = "text-muted-foreground";
+  let containerTone = "bg-card";
+  let shadowColor = "nb-shadow";
 
   if (exhausted > 0) {
-    overallStatus = "Active Rerouting";
+    overallStatus = "Rerouting";
     StatusIcon = ShieldAlert;
-    statusColor = "text-red-600 dark:text-red-400";
-    bgStatusColor = "bg-red-50 dark:bg-red-950/30";
-    shadowColor = "nb-shadow-rose";
+    statusTone = "text-destructive";
+    containerTone = "bg-destructive/10";
+    shadowColor = "nb-shadow-oxblood";
   } else if (nearExhaustion > 0) {
-    overallStatus = "Monitoring Load";
+    overallStatus = "Watching load";
     StatusIcon = Activity;
-    statusColor = "text-amber-600 dark:text-amber-400";
-    bgStatusColor = "bg-amber-50 dark:bg-amber-950/30";
-    shadowColor = "nb-shadow-amber";
+    statusTone = "text-foreground";
+    containerTone = "bg-secondary/25";
+    shadowColor = "nb-shadow-highlight";
   }
 
   return (
     <Collapsible
       open={isOpen}
       onOpenChange={setIsOpen}
-      className={`nb-border ${shadowColor} transition-colors duration-300 ${bgStatusColor}`}
+      className={`nb-border ${shadowColor} transition-colors duration-300 ${containerTone}`}
     >
       <CollapsibleTrigger className="w-full flex items-center justify-between p-3 hover:bg-black/5 dark:hover:bg-white/5 transition-colors group">
-        <div className="flex items-center gap-3">
-          <div className="nb-border bg-card p-1.5">
-            <StatusIcon className={`h-4 w-4 ${statusColor}`} />
-          </div>
+        <div className="flex items-center gap-2.5">
+          <StatusIcon className={`h-4 w-4 shrink-0 ${statusTone}`} />
           <div className="text-left">
-            <h2 className="text-base font-black tracking-tight leading-tight">Optimus</h2>
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">
-              {healthData.length} models tracked · {adaptiveSettings?.documentMaxChunks ?? 10} chunks/doc
+            <h2 className="text-base font-bold tracking-tight leading-tight">
+              Optimus
+            </h2>
+            <p className="nb-label text-muted-foreground mt-0.5">
+              {healthData.length} models tracked ·{" "}
+              {adaptiveSettings?.documentMaxChunks ?? 10} chunks/doc
             </p>
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <div className={`nb-border bg-card px-2 py-0.5 font-bold text-[10px] uppercase tracking-widest ${statusColor}`}>
+          <span
+            className={`nb-border bg-card px-2 py-0.5 nb-label ${statusTone}`}
+          >
             {overallStatus}
-          </div>
+          </span>
           <div className="nb-border bg-card p-1 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-            {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            {isOpen ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : (
+              <ChevronDown className="h-4 w-4" />
+            )}
           </div>
         </div>
       </CollapsibleTrigger>
 
       <CollapsibleContent className="border-t-2 border-border bg-card text-card-foreground p-3 space-y-4">
-        {/* Network Health Minimal View */}
         <div>
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-xs font-bold uppercase tracking-[0.15em] text-muted-foreground">Routing Health</h3>
-          </div>
+          <h3 className="nb-label text-muted-foreground mb-2">Routing health</h3>
           <div className="flex flex-wrap gap-2">
             {healthData.map((node) => {
               const isExhausted = node.status === "exhausted";
               const isNear = node.status === "near-exhaustion";
-              let nodeColor = "text-green-600 bg-green-50";
-              
-              if (isExhausted) {
-                nodeColor = "text-red-600 bg-red-50";
-              } else if (isNear) {
-                nodeColor = "text-amber-600 bg-amber-50";
-              }
+              const nodeTone = isExhausted
+                ? "bg-destructive text-white"
+                : isNear
+                  ? "bg-secondary text-secondary-foreground"
+                  : "bg-muted text-muted-foreground";
 
               return (
-                <div key={`${node.provider}-${node.model}`} className={`nb-border px-2 py-1 flex items-center gap-1.5 ${nodeColor}`} title={node.reason ?? "Healthy"}>
-                  <span className="text-[10px] font-bold uppercase tracking-wider">{node.provider}</span>
-                  <span className="text-[10px] font-medium opacity-80 border-l border-current/20 pl-1.5">
-                    {isExhausted ? "ERR" : (isNear ? "WARN" : "OK")}
+                <div
+                  key={`${node.provider}-${node.model}`}
+                  className={`nb-border-2 px-2 py-1 flex items-center gap-1.5 ${nodeTone}`}
+                  title={node.reason ?? "Healthy"}
+                >
+                  <span className="nb-label">{node.provider}</span>
+                  <span className="nb-label opacity-80 border-l border-current/30 pl-1.5">
+                    {isExhausted ? "ERR" : isNear ? "WARN" : "OK"}
                   </span>
                 </div>
               );
             })}
             {healthData.length === 0 && (
-              <div className="text-xs font-bold text-muted-foreground py-1">No providers active.</div>
+              <div className="text-xs font-bold text-muted-foreground py-1">
+                No providers are reporting.
+              </div>
             )}
           </div>
         </div>
 
-        {/* Adaptive Tuning Minimal View */}
-        <div className="pt-3 border-t border-border">
+        <div className="pt-3 border-t-2 border-border">
           <div className="flex flex-col sm:flex-row gap-4 justify-between">
-            <div className="flex gap-4">
+            <dl className="flex gap-6">
               <div>
-                <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Sections</p>
-                <p className="text-sm font-bold">{adaptiveSettings?.documentMaxChunks ?? 10}</p>
+                <dt className="nb-label text-muted-foreground">Sections</dt>
+                <dd className="text-base font-bold">
+                  {adaptiveSettings?.documentMaxChunks ?? 10}
+                </dd>
               </div>
               <div>
-                <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Passes</p>
-                <p className="text-sm font-bold">{adaptiveSettings?.completionPasses ?? 3}</p>
+                <dt className="nb-label text-muted-foreground">Passes</dt>
+                <dd className="text-base font-bold">
+                  {adaptiveSettings?.completionPasses ?? 3}
+                </dd>
               </div>
               <div>
-                <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Tuned</p>
-                <p className="text-sm font-bold">
-                  {latestInsight ? formatDistanceToNow(latestInsight.createdAt) + " ago" : "Pending"}
-                </p>
+                <dt className="nb-label text-muted-foreground">Tuned</dt>
+                <dd className="text-base font-bold">
+                  {latestInsight
+                    ? formatDistanceToNow(latestInsight.createdAt) + " ago"
+                    : "Pending"}
+                </dd>
               </div>
-            </div>
+            </dl>
             {latestInsight && (
-              <p className="text-xs text-muted-foreground font-medium max-w-sm text-right leading-snug">
-                "{latestInsight.summary}"
+              <p className="text-xs text-muted-foreground max-w-sm sm:text-right leading-snug">
+                {latestInsight.summary}
               </p>
             )}
           </div>

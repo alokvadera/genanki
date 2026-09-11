@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, lazy, Suspense } from "react";
+import { SkipLink } from "@/components/SkipLink";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check } from "lucide-react";
 import { api } from "@/lib/api";
@@ -212,19 +213,29 @@ export default function AnkiCreator() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AnimatePresence>
-        {toast && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] nb-border nb-shadow-sm bg-secondary px-5 py-2.5 text-sm font-semibold"
-          >
-            <Check className="inline-block w-4 h-4 mr-2 -mt-0.5" />
-            {toast}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <SkipLink />
+
+      {/* Stable polite region: always present so the text change is announced
+          reliably, and never focus-stealing. */}
+      <div
+        role="status"
+        aria-live="polite"
+        className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] pointer-events-none"
+      >
+        <AnimatePresence>
+          {toast && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="nb-border nb-shadow-sm bg-secondary text-secondary-foreground px-5 py-2.5 text-sm font-semibold flex items-center"
+            >
+              <Check className="w-4 h-4 mr-2 shrink-0" aria-hidden="true" />
+              {toast}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
       <AnkiCreatorHeader
         deckCount={decks.length}
@@ -251,11 +262,11 @@ export default function AnkiCreator() {
           showToast={showToast}
         />
 
-        <main className="flex-1 min-w-0">
-          <section className="nb-border bg-foreground text-background nb-shadow-amber dark:bg-card dark:text-foreground p-5 sm:p-6 mb-5 sm:mb-6">
+        <main id="main-content" className="flex-1 min-w-0 scroll-mt-4">
+          <section className="nb-border bg-foreground text-background nb-shadow dark:bg-card dark:text-foreground p-5 sm:p-6 mb-5 sm:mb-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-secondary mb-1.5">
+                <p className="nb-label text-secondary mb-1.5">
                   Study workspace
                 </p>
                 <h2 className="text-2xl sm:text-3xl font-bold tracking-tight leading-tight">
@@ -267,7 +278,7 @@ export default function AnkiCreator() {
                 </p>
               </div>
               <div className="shrink-0 nb-border-2 border-background/30 dark:border-border bg-background/10 dark:bg-muted/30 px-3 py-2">
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-background/60 dark:text-muted-foreground">
+                <p className="nb-label text-background/60 dark:text-muted-foreground">
                   Active deck
                 </p>
                 <p className="text-sm font-bold mt-0.5">

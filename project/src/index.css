@@ -32,6 +32,10 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --color-status-ok: var(--status-ok);
+  --color-status-warn: var(--status-warn);
+  --color-status-err: var(--status-err);
+  --color-status-info: var(--status-info);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -42,72 +46,104 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
-/* Fonts — plain @theme so the CSS variables are emitted to :root
-   (Tailwind's preflight applies --font-sans to html via --default-font-family). */
+/* Type — a study tool reads like print: a slab for display, a humanist sans
+   for everything you actually read. Plain @theme so the variables land on
+   :root (Tailwind's preflight applies --font-sans to html).
+
+   Scale (1.25 ratio, product register):
+     micro   11px  — uppercase lane labels (the floor; never go below)
+     small   14px  — secondary copy, metadata
+     body    16px  — default reading size
+     lead    20px  — section intros
+     title   24px  — module headings
+     display 30-60px — page and hero headings                             */
 @theme {
   --font-sans:
-    "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-display:
-    "Space Grotesk", "Inter", ui-sans-serif, system-ui, sans-serif;
+    "Source Sans 3", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    sans-serif;
+  --font-display: "Bitter", Georgia, ui-serif, serif;
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
 }
 
-/* Neobrutalism Minimalism Theme */
+/* Neobrutalism Minimalism — "ink & highlighter".
+   The palette is the material of the domain, not the category: warm index-card
+   paper, marker ink for the structure, a highlighter for emphasis, and one
+   ballpoint blue reserved for focus and links. No indigo. */
 :root {
   --radius: 0px;
-  --background: #fdfcf7; /* elegant warm cream */
-  --foreground: #18181b; /* zinc 900 */
+  --background: #fdfcf7; /* index-card paper */
+  --foreground: #18181b; /* nib ink */
   --card: #ffffff;
   --card-foreground: #18181b;
   --popover: #ffffff;
   --popover-foreground: #18181b;
-  --primary: #4f46e5; /* elegant indigo */
-  --primary-foreground: #ffffff;
-  --secondary: #f59e0b; /* richer warm amber — holds up better against cream */
+  --primary: #232326; /* marker ink — the primary action */
+  --primary-foreground: #fdfcf7;
+  --secondary: #fbbf24; /* highlighter — emphasis only */
   --secondary-foreground: #18181b;
-  --muted: #f4f4f5; /* zinc 100 */
-  --muted-foreground: #71717a; /* zinc 500 */
-  --accent: #f43f5e; /* vibrant rose */
+  --muted: #f4f4f5;
+  --muted-foreground: #52525b; /* darkened to hold contrast on paper */
+  --accent: #2f6fdb; /* ballpoint blue — links and selection */
   --accent-foreground: #ffffff;
-  --destructive: #ef4444;
-  --border: #18181b; /* zinc 900 border */
+  --destructive: #b91c1c;
+  --border: #18181b; /* ink rules */
   --input: #f4f4f5;
-  --ring: #4f46e5;
+  --ring: #2f6fdb; /* focus is ballpoint, never the ink */
   --grid-color: rgba(24, 24, 27, 0.04);
-  --chart-1: #4f46e5;
-  --chart-2: #0d9488;
-  --chart-3: #fbbf24;
-  --chart-4: #22c55e;
-  --chart-5: #a855f7;
+  --chart-1: #232326; /* ink */
+  --chart-2: #2f6fdb; /* ballpoint */
+  --chart-3: #fbbf24; /* highlighter */
+  --chart-4: #0f766e; /* pencil teal — data only */
+  --chart-5: #9f1239; /* oxblood — data only */
+  /* Semantic status — the only place a hue is allowed to mean something.
+     Pair every use with an icon or a word; never rely on the hue alone. */
+  --status-ok: #115e59;
+  --status-warn: #92400e;
+  --status-err: #9f1239;
+  --status-info: #1e40af;
   --sidebar: #ffffff;
   --sidebar-foreground: #18181b;
-  --sidebar-primary: #4f46e5;
-  --sidebar-primary-foreground: #ffffff;
+  --sidebar-primary: #232326;
+  --sidebar-primary-foreground: #fdfcf7;
   --sidebar-accent: #fbbf24;
   --sidebar-accent-foreground: #18181b;
   --sidebar-border: #18181b;
-  --sidebar-ring: #4f46e5;
+  --sidebar-ring: #2f6fdb;
 }
 
 .dark {
-  --background: #09090b; /* deep midnight obsidian */
-  --foreground: #e4e4e7; /* zinc 200 — softer body text, less eye fatigue */
-  --card: #1a1a1f; /* lifted card surface — 10%+ luminance delta from bg */
+  --background: #09090b;
+  --foreground: #e4e4e7;
+  --card: #1a1a1f; /* lifted surface — clear luminance delta from bg */
   --card-foreground: #e4e4e7;
   --popover: #1a1a1f;
   --popover-foreground: #e4e4e7;
-  --primary: #6366f1; /* electric indigo */
-  --primary-foreground: #ffffff;
-  --secondary: #f59e0b; /* warm amber */
-  --secondary-foreground: #09090b;
-  --muted: #27272a; /* zinc 800 */
-  --muted-foreground: #a1a1aa; /* zinc 400 */
-  --accent: #fb7185; /* rose-400 — brighter on dark surfaces, keeps white text legible */
-  --accent-foreground: #1a1a1f;
+  --primary: #edeae1; /* paper-lit ink — the action inverts on dark */
+  --primary-foreground: #18181b;
+  --secondary: #fbbf24;
+  --secondary-foreground: #18181b;
+  --muted: #27272a;
+  --muted-foreground: #a1a1aa;
+  --accent: #7aa2f7; /* ballpoint, lifted for dark surfaces */
+  --accent-foreground: #0b0b0d;
   --destructive: #ef4444;
-  --border: #3f3f46; /* zinc 700 clean border */
+  --border: #3f3f46;
   --input: #27272a;
-  --ring: #6366f1;
+  --ring: #7aa2f7;
+  --status-ok: #5eead4;
+  --status-warn: #fbbf24;
+  --status-err: #fda4af;
+  --status-info: #93c5fd;
   --grid-color: rgba(255, 255, 255, 0.04);
+  --sidebar: #1a1a1f;
+  --sidebar-foreground: #e4e4e7;
+  --sidebar-primary: #edeae1;
+  --sidebar-primary-foreground: #18181b;
+  --sidebar-accent: #fbbf24;
+  --sidebar-accent-foreground: #18181b;
+  --sidebar-border: #3f3f46;
+  --sidebar-ring: #7aa2f7;
 }
 
 @layer base {
@@ -122,13 +158,15 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.6;
     background-image: radial-gradient(
       var(--grid-color) 1.5px,
       transparent 1.5px
     );
     background-size: 20px 20px;
   }
-  /* Space Grotesk display headings — tighter, confident, neo-brutalist */
+  /* Slab display — print weight, tightened tracking */
   h1,
   h2,
   h3,
@@ -137,48 +175,56 @@
   h6 {
     font-family: var(--font-display);
     font-weight: 700;
-    letter-spacing: -0.025em;
-    line-height: 1.1;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
   }
   button:not([disabled]),
   [role="button"]:not([disabled]) {
     cursor: pointer;
   }
-  /* Style inputs and select boxes with custom focus styling for neobrutalist look */
-  input:focus,
-  select:focus,
-  textarea:focus {
+  /* Focus on fields: a ballpoint rule, visible and never merely a color shift */
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
     @apply outline-none ring-0;
-    box-shadow: 2px 2px 0px var(--border);
+    box-shadow: 3px 3px 0 var(--ring);
     transform: translate(-1px, -1px);
     transition:
       transform 0.1s ease,
       box-shadow 0.1s ease;
   }
-  /* Dark mode: brighter headings, controlled placeholders, card depth cue */
   .dark h1,
   .dark h2,
   .dark h3,
   .dark h4,
   .dark h5,
   .dark h6 {
-    color: #f4f4f5; /* zinc 100 — headings stay crisp white */
+    color: #f4f4f5;
   }
   .dark input::placeholder,
   .dark textarea::placeholder {
-    color: #71717a; /* zinc 500 — visible but dim */
+    color: #71717a;
   }
   .dark .nb-border {
-    border-top-color: rgba(
-      255,
-      255,
-      255,
-      0.06
-    ); /* subtle top highlight for card depth */
+    border-top-color: rgba(255, 255, 255, 0.06);
   }
 }
 
-/* Neobrutalism utility classes with variables to look correct in dark mode */
+/* Motion — respect the user's preference everywhere, including the
+   framer-motion entrances that set their own inline transitions. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Shadow system — one ink shadow carries the whole surface. Emphasis is a
+   deliberate exception, not a hue rotation. */
 .nb-shadow {
   box-shadow: 4px 4px 0px var(--border);
 }
@@ -188,21 +234,18 @@
 .nb-shadow-lg {
   box-shadow: 6px 6px 0px var(--border);
 }
-.nb-shadow-indigo {
-  box-shadow: 4px 4px 0px #4f46e5;
+.nb-shadow-highlight {
+  box-shadow: 4px 4px 0px #fbbf24;
 }
-.nb-shadow-teal {
-  box-shadow: 4px 4px 0px #0d9488;
+.nb-shadow-pen {
+  box-shadow: 4px 4px 0px var(--ring);
 }
-.nb-shadow-rose {
-  box-shadow: 4px 4px 0px #f43f5e;
-}
-.nb-shadow-amber {
-  box-shadow: 4px 4px 0px #d97706;
+.nb-shadow-oxblood {
+  box-shadow: 4px 4px 0px #9f1239;
 }
 
 .dark .nb-shadow {
-  box-shadow: 4px 4px 0px #27272a; /* visible on dark bg, not invisible black */
+  box-shadow: 4px 4px 0px #27272a;
 }
 .dark .nb-shadow-sm {
   box-shadow: 2px 2px 0px #27272a;
@@ -210,17 +253,14 @@
 .dark .nb-shadow-lg {
   box-shadow: 6px 6px 0px #27272a;
 }
-.dark .nb-shadow-indigo {
-  box-shadow: 4px 4px 0px #6366f1;
-}
-.dark .nb-shadow-teal {
-  box-shadow: 4px 4px 0px #14b8a6;
-}
-.dark .nb-shadow-rose {
-  box-shadow: 4px 4px 0px #f43f5e;
-}
-.dark .nb-shadow-amber {
+.dark .nb-shadow-highlight {
   box-shadow: 4px 4px 0px #f59e0b;
+}
+.dark .nb-shadow-pen {
+  box-shadow: 4px 4px 0px #7aa2f7;
+}
+.dark .nb-shadow-oxblood {
+  box-shadow: 4px 4px 0px #be123c;
 }
 
 .nb-hover-shadow {
@@ -249,12 +289,39 @@
   border: 2px solid var(--border);
 }
 
-/* Custom select styling for neobrutalist theme */
+/* Lane label — the single sanctioned micro-size treatment */
+.nb-label {
+  font-family: var(--font-sans);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* Skip link — first focusable element, revealed only when focused */
+.skip-link {
+  position: absolute;
+  inset-inline-start: 8px;
+  top: -100px;
+  z-index: 100;
+  padding: 8px 16px;
+  font-weight: 700;
+  background: var(--secondary);
+  color: var(--secondary-foreground);
+  border: 3px solid var(--border);
+}
+.skip-link:focus-visible {
+  top: 8px;
+  outline: 3px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Custom select styling for the neobrutalist theme */
 select {
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
-  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%231a1a1a' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2318181b' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
   background-position: right 0.5rem center;
   background-repeat: no-repeat;
   background-size: 1.25em 1.25em;
@@ -262,5 +329,5 @@ select {
 }
 
 .dark select {
-  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%23f5f0e8' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%23e4e4e7' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
 }

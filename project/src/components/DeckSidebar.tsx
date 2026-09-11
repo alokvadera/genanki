@@ -45,10 +45,10 @@ export default function DeckSidebar({
 
   return (
     <aside className="lg:w-64 shrink-0 lg:sticky lg:top-6 lg:self-start">
-      <div className="nb-border bg-card text-card-foreground nb-shadow-indigo p-4">
+      <div className="nb-border bg-card text-card-foreground nb-shadow p-4">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h2 className="font-bold text-xs uppercase tracking-[0.2em] text-indigo-600 dark:text-indigo-400">
+            <h2 className="font-bold text-xs uppercase tracking-[0.2em] text-muted-foreground">
               DECKS
             </h2>
             <p className="text-[11px] text-muted-foreground font-medium mt-1">
@@ -74,7 +74,7 @@ export default function DeckSidebar({
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Filter decks..."
             aria-label="Search decks"
-            className="h-8 pl-7 text-xs nb-border-2 font-medium"
+            className="h-8 pl-7 text-base sm:text-xs nb-border-2 font-medium"
           />
         </div>
 
@@ -86,7 +86,7 @@ export default function DeckSidebar({
               </p>
             ) : (
               <div className="nb-border-2 border-dashed bg-muted/20 p-4 text-center">
-                <BookOpen className="w-5 h-5 mx-auto text-indigo-500 mb-2" />
+                <BookOpen className="w-5 h-5 mx-auto text-muted-foreground mb-2" />
                 <p className="text-xs font-bold">No decks yet</p>
                 <p className="text-[11px] text-muted-foreground font-medium mt-1 leading-relaxed">
                   Create a deck to give your next idea a home.
@@ -122,7 +122,7 @@ export default function DeckSidebar({
                       }}
                       onBlur={onCommitRename}
                       autoFocus
-                      className="h-6 text-xs nb-border-2 font-bold"
+                      className="h-8 text-base sm:h-6 sm:text-xs nb-border-2 font-bold"
                     />
                   </div>
                 ) : (
@@ -150,7 +150,11 @@ export default function DeckSidebar({
                           {deck.name}
                         </p>
                         <p
-                          className="text-xs text-muted-foreground font-normal ml-5"
+                          className={`text-xs font-normal ml-5 ${
+                            activeDeckId === deck.id
+                              ? "text-secondary-foreground/80"
+                              : "text-muted-foreground"
+                          }`}
                           data-testid="deck-card-count"
                           data-deck-id={deck.id}
                         >

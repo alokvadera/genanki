@@ -20,32 +20,32 @@ export function CloudflareBudgetCard({
   const nearExhaustion = !exhausted && used >= CLOUDFLARE_DAILY_BUDGET * 0.8;
 
   const sectionClass = exhausted
-    ? "nb-shadow-rose bg-red-50 dark:bg-red-950/20"
+    ? "nb-shadow bg-status-err/15 dark:bg-status-err/10"
     : nearExhaustion
-      ? "nb-shadow-amber bg-amber-50 dark:bg-amber-950/20"
-      : "nb-shadow-teal bg-emerald-50 dark:bg-emerald-950/20";
+      ? "nb-shadow bg-status-warn/10"
+      : "nb-shadow bg-status-ok/15 dark:bg-status-ok/10";
 
   const barColor = exhausted
     ? "bg-destructive"
     : nearExhaustion
-      ? "bg-amber-500"
-      : "bg-teal-500";
+      ? "bg-status-warn"
+      : "bg-status-ok";
 
   const textColor = exhausted
     ? "text-destructive"
     : nearExhaustion
-      ? "text-amber-600"
-      : "text-emerald-600";
+      ? "text-muted-foreground"
+      : "text-status-ok";
 
   return (
     <section className={`nb-border p-5 mb-6 ${sectionClass}`}>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="nb-border bg-card p-2">
-            <Zap className="w-5 h-5 text-amber-500" />
+            <Zap className="w-5 h-5 text-status-warn" />
           </div>
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+            <p className="nb-label text-muted-foreground">
               Cloudflare Workers AI · Daily Free Tier
             </p>
             <h2 className="text-lg font-bold tracking-tight">
@@ -76,7 +76,7 @@ export function CloudflareBudgetCard({
             </p>
           )}
           {nearExhaustion && (
-            <p className="text-xs font-bold text-amber-600 mt-1.5">
+            <p className="text-xs font-bold text-muted-foreground mt-1.5">
               Near exhaustion — Cloudflare routing priority reduced.
             </p>
           )}
