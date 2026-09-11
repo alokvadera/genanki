@@ -1,0 +1,11 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // Cloudflare Pages builds this repo with the build root set to the repo root,
+  // so it looks for a Wrangler config here. Declaring the output directory lets
+  // the Pages build validate the frontend's real output (project/dist) instead
+  // of falling back to a root "dist" that the monorepo never creates.
+  // project/wrangler.jsonc covers the CLI path, where cwd is project/.
+  "name": "genanki",
+  "pages_build_output_dir": "project/dist",
+  "compatibility_date": "2026-09-10"
+}
