@@ -9,12 +9,14 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "preview": "vite preview",
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "deploy": "wrangler pages deploy",
+    "preview:pages": "wrangler pages dev dist",
+    "test": "NODE_ENV=test vitest run",
+    "test:watch": "NODE_ENV=test vitest",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "typecheck": "tsc -b --noEmit",
-    "check": "npm run lint && npm run typecheck",
+    "check": "pnpm lint && pnpm typecheck",
     "coverage:report": "python3 scripts/coverage-report.py",
     "prepare": "husky"
   },
@@ -127,6 +129,7 @@
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.48.1",
     "vite": "^7.2.6",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "wrangler": "^4.130.0"
   }
 }

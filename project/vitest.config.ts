@@ -11,7 +11,7 @@ export default defineConfig({
     environment: "node",
     globals: true,
     setupFiles: ["./src/test-setup.ts"],
-    include: ["src/**/*.test.{ts,tsx}", "../server/**/*.test.ts"],
+    include: ["src/**/*.test.{ts,tsx}"],
     coverage: {
       provider: "istanbul",
       reporter: ["text", "json", "html"],

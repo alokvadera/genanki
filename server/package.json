@@ -1,1 +1,25 @@
-{"name":"genanki-server","private":true,"type":"module","dependencies":{"@neon/functions":"^0.9.0","drizzle-orm":"^0.45.2","hono":"^4.13.7","jose":"^6.2.12","pg":"^8.23.0"},"devDependencies":{"@types/node":"^26.5.0","@types/pg":"^8.23.1","drizzle-kit":"^0.31.10","typescript":"^7.0.2","vitest":"^5.0.0"}}
+{
+  "name": "genanki-server",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "NODE_ENV=test vitest run",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate"
+  },
+  "dependencies": {
+    "@neon/functions": "^0.9.0",
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4.13.7",
+    "jose": "^6.2.12",
+    "pg": "^8.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.5.0",
+    "@types/pg": "^8.23.1",
+    "drizzle-kit": "^0.31.10",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.0"
+  }
+}

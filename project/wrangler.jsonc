@@ -1,0 +1,10 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // Cloudflare Pages project for the genanki SPA.
+  // Deploy with: pnpm deploy   (from project/)
+  // The build output already contains public/_redirects (SPA fallback) and
+  // public/_headers, which Cloudflare applies without extra configuration.
+  "name": "genanki",
+  "pages_build_output_dir": "dist",
+  "compatibility_date": "2026-09-10"
+}

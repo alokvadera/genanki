@@ -1,0 +1,8 @@
+packages:
+  - project
+  - server
+
+# Packages allowed to run install/postinstall build scripts (pnpm 11+).
+allowBuilds:
+  esbuild: true
+  tesseract.js: true
