@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Check, FileUp, Layers, Loader, RefreshCw, Sparkles, Zap, Trash2,
@@ -102,6 +103,17 @@ export default function DocUploadSection({
   onFileChange,
   onBrowseClick,
 }: DocUploadSectionProps) {
+  // Stable unique ids so every visible label is wired to the control it names,
+  // and so inline warnings can be tied to their field with aria-describedby.
+  const uid = useId();
+  const cardCountId = `${uid}-card-count`;
+  const cardCountHintId = `${uid}-card-count-hint`;
+  const difficultyId = `${uid}-difficulty`;
+  const formatId = `${uid}-format`;
+  const providerId = `${uid}-provider`;
+  const instructionsId = `${uid}-instructions`;
+  const chaptersLabelId = `${uid}-chapters-label`;
+
   return (
     <>
       {/* Upload Section */}
@@ -162,13 +174,18 @@ export default function DocUploadSection({
               {docMode === "ai" && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[0.8fr_1fr_1.2fr_1.8fr] gap-3 mb-4">
                   <div>
-                    <label className="text-xs font-bold text-muted-foreground mb-1.5 block uppercase tracking-wide">
+                    <label
+                      htmlFor={cardCountId}
+                      className="text-xs font-bold text-muted-foreground mb-1.5 block uppercase tracking-wide"
+                    >
                       Card count
                     </label>
                     <Input
+                      id={cardCountId}
                       type="number"
                       min={0}
                       max={1000}
+                      aria-describedby={docCardCount === 0 ? cardCountHintId : undefined}
                       value={docCardCount}
                       onChange={(e) => {
                         const val = e.target.value;
@@ -178,25 +195,35 @@ export default function DocUploadSection({
                         }
                         onDocCardCountChange(Math.max(0, Math.min(1000, Math.round(Number(val)))));
                       }}
-                      className="nb-border-2 h-9 text-sm font-medium"
+                      className="nb-border-2 h-9 text-base sm:text-sm font-medium"
                     />
                     {docCardCount === 0 && (
-                      <p className="text-[11px] text-muted-foreground font-medium mt-1.5 flex items-center gap-1">
-                        <span className="inline-block w-1.5 h-1.5 rounded-full bg-status-warn shrink-0" />
+                      <p
+                        id={cardCountHintId}
+                        className="text-[11px] text-muted-foreground font-medium mt-1.5 flex items-center gap-1"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className="inline-block w-1.5 h-1.5 rounded-full bg-status-warn shrink-0"
+                        />
                         Card count is 0 — no cards will be generated. Set to 1 or more to create cards.
                       </p>
                     )}
                   </div>
                   <div>
-                    <label className="text-xs font-bold text-muted-foreground mb-1.5 block uppercase tracking-wide">
+                    <label
+                      htmlFor={difficultyId}
+                      className="text-xs font-bold text-muted-foreground mb-1.5 block uppercase tracking-wide"
+                    >
                       Difficulty
                     </label>
                     <select
+                      id={difficultyId}
                       value={docDifficulty}
                       onChange={(e) =>
                         onDocDifficultyChange(e.target.value as "beginner" | "intermediate" | "advanced")
                       }
-                      className="nb-border-2 h-9 w-full bg-background px-3 text-sm font-medium outline-none"
+                      className="nb-border-2 h-9 w-full bg-background px-3 text-base sm:text-sm font-medium outline-none"
                     >
                       <option value="beginner">Beginner</option>
                       <option value="intermediate">Intermediate</option>
@@ -204,30 +231,38 @@ export default function DocUploadSection({
                     </select>
                   </div>
                   <div>
-                    <label className="text-xs font-bold text-muted-foreground mb-1.5 block uppercase tracking-wide">
+                    <label
+                      htmlFor={formatId}
+                      className="text-xs font-bold text-muted-foreground mb-1.5 block uppercase tracking-wide"
+                    >
                       Card Format
                     </label>
                     <select
+                      id={formatId}
                       value={cardType}
                       onChange={(e) =>
                         onCardTypeChange(e.target.value as "basic" | "cloze")
                       }
-                      className="nb-border-2 h-9 w-full bg-background px-3 text-sm font-medium outline-none"
+                      className="nb-border-2 h-9 w-full bg-background px-3 text-base sm:text-sm font-medium outline-none"
                     >
                       <option value="basic">Standard Q&A</option>
                       <option value="cloze">Cloze deletion</option>
                     </select>
                   </div>
                   <div>
-                    <label className="text-xs font-bold text-muted-foreground mb-1.5 block uppercase tracking-wide">
+                    <label
+                      htmlFor={providerId}
+                      className="text-xs font-bold text-muted-foreground mb-1.5 block uppercase tracking-wide"
+                    >
                       Provider
                     </label>
                     <div className="flex gap-1.5">
                       <select
+                        id={providerId}
                         value={preferredProvider}
                         onChange={(e) => onProviderChange(e.target.value)}
                         disabled={loadingProviders}
-                        className="nb-border-2 h-9 flex-1 bg-background px-3 text-sm font-medium outline-none disabled:opacity-60"
+                        className="nb-border-2 h-9 flex-1 bg-background px-3 text-base sm:text-sm font-medium outline-none disabled:opacity-60"
                       >
                         {loadingProviders ? (
                           <option value="auto">Loading providers...</option>
@@ -245,10 +280,12 @@ export default function DocUploadSection({
                       <button
                         onClick={onRefreshProviders}
                         disabled={loadingProviders}
+                        aria-label="Refresh providers"
+
                         title="Refresh providers"
                         className="nb-border nb-shadow-sm nb-hover-shadow h-9 w-9 flex items-center justify-center shrink-0 disabled:opacity-40"
                       >
-                        <RefreshCw className={`w-3.5 h-3.5 ${loadingProviders ? "animate-spin" : ""}`} />
+                        <RefreshCw aria-hidden="true" className={`w-3.5 h-3.5 ${loadingProviders ? "animate-spin" : ""}`} />
                       </button>
                     </div>
                   </div>
@@ -257,14 +294,18 @@ export default function DocUploadSection({
 
               {docMode === "ai" && (
                 <div className="mb-4">
-                  <label className="text-xs font-bold text-muted-foreground mb-1.5 block uppercase tracking-wide">
+                  <label
+                    htmlFor={instructionsId}
+                    className="text-xs font-bold text-muted-foreground mb-1.5 block uppercase tracking-wide"
+                  >
                     Instructions for this document
                   </label>
                   <Textarea
+                    id={instructionsId}
                     value={docInstructions}
                     onChange={(e) => onDocInstructionsChange(e.target.value)}
                     placeholder="Example: Only create cards from chapters 2 and 4. Focus on definitions and key formulas. Skip historical examples."
-                    className="nb-border-2 min-h-[96px] text-sm font-medium"
+                    className="nb-border-2 min-h-[96px] text-base sm:text-sm font-medium"
                   />
                   <p className="text-[11px] text-muted-foreground font-medium mt-1.5">
                     These instructions refine an already-scoped selection and guide coverage and card style.
@@ -274,11 +315,18 @@ export default function DocUploadSection({
 
               {/* Chapter selection */}
               {docMode === "ai" && docFileNames.length > 0 && !processing && chaptersDetected && docChapters.length > 0 && (
-                <div className="mb-4 nb-border-2 bg-card p-3">
+                <div
+                  role="group"
+                  aria-labelledby={chaptersLabelId}
+                  className="mb-4 nb-border-2 bg-card p-3"
+                >
                   <div className="flex items-center justify-between mb-2">
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                    <p
+                      id={chaptersLabelId}
+                      className="text-xs font-bold text-muted-foreground uppercase tracking-wide"
+                    >
                       Chapters ({selectedChapterIds.size}/{docChapters.length} selected)
-                    </label>
+                    </p>
                     <div className="flex gap-1.5">
                       <button
                         onClick={() => onSelectAllChapters(true)}
@@ -420,11 +468,13 @@ export default function DocUploadSection({
                         <div key={idx} className="flex items-center justify-between bg-card nb-border-2 px-3 py-1.5 text-xs font-bold">
                           <span className="truncate mr-2">{name}</span>
                           <button
+                            type="button"
                             onClick={() => onRemoveFile(idx)}
-                            className="p-1 text-destructive hover:bg-destructive/10 transition-colors"
+                            className="p-1.5 text-destructive hover:bg-destructive/10 transition-colors"
+                            aria-label={`Remove ${name}`}
                             title="Remove file"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
                           </button>
                         </div>
                       ))}

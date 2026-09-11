@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { FileText, Plus, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,6 +24,11 @@ export default function AddCardForm({
   onCsvUpload,
   fileInputRef,
 }: AddCardFormProps) {
+  // Stable unique ids so each visible label is actually wired to its field.
+  const uid = useId();
+  const frontId = `${uid}-front`;
+  const backId = `${uid}-back`;
+
   return (
     <div className="nb-border bg-card text-card-foreground nb-shadow p-5 mb-6">
       <h2 className="font-bold text-xs uppercase tracking-[0.2em] mb-4 flex items-center gap-2 text-muted-foreground">
@@ -31,10 +37,14 @@ export default function AddCardForm({
       </h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
         <div>
-          <label className="text-xs font-bold text-muted-foreground mb-1.5 block uppercase tracking-wide">
+          <label
+            htmlFor={frontId}
+            className="text-xs font-bold text-muted-foreground mb-1.5 block uppercase tracking-wide"
+          >
             Front
           </label>
           <Textarea
+            id={frontId}
             value={front}
             onChange={(e) => onFrontChange(e.target.value)}
             placeholder="Question or term..."
@@ -45,10 +55,14 @@ export default function AddCardForm({
           />
         </div>
         <div>
-          <label className="text-xs font-bold text-muted-foreground mb-1.5 block uppercase tracking-wide">
+          <label
+            htmlFor={backId}
+            className="text-xs font-bold text-muted-foreground mb-1.5 block uppercase tracking-wide"
+          >
             Back
           </label>
           <Textarea
+            id={backId}
             value={back}
             onChange={(e) => onBackChange(e.target.value)}
             placeholder="Answer or definition..."

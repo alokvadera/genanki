@@ -171,9 +171,9 @@ export default function DeckSidebar({
                             e.stopPropagation();
                             onStartRename(deck);
                           }}
-                          className="p-1 hover:bg-muted transition-colors"
+                          className="p-1.5 hover:bg-muted transition-colors"
                         >
-                          <Pencil className="w-3 h-3" />
+                          <Pencil className="w-3 h-3" aria-hidden="true" />
                         </button>
                         {decks.length > 1 && (
                           <button
@@ -184,9 +184,9 @@ export default function DeckSidebar({
                               e.stopPropagation();
                               onRemoveDeck(deck.id, showToast);
                             }}
-                            className="p-1 hover:bg-destructive/10 text-destructive transition-colors"
+                            className="p-1.5 hover:bg-destructive/10 text-destructive transition-colors"
                           >
-                            <Trash2 className="w-3 h-3" />
+                            <Trash2 className="w-3 h-3" aria-hidden="true" />
                           </button>
                         )}
                       </div>

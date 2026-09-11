@@ -191,7 +191,33 @@ export default function IpAdmin() {
   // Render Login Gate
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <div className="min-h-screen flex flex-col bg-background">
+        <SkipLink />
+
+        <header className="border-b-[3px] border-border bg-card text-card-foreground">
+          <div className="w-full px-6 lg:px-10 py-4 flex items-center justify-between">
+            <Link to="/" className="flex items-center gap-2.5">
+              <div className="nb-border nb-shadow-sm bg-secondary text-secondary-foreground p-2">
+                <Layers className="w-5 h-5" aria-hidden="true" />
+              </div>
+              <span className="font-bold text-lg tracking-tight">genanki</span>
+            </Link>
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <Button asChild variant="outline" className="nb-border nb-shadow-sm nb-hover-shadow font-bold text-sm px-3 h-9">
+                <Link to="/app" aria-label="Back to deck creator">
+                  <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+                  <span className="hidden sm:inline">Deck creator</span>
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </header>
+
+        <main
+          id="main-content"
+          className="flex-1 flex items-center justify-center px-4 py-12 scroll-mt-4"
+        >
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -209,11 +235,17 @@ export default function IpAdmin() {
 
           <form onSubmit={handleLogin} className="mt-6 space-y-4">
             <div>
-              <label className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground block mb-2">
+              <label
+                htmlFor="admin-passphrase"
+                className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground block mb-2"
+              >
                 Passphrase
               </label>
               <Input
+                id="admin-passphrase"
+                name="passphrase"
                 type="password"
+                autoComplete="current-password"
                 value={passphrase}
                 onChange={(e) => setPassphrase(e.target.value)}
                 placeholder="••••••••••••••••"
@@ -226,6 +258,7 @@ export default function IpAdmin() {
             </Button>
           </form>
         </motion.div>
+        </main>
         <Toaster />
       </div>
     );

@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Layers, Loader, RefreshCw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -66,6 +67,15 @@ export default function AiDeckBuilder({
   onAiPreviewEdit,
   onAiPreviewRemove,
 }: AiDeckBuilderProps) {
+  // Stable unique ids so every visible label is wired to the control it names.
+  const uid = useId();
+  const deckNameId = `${uid}-deck-name`;
+  const cardCountId = `${uid}-card-count`;
+  const difficultyId = `${uid}-difficulty`;
+  const formatId = `${uid}-format`;
+  const providerId = `${uid}-provider`;
+  const promptId = `${uid}-prompt`;
+
   return (
     <>
       {/* AI Deck Builder */}
@@ -99,10 +109,14 @@ export default function AiDeckBuilder({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-[1.5fr_0.8fr_1fr_1.2fr_2fr_1.2fr] gap-3 mb-3">
                 <div>
-                  <label className="text-xs font-bold text-muted-foreground mb-1.5 block uppercase tracking-wide">
+                  <label
+                    htmlFor={deckNameId}
+                    className="text-xs font-bold text-muted-foreground mb-1.5 block uppercase tracking-wide"
+                  >
                     Deck name
                   </label>
                   <Input
+                    id={deckNameId}
                     value={aiDeckName}
                     onChange={(e) => onDeckNameChange(e.target.value)}
                     placeholder={activeDeckName || "AI generated deck"}
@@ -110,10 +124,14 @@ export default function AiDeckBuilder({
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-muted-foreground mb-1.5 block uppercase tracking-wide">
+                  <label
+                    htmlFor={cardCountId}
+                    className="text-xs font-bold text-muted-foreground mb-1.5 block uppercase tracking-wide"
+                  >
                     Card count
                   </label>
                   <Input
+                    id={cardCountId}
                     type="number"
                     min={0}
                     max={1000}
@@ -136,10 +154,14 @@ export default function AiDeckBuilder({
                   )}
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-muted-foreground mb-1.5 block uppercase tracking-wide">
+                  <label
+                    htmlFor={difficultyId}
+                    className="text-xs font-bold text-muted-foreground mb-1.5 block uppercase tracking-wide"
+                  >
                     Difficulty
                   </label>
                   <select
+                    id={difficultyId}
                     value={aiDifficulty}
                     onChange={(e) =>
                       onDifficultyChange(e.target.value as "beginner" | "intermediate" | "advanced")
@@ -152,10 +174,14 @@ export default function AiDeckBuilder({
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-muted-foreground mb-1.5 block uppercase tracking-wide">
+                  <label
+                    htmlFor={formatId}
+                    className="text-xs font-bold text-muted-foreground mb-1.5 block uppercase tracking-wide"
+                  >
                     Card Format
                   </label>
                   <select
+                    id={formatId}
                     value={cardType}
                     onChange={(e) =>
                       onCardTypeChange(e.target.value as "basic" | "cloze")
@@ -167,11 +193,15 @@ export default function AiDeckBuilder({
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-muted-foreground mb-1.5 block uppercase tracking-wide">
+                  <label
+                    htmlFor={providerId}
+                    className="text-xs font-bold text-muted-foreground mb-1.5 block uppercase tracking-wide"
+                  >
                     Provider
                   </label>
                   <div className="flex gap-1.5">
                     <select
+                      id={providerId}
                       value={preferredProvider}
                       onChange={(e) => onProviderChange(e.target.value)}
                       disabled={loadingProviders}
@@ -193,10 +223,12 @@ export default function AiDeckBuilder({
                     <button
                       onClick={onRefreshProviders}
                       disabled={loadingProviders}
+                      aria-label="Refresh providers"
+
                       title="Refresh providers"
                       className="nb-border nb-shadow-sm nb-hover-shadow h-10 w-10 flex items-center justify-center shrink-0 disabled:opacity-40"
                     >
-                      <RefreshCw className={`w-3.5 h-3.5 ${loadingProviders ? "animate-spin" : ""}`} />
+                      <RefreshCw aria-hidden="true" className={`w-3.5 h-3.5 ${loadingProviders ? "animate-spin" : ""}`} />
                     </button>
                   </div>
                 </div>
@@ -227,10 +259,14 @@ export default function AiDeckBuilder({
               </div>
 
               <div className="mb-3">
-                <label className="text-xs font-bold text-muted-foreground mb-1.5 block uppercase tracking-wide">
+                <label
+                  htmlFor={promptId}
+                  className="text-xs font-bold text-muted-foreground mb-1.5 block uppercase tracking-wide"
+                >
                   Topic or notes
                 </label>
                 <Textarea
+                  id={promptId}
                   value={aiPrompt}
                   onChange={(e) => onPromptChange(e.target.value)}
                   placeholder="Example: Create a deck on cell respiration for first-year biology students, focusing on core terms, stages, and key differences."
